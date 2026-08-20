@@ -43,3 +43,7 @@ files = ["src", "tests"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --cov=palm_lab --cov-report=term-missing"
+
+[[tool.mypy.overrides]]
+module = ["mediapipe.*", "cv2.*"]
+ignore_missing_imports = true
