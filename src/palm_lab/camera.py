@@ -1,5 +1,7 @@
 """Live webcam preview with hand landmarks drawn on each frame."""
 
+import json
+from datetime import datetime
 from pathlib import Path
 
 import cv2
@@ -17,12 +19,22 @@ WINDOW_NAME = "palm-lab preview"
 DOT_COLOUR = (0, 255, 0)
 DOT_RADIUS = 5
 QUIT_KEY = "q"
+FIXTURE_DIR = Path(__file__).parents[2] / "tests" / "fixtures"
 
 
-def run_preview(camera_index: int = 0) -> None:
+def save_fixture(hand: list[dict[str, float]], gesture_name: str) -> Path:
+    """Write one hand's landmarks to a timestamped JSON file."""
+    FIXTURE_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    path = FIXTURE_DIR / f"{gesture_name}_{stamp}.json"
+    path.write_text(json.dumps(hand, indent=2))
+    return path
+
+
+def run_preview(camera_index: int = 0, gesture_name: str = "unlabelled") -> None:
     """Show the webcam feed with hand landmarks drawn on it.
 
-    Press 'q' with the preview window focused to exit.
+    Press 'q' to exit, 's' to save the current hand's landmarks as a fixture.
     """
     if not MODEL_PATH.exists():
         raise FileNotFoundError(f"Hand landmarker model not found at {MODEL_PATH}")
@@ -56,8 +68,13 @@ def run_preview(camera_index: int = 0) -> None:
                         cv2.circle(frame, (x, y), DOT_RADIUS, DOT_COLOUR, -1)
 
                 cv2.imshow(WINDOW_NAME, frame)
-                if cv2.waitKey(1) & 0xFF == ord(QUIT_KEY):
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord(QUIT_KEY):
                     break
+                if key == ord("s") and result.hand_landmarks:
+                    points = [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in result.hand_landmarks[0]]
+                    saved = save_fixture(points, gesture_name)
+                    print(f"Saved {saved.name}")
         finally:
             capture.release()
             cv2.destroyAllWindows()
