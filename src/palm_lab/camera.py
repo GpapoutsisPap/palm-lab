@@ -1,6 +1,7 @@
 """Live webcam preview with hand landmarks drawn on each frame."""
 
 import json
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -13,8 +14,18 @@ from mediapipe.tasks.python.vision import (
     RunningMode,
 )
 
+from palm_lab.features import extract
+from palm_lab.gestures import classify
+from palm_lab.landmarks import Point, normalise
+from palm_lab.state import GestureTrigger
+
 MODEL_PATH = Path(__file__).parent / "assets" / "hand_landmarker.task"
 
+TEXT_COLOUR = (255, 255, 255)
+TEXT_POSITION = (10, 40)
+FONT = cv2.FONT_HERSHEY_SIMPLEX
+FONT_SCALE = 1.0
+FONT_THICKNESS = 2
 WINDOW_NAME = "palm-lab preview"
 DOT_COLOUR = (0, 255, 0)
 DOT_RADIUS = 5
@@ -31,6 +42,15 @@ def save_fixture(hand: list[dict[str, float]], gesture_name: str) -> Path:
     return path
 
 
+def classify_frame(result: object) -> str | None:
+    """Run the first detected hand through the recognition pipeline."""
+    hands = result.hand_landmarks  # type: ignore[attr-defined]
+    if not hands:
+        return None
+    points = [Point(lm.x, lm.y, lm.z) for lm in hands[0]]
+    return classify(extract(normalise(points)))
+
+
 def run_preview(camera_index: int = 0, gesture_name: str = "unlabelled") -> None:
     """Show the webcam feed with hand landmarks drawn on it.
 
@@ -45,10 +65,16 @@ def run_preview(camera_index: int = 0, gesture_name: str = "unlabelled") -> None
         num_hands=2,
     )
 
+    trigger = GestureTrigger()
+
     with HandLandmarker.create_from_options(options) as landmarker:
         capture = cv2.VideoCapture(camera_index)
         if not capture.isOpened():
             raise RuntimeError(f"Could not open camera {camera_index}")
+
+        auto_ok = capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+        exp_ok = capture.set(cv2.CAP_PROP_EXPOSURE, -6)
+        print(f"exposure control: auto={auto_ok} manual={exp_ok}")
 
         try:
             while True:
@@ -66,7 +92,20 @@ def run_preview(camera_index: int = 0, gesture_name: str = "unlabelled") -> None
                         x = int(landmark.x * width)
                         y = int(landmark.y * height)
                         cv2.circle(frame, (x, y), DOT_RADIUS, DOT_COLOUR, -1)
-
+                gesture = classify_frame(result)
+                fired = trigger.update(gesture, time.monotonic())
+                if fired:
+                    print(f"TRIGGERED: {fired}")
+                label = gesture if gesture else "no gesture"
+                cv2.putText(
+                    frame,
+                    label,
+                    TEXT_POSITION,
+                    FONT,
+                    FONT_SCALE,
+                    TEXT_COLOUR,
+                    FONT_THICKNESS,
+                )
                 cv2.imshow(WINDOW_NAME, frame)
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord(QUIT_KEY):
