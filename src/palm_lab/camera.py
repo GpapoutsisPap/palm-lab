@@ -14,6 +14,8 @@ from mediapipe.tasks.python.vision import (
     RunningMode,
 )
 
+from palm_lab.actions.models import Binding, load_bindings
+from palm_lab.actions.runner import run_binding
 from palm_lab.features import extract
 from palm_lab.gestures import classify
 from palm_lab.landmarks import Point, normalise
@@ -66,15 +68,15 @@ def run_preview(camera_index: int = 0, gesture_name: str = "unlabelled") -> None
     )
 
     trigger = GestureTrigger()
-
+    bindings_path = Path.cwd() / "bindings.toml"
+    bindings: dict[str, Binding] = {}
+    if bindings_path.exists():
+        bindings = {b.gesture: b for b in load_bindings(bindings_path)}
+        print(f"Loaded {len(bindings)} binding(s)")
     with HandLandmarker.create_from_options(options) as landmarker:
         capture = cv2.VideoCapture(camera_index)
         if not capture.isOpened():
             raise RuntimeError(f"Could not open camera {camera_index}")
-
-        auto_ok = capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
-        exp_ok = capture.set(cv2.CAP_PROP_EXPOSURE, -6)
-        print(f"exposure control: auto={auto_ok} manual={exp_ok}")
 
         try:
             while True:
@@ -95,7 +97,18 @@ def run_preview(camera_index: int = 0, gesture_name: str = "unlabelled") -> None
                 gesture = classify_frame(result)
                 fired = trigger.update(gesture, time.monotonic())
                 if fired:
-                    print(f"TRIGGERED: {fired}")
+                    binding = bindings.get(fired)
+                    if binding is None:
+                        print(f"TRIGGERED: {fired} (no binding)")
+                    else:
+                        print(f"TRIGGERED: {fired} -> {binding.name}")
+                        for outcome in run_binding(binding):
+                            if outcome.error is None:
+                                print(f"  {outcome.action.type.value}: ok")
+                            else:
+                                print(
+                                    f"  {outcome.action.type.value}: {outcome.error.user_message()}"
+                                )
                 label = gesture if gesture else "no gesture"
                 cv2.putText(
                     frame,
