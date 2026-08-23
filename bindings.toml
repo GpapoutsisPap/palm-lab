@@ -1,0 +1,11 @@
+[[binding]]
+gesture = "peace"
+name = "Morning setup"
+
+  [[binding.action]]
+  type = "launch"
+  target = "spotify"
+
+  [[binding.action]]
+  type = "open_url"
+  target = "https://youtube.com"
