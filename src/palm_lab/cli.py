@@ -5,8 +5,12 @@ import sys
 
 from palm_lab.actions.errors import ActionError
 from palm_lab.actions.models import load_bindings
-from palm_lab.camera import MODEL_PATH, run_preview
-from palm_lab.config import bindings_path, config_dir, ensure_bindings_file
+from palm_lab.config import (
+    MODEL_PATH,
+    bindings_path,
+    config_dir,
+    ensure_bindings_file,
+)
 from palm_lab.version import __version__
 
 MODEL_URL = (
@@ -15,7 +19,8 @@ MODEL_URL = (
 )
 
 
-def _build_parser() -> argparse.ArgumentParser:
+def build_parser() -> argparse.ArgumentParser:
+    """Build the argument parser. Public so tests can exercise it directly."""
     parser = argparse.ArgumentParser(
         prog="palm-lab",
         description="Trigger shortcuts with hand gestures seen by your webcam.",
@@ -40,6 +45,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
+    # Imported here so config/doctor never load OpenCV and MediaPipe.
+    from palm_lab.camera import run_preview
+
     path, created = ensure_bindings_file()
     if created:
         print(f"Created a default bindings file at {path}")
@@ -48,6 +56,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
 
 def _cmd_capture(args: argparse.Namespace) -> int:
+    from palm_lab.camera import run_preview
+
     run_preview(
         camera_index=args.camera,
         gesture_name=args.gesture,
@@ -117,17 +127,19 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
     return 1 if problems else 0
 
 
+HANDLERS = {
+    "run": _cmd_run,
+    "capture": _cmd_capture,
+    "config": _cmd_config,
+    "doctor": _cmd_doctor,
+}
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = _build_parser()
+    parser = build_parser()
     args = parser.parse_args(argv)
 
-    handlers = {
-        "run": _cmd_run,
-        "capture": _cmd_capture,
-        "config": _cmd_config,
-        "doctor": _cmd_doctor,
-    }
-    handler = handlers.get(args.command)
+    handler = HANDLERS.get(args.command)
     if handler is None:
         parser.print_help()
         return 2

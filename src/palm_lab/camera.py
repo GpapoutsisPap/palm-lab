@@ -16,12 +16,11 @@ from mediapipe.tasks.python.vision import (
 
 from palm_lab.actions.models import Binding, load_bindings
 from palm_lab.actions.runner import run_binding
+from palm_lab.config import MODEL_PATH
 from palm_lab.features import extract
 from palm_lab.gestures import classify
 from palm_lab.landmarks import Point, normalise
 from palm_lab.state import GestureTrigger
-
-MODEL_PATH = Path(__file__).parent / "assets" / "hand_landmarker.task"
 
 TEXT_COLOUR = (255, 255, 255)
 TEXT_POSITION = (10, 40)
