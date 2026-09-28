@@ -9,6 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from palm_lab.actions.errors import ActionError, AppNotFoundError, LaunchFailedError
+from palm_lab.actions.hotkeys import parse_hotkey, send_hotkey
 from palm_lab.actions.models import Action, ActionType, Binding
 
 KNOWN_APPS = {
@@ -52,6 +53,18 @@ def _launch(target: str) -> None:
         raise LaunchFailedError(target, str(exc)) from exc
 
 
+def _hotkey(target: str) -> None:
+    """Parse and send a hotkey, translating failures into typed errors."""
+    try:
+        hotkey = parse_hotkey(target)
+    except ValueError as exc:
+        raise LaunchFailedError(target, str(exc)) from exc
+    try:
+        send_hotkey(hotkey)
+    except OSError as exc:
+        raise LaunchFailedError(target, str(exc)) from exc
+
+
 def run_action(action: Action) -> ActionResult:
     """Run one action, capturing any failure rather than raising."""
     try:
@@ -60,7 +73,7 @@ def run_action(action: Action) -> ActionResult:
         elif action.type is ActionType.LAUNCH:
             _launch(action.target)
         else:
-            raise LaunchFailedError(action.target, "hotkey actions are not supported yet")
+            _hotkey(action.target)
     except ActionError as exc:
         return ActionResult(action=action, error=exc)
     return ActionResult(action=action)
