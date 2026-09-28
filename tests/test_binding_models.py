@@ -78,6 +78,16 @@ step_delay_seconds = 1
     assert isinstance(binding.step_delay_seconds, float)
 
 
+def test_valid_hotkey_binding_parses() -> None:
+    """A well-formed hotkey passes validation at load time."""
+    text = (
+        '[[binding]]\ngesture="fist"\nname="Pause"\n'
+        '[[binding.action]]\ntype="hotkey"\ntarget="media_play_pause"'
+    )
+    (binding,) = parse_bindings(text)
+    assert binding.actions[0].type is ActionType.HOTKEY
+
+
 def test_bindings_are_immutable() -> None:
     """Configuration is read once at startup and must not be mutated."""
     (binding,) = parse_bindings(MINIMAL)
@@ -125,6 +135,12 @@ def test_bindings_are_immutable() -> None:
             '[[binding]]\ngesture="g"\nname="n"\n[[binding.action]]\ntype="launch"',
             "'target' must be a non-empty string",
             id="missing-target",
+        ),
+        pytest.param(
+            '[[binding]]\ngesture="g"\nname="n"\n'
+            '[[binding.action]]\ntype="hotkey"\ntarget="ctrl+banana"',
+            "unknown key 'banana'",
+            id="bad-hotkey",
         ),
         pytest.param(
             '[[binding]]\ngesture="g"\nname="n"\nstep_delay_seconds="soon"\n'

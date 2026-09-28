@@ -6,6 +6,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from palm_lab.actions.errors import InvalidBindingError
+from palm_lab.actions.hotkeys import parse_hotkey
 
 DEFAULT_STEP_DELAY_SECONDS = 0.4
 
@@ -88,6 +89,12 @@ def parse_bindings(text: str) -> tuple[Binding, ...]:
             target = raw_action.get("target")
             if not isinstance(target, str) or not target:
                 raise InvalidBindingError(f"{where}: 'target' must be a non-empty string")
+
+            if action_type is ActionType.HOTKEY:
+                try:
+                    parse_hotkey(target)
+                except ValueError as exc:
+                    raise InvalidBindingError(f"{where}: {exc}") from exc
 
             actions.append(Action(type=action_type, target=target))
 

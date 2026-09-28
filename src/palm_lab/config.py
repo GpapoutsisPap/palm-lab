@@ -18,9 +18,12 @@ DEFAULT_BINDINGS_TOML = """\
 # Gestures:     peace, fist, open_palm, thumbs_up
 # Action types: launch    - start an application (a known name or a full path)
 #               open_url  - open a URL in the default browser
-#               hotkey    - send a keystroke (not implemented yet)
+#               hotkey    - press a key or combination
 #
 # Known launch names: spotify, notepad, notes, calculator, explorer
+# Hotkey examples:    media_play_pause, media_next, media_previous,
+#                     volume_up, volume_down, volume_mute,
+#                     ctrl+alt+t, win+d, alt+tab, f5
 
 [[binding]]
 gesture = "peace"
@@ -36,12 +39,11 @@ name = "Morning setup"
 
 # [[binding]]
 # gesture = "fist"
-# name = "Open notes"
-# step_delay_seconds = 0.4
+# name = "Play or pause"
 #
 #   [[binding.action]]
-#   type = "launch"
-#   target = "notes"
+#   type = "hotkey"
+#   target = "media_play_pause"
 """
 
 

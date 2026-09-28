@@ -6,7 +6,7 @@ import webbrowser
 
 import pytest
 
-from palm_lab.actions import runner
+from palm_lab.actions import hotkeys, runner
 from palm_lab.actions.errors import AppNotFoundError, LaunchFailedError
 from palm_lab.actions.models import Action, ActionType, Binding
 
@@ -18,6 +18,16 @@ def _binding(*actions: Action, delay: float = 0.4) -> Binding:
 LAUNCH = Action(type=ActionType.LAUNCH, target="spotify")
 URL = Action(type=ActionType.OPEN_URL, target="https://example.com")
 HOTKEY = Action(type=ActionType.HOTKEY, target="media_play_pause")
+# Built directly, bypassing the parser, to exercise the runner's own guard.
+BAD_HOTKEY = Action(type=ActionType.HOTKEY, target="not_a_key")
+
+
+@pytest.fixture(autouse=True)
+def pressed(monkeypatch: pytest.MonkeyPatch) -> list[tuple[int, int]]:
+    """Record key events so no test ever presses a real key."""
+    events: list[tuple[int, int]] = []
+    monkeypatch.setattr(hotkeys, "_keybd_event", lambda vk, f: events.append((vk, f)))
+    return events
 
 
 @pytest.fixture
@@ -100,16 +110,38 @@ def test_open_url_success(opened: list[str]) -> None:
     assert opened == ["https://example.com"]
 
 
-def test_hotkey_is_reported_as_unsupported() -> None:
-    """Hotkeys are not implemented yet and must say so rather than fail silently."""
+def test_hotkey_action_sends_the_key(pressed: list[tuple[int, int]]) -> None:
+    """A hotkey action presses and releases its key."""
     result = runner.run_action(HOTKEY)
-    assert not result.ok
-    assert "not supported yet" in str(result.error)
+    assert result.ok
+    assert [vk for vk, _ in pressed] == [0xB3, 0xB3]
+
+
+def test_invalid_hotkey_becomes_launch_failed(pressed: list[tuple[int, int]]) -> None:
+    """A target the parser rejects is reported, and nothing is pressed."""
+    result = runner.run_action(BAD_HOTKEY)
+    assert isinstance(result.error, LaunchFailedError)
+    assert "unknown key" in str(result.error)
+    assert pressed == []
+
+
+def test_hotkey_os_failure_becomes_launch_failed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If the keyboard API is unavailable, the failure is reported, not raised."""
+
+    def unavailable(vk: int, flags: int) -> None:
+        raise OSError("hotkeys are only supported on Windows")
+
+    monkeypatch.setattr(hotkeys, "_keybd_event", unavailable)
+    result = runner.run_action(HOTKEY)
+    assert isinstance(result.error, LaunchFailedError)
+    assert "only supported on Windows" in str(result.error)
 
 
 def test_every_action_runs_even_after_a_failure(launched: list[str], opened: list[str]) -> None:
     """Partial success: one bad action does not stop the ones after it."""
-    binding = _binding(HOTKEY, LAUNCH, URL)
+    binding = _binding(BAD_HOTKEY, LAUNCH, URL)
     results = runner.run_binding(binding, sleep=lambda _: None)
     assert [r.ok for r in results] == [False, True, True]
     assert launched == ["spotify"]
