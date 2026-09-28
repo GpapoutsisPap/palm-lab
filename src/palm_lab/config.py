@@ -7,6 +7,8 @@ from pathlib import Path
 APP_NAME = "palm-lab"
 BINDINGS_FILENAME = "bindings.toml"
 
+MODEL_PATH = Path(__file__).parent / "assets" / "hand_landmarker.task"
+
 DEFAULT_BINDINGS_TOML = """\
 # palm-lab gesture bindings.
 #
