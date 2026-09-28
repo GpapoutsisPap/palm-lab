@@ -21,6 +21,9 @@ dev = [
     "pre-commit>=3.8",
 ]
 
+[project.scripts]
+palm-lab = "palm_lab.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

@@ -219,3 +219,6 @@ __marimo__/
 
 # MediaPipe model files (downloaded separately, too large for git)
 *.task
+
+# Local gesture bindings — the real one lives in %APPDATA%\palm-lab
+bindings.toml

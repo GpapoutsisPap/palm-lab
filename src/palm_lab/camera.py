@@ -32,6 +32,7 @@ WINDOW_NAME = "palm-lab preview"
 DOT_COLOUR = (0, 255, 0)
 DOT_RADIUS = 5
 QUIT_KEY = "q"
+SAVE_KEY = "s"
 FIXTURE_DIR = Path(__file__).parents[2] / "tests" / "fixtures"
 
 
@@ -53,26 +54,35 @@ def classify_frame(result: object) -> str | None:
     return classify(extract(normalise(points)))
 
 
-def run_preview(camera_index: int = 0, gesture_name: str = "unlabelled") -> None:
+def run_preview(
+    camera_index: int = 0,
+    gesture_name: str = "unlabelled",
+    bindings_path: Path | None = None,
+) -> None:
     """Show the webcam feed with hand landmarks drawn on it.
+
+    When bindings_path is given, held gestures run their configured actions.
+    Pass None to watch and capture without triggering anything.
 
     Press 'q' to exit, 's' to save the current hand's landmarks as a fixture.
     """
     if not MODEL_PATH.exists():
         raise FileNotFoundError(f"Hand landmarker model not found at {MODEL_PATH}")
 
+    bindings: dict[str, Binding] = {}
+    if bindings_path is not None:
+        bindings = {b.gesture: b for b in load_bindings(bindings_path)}
+        print(f"Loaded {len(bindings)} binding(s) from {bindings_path}")
+    else:
+        print("No bindings loaded; gestures will be reported but not run.")
+
     options = HandLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=str(MODEL_PATH)),
         running_mode=RunningMode.IMAGE,
         num_hands=2,
     )
-
     trigger = GestureTrigger()
-    bindings_path = Path.cwd() / "bindings.toml"
-    bindings: dict[str, Binding] = {}
-    if bindings_path.exists():
-        bindings = {b.gesture: b for b in load_bindings(bindings_path)}
-        print(f"Loaded {len(bindings)} binding(s)")
+
     with HandLandmarker.create_from_options(options) as landmarker:
         capture = cv2.VideoCapture(camera_index)
         if not capture.isOpened():
@@ -94,13 +104,17 @@ def run_preview(camera_index: int = 0, gesture_name: str = "unlabelled") -> None
                         x = int(landmark.x * width)
                         y = int(landmark.y * height)
                         cv2.circle(frame, (x, y), DOT_RADIUS, DOT_COLOUR, -1)
+
                 gesture = classify_frame(result)
+                label = gesture if gesture else "no gesture"
+
                 fired = trigger.update(gesture, time.monotonic())
                 if fired:
                     binding = bindings.get(fired)
                     if binding is None:
                         print(f"TRIGGERED: {fired} (no binding)")
                     else:
+                        label = f"{fired} -> {binding.name}"
                         print(f"TRIGGERED: {fired} -> {binding.name}")
                         for outcome in run_binding(binding):
                             if outcome.error is None:
@@ -109,7 +123,7 @@ def run_preview(camera_index: int = 0, gesture_name: str = "unlabelled") -> None
                                 print(
                                     f"  {outcome.action.type.value}: {outcome.error.user_message()}"
                                 )
-                label = gesture if gesture else "no gesture"
+
                 cv2.putText(
                     frame,
                     label,
@@ -120,10 +134,11 @@ def run_preview(camera_index: int = 0, gesture_name: str = "unlabelled") -> None
                     FONT_THICKNESS,
                 )
                 cv2.imshow(WINDOW_NAME, frame)
+
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord(QUIT_KEY):
                     break
-                if key == ord("s") and result.hand_landmarks:
+                if key == ord(SAVE_KEY) and result.hand_landmarks:
                     points = [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in result.hand_landmarks[0]]
                     saved = save_fixture(points, gesture_name)
                     print(f"Saved {saved.name}")
