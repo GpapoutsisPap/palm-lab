@@ -1,6 +1,8 @@
 """Tests for the command line interface."""
 
+import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -14,6 +16,25 @@ def config_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     target = tmp_path / "palm-lab"
     monkeypatch.setenv("PALM_LAB_CONFIG_DIR", str(target))
     return target
+
+
+@pytest.fixture
+def self_test_calls(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Stand in for palm_lab.camera so doctor never loads OpenCV or MediaPipe."""
+    calls: list[str] = []
+    fake = ModuleType("palm_lab.camera")
+    fake.self_test = lambda: calls.append("ran")  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "palm_lab.camera", fake)
+    return calls
+
+
+@pytest.fixture
+def present_model(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A stand-in model file, so doctor's existence check passes."""
+    model = tmp_path / "hand_landmarker.task"
+    model.write_bytes(b"x" * 1024)
+    monkeypatch.setattr(cli, "MODEL_PATH", model)
+    return model
 
 
 def test_bare_invocation_defaults_to_run() -> None:
@@ -80,28 +101,51 @@ def test_doctor_fails_when_the_model_is_missing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    self_test_calls: list[str],
 ) -> None:
-    """Doctor exits non-zero and prints the download command."""
+    """Doctor exits non-zero, prints the download command, and skips detection."""
     monkeypatch.setattr(cli, "MODEL_PATH", tmp_path / "absent.task")
     assert cli.main(["doctor"]) == 1
     out = capsys.readouterr().out
     assert "[FAIL]" in out
     assert cli.MODEL_URL in out
+    assert self_test_calls == []
 
 
 def test_doctor_passes_when_everything_is_present(
     config_home: Path,
-    tmp_path: Path,
+    present_model: Path,
+    capsys: pytest.CaptureFixture[str],
+    self_test_calls: list[str],
+) -> None:
+    """With a model, a valid config and working detection, doctor is all clear."""
+    cli.main(["config"])
+    assert cli.main(["doctor"]) == 0
+    out = capsys.readouterr().out
+    assert "hand detection runs" in out
+    assert "All good." in out
+    assert self_test_calls == ["ran"]
+
+
+def test_doctor_reports_a_detection_failure(
+    config_home: Path,
+    present_model: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """With a model and a valid config, doctor reports all clear."""
-    model = tmp_path / "hand_landmarker.task"
-    model.write_bytes(b"x" * 1024)
-    monkeypatch.setattr(cli, "MODEL_PATH", model)
+    """If the model is present but detection cannot start, doctor says so."""
+
+    def broken() -> None:
+        raise RuntimeError("Unable to open the model file")
+
+    fake = ModuleType("palm_lab.camera")
+    fake.self_test = broken  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "palm_lab.camera", fake)
     cli.main(["config"])
-    assert cli.main(["doctor"]) == 0
-    assert "All good." in capsys.readouterr().out
+    assert cli.main(["doctor"]) == 1
+    out = capsys.readouterr().out
+    assert "[FAIL] hand detection could not start" in out
+    assert "Unable to open the model file" in out
 
 
 def test_version_flag_exits_cleanly(capsys: pytest.CaptureFixture[str]) -> None:

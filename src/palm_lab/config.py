@@ -6,8 +6,8 @@ from pathlib import Path
 
 APP_NAME = "palm-lab"
 BINDINGS_FILENAME = "bindings.toml"
-
-MODEL_PATH = Path(__file__).parent / "assets" / "hand_landmarker.task"
+MODEL_FILENAME = "hand_landmarker.task"
+CAPTURES_DIRNAME = "captures"
 
 DEFAULT_BINDINGS_TOML = """\
 # palm-lab gesture bindings.
@@ -47,6 +47,41 @@ name = "Morning setup"
 """
 
 
+def is_frozen() -> bool:
+    """True when running from a PyInstaller build rather than from source."""
+    return bool(getattr(sys, "frozen", False)) and hasattr(sys, "_MEIPASS")
+
+
+def resource_dir() -> Path:
+    """Directory holding bundled read-only files such as the hand model.
+
+    In a PyInstaller build, bundled files are unpacked under sys._MEIPASS, which
+    has nothing to do with where this source file used to live.
+    """
+    if is_frozen():
+        # getattr, because the attribute only exists inside a build.
+        return Path(getattr(sys, "_MEIPASS", "")) / "palm_lab" / "assets"
+    return Path(__file__).parent / "assets"
+
+
+def model_path() -> Path:
+    """Full path to the hand landmarker model, from source or a build."""
+    return resource_dir() / MODEL_FILENAME
+
+
+def fixture_dir() -> Path:
+    """Where `palm-lab capture` saves landmark fixtures.
+
+    From a source checkout, captures go straight into the test suite's
+    fixtures. A packaged app has no test suite, so they go to a captures folder
+    in the user's config directory instead.
+    """
+    repo_tests = Path(__file__).resolve().parents[2] / "tests"
+    if not is_frozen() and repo_tests.is_dir():
+        return repo_tests / "fixtures"
+    return config_dir() / CAPTURES_DIRNAME
+
+
 def config_dir() -> Path:
     """The directory holding this user's palm-lab configuration.
 
@@ -67,6 +102,9 @@ def config_dir() -> Path:
     xdg = os.environ.get("XDG_CONFIG_HOME")
     base = Path(xdg) if xdg else Path.home() / ".config"
     return base / APP_NAME
+
+
+MODEL_PATH = model_path()
 
 
 def bindings_path() -> Path:

@@ -98,3 +98,38 @@ def test_windows_falls_back_when_appdata_is_unset(
     monkeypatch.delenv("APPDATA", raising=False)
     monkeypatch.setattr(sys, "platform", "win32")
     assert config.config_dir().parts[-3:] == ("AppData", "Roaming", config.APP_NAME)
+
+
+def test_not_frozen_when_running_from_source() -> None:
+    """The test suite itself runs from source, never from a build."""
+    assert not config.is_frozen()
+
+
+def test_model_is_found_beside_the_source_when_not_frozen() -> None:
+    """From a checkout, the model sits in the package's assets folder."""
+    expected = Path(config.__file__).parent / "assets" / config.MODEL_FILENAME
+    assert config.model_path() == expected
+
+
+def test_model_is_found_in_the_bundle_when_frozen(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Inside a PyInstaller build, bundled files live under sys._MEIPASS."""
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+    assert config.is_frozen()
+    assert config.model_path() == tmp_path / "palm_lab" / "assets" / config.MODEL_FILENAME
+
+
+def test_captures_go_to_the_test_suite_from_a_checkout() -> None:
+    """While developing, new captures land where the tests will pick them up."""
+    assert config.fixture_dir().parts[-2:] == ("tests", "fixtures")
+
+
+def test_captures_go_to_the_profile_when_frozen(
+    config_home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A packaged app has no tests folder, so captures go to the config dir."""
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+    assert config.fixture_dir() == config_home / config.CAPTURES_DIRNAME

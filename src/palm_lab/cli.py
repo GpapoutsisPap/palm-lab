@@ -123,6 +123,18 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
     else:
         print(f"[ok]   mediapipe {mediapipe.__version__}")
 
+    # Only worth trying once the model and libraries are known to be present.
+    if not problems:
+        try:
+            from palm_lab.camera import self_test
+
+            self_test()
+        except Exception as exc:
+            problems += 1
+            print(f"[FAIL] hand detection could not start: {exc}")
+        else:
+            print("[ok]   hand detection runs")
+
     print("\nAll good." if not problems else f"\n{problems} problem(s) found.")
     return 1 if problems else 0
 

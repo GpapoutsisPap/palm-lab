@@ -7,6 +7,7 @@ from pathlib import Path
 
 import cv2
 import mediapipe as mp
+import numpy as np
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import (
     HandLandmarker,
@@ -16,7 +17,7 @@ from mediapipe.tasks.python.vision import (
 
 from palm_lab.actions.models import Binding, load_bindings
 from palm_lab.actions.runner import run_binding
-from palm_lab.config import MODEL_PATH
+from palm_lab.config import MODEL_PATH, fixture_dir
 from palm_lab.features import extract
 from palm_lab.gestures import classify
 from palm_lab.landmarks import Point, normalise
@@ -32,14 +33,14 @@ DOT_COLOUR = (0, 255, 0)
 DOT_RADIUS = 5
 QUIT_KEY = "q"
 SAVE_KEY = "s"
-FIXTURE_DIR = Path(__file__).parents[2] / "tests" / "fixtures"
 
 
 def save_fixture(hand: list[dict[str, float]], gesture_name: str) -> Path:
     """Write one hand's landmarks to a timestamped JSON file."""
-    FIXTURE_DIR.mkdir(parents=True, exist_ok=True)
+    directory = fixture_dir()
+    directory.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    path = FIXTURE_DIR / f"{gesture_name}_{stamp}.json"
+    path = directory / f"{gesture_name}_{stamp}.json"
     path.write_text(json.dumps(hand, indent=2))
     return path
 
@@ -51,6 +52,28 @@ def classify_frame(result: object) -> str | None:
         return None
     points = [Point(lm.x, lm.y, lm.z) for lm in hands[0]]
     return classify(extract(normalise(points)))
+
+
+def _landmarker_options(num_hands: int) -> HandLandmarkerOptions:
+    return HandLandmarkerOptions(
+        base_options=BaseOptions(model_asset_path=str(MODEL_PATH)),
+        running_mode=RunningMode.IMAGE,
+        num_hands=num_hands,
+    )
+
+
+def self_test() -> None:
+    """Load the hand model and run one detection on a blank image.
+
+    This exercises the whole native MediaPipe stack without needing a camera,
+    which is what goes wrong when a packaged build is missing files. Raises if
+    anything fails.
+    """
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(f"Hand landmarker model not found at {MODEL_PATH}")
+    blank = np.zeros((64, 64, 3), dtype=np.uint8)
+    with HandLandmarker.create_from_options(_landmarker_options(num_hands=1)) as landmarker:
+        landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=blank))
 
 
 def run_preview(
@@ -75,14 +98,9 @@ def run_preview(
     else:
         print("No bindings loaded; gestures will be reported but not run.")
 
-    options = HandLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path=str(MODEL_PATH)),
-        running_mode=RunningMode.IMAGE,
-        num_hands=2,
-    )
     trigger = GestureTrigger()
 
-    with HandLandmarker.create_from_options(options) as landmarker:
+    with HandLandmarker.create_from_options(_landmarker_options(num_hands=2)) as landmarker:
         capture = cv2.VideoCapture(camera_index)
         if not capture.isOpened():
             raise RuntimeError(f"Could not open camera {camera_index}")
