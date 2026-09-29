@@ -67,6 +67,7 @@ def test_integers_are_accepted_for_times() -> None:
         ({"close_action": True}, "'close_action' must be one of"),
         ({"theme": "blue"}, "'theme' must be one of: system, light, dark"),
         ({"theme": 1}, "'theme' must be one of"),
+        ({"custom_css": "yes"}, "'custom_css' must be true or false"),
     ],
 )
 def test_bad_values_are_rejected(data: dict[str, object], expected: str) -> None:
@@ -123,3 +124,10 @@ def test_the_theme_round_trips(tmp_path: Path, theme: str) -> None:
     path = tmp_path / "settings.toml"
     save_settings(Settings(theme=theme), path)
     assert load_settings(path).theme == theme
+
+
+def test_custom_css_is_used_by_default_and_can_be_turned_off(tmp_path: Path) -> None:
+    assert Settings().custom_css is True
+    path = tmp_path / "settings.toml"
+    save_settings(Settings(custom_css=False), path)
+    assert load_settings(path).custom_css is False

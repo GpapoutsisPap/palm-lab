@@ -152,6 +152,7 @@ def test_only_the_intended_methods_are_exposed_to_javascript() -> None:
         "open_project_page",
         "theme_changed",
         "close_choice",
+        "save_custom_css",
         "start_gesture_capture",
         "cancel_gesture_capture",
         "capture_status",
@@ -648,3 +649,70 @@ def test_the_close_setting_can_be_changed_from_settings(tmp_path: Path) -> None:
     result = api.save_settings({"close_action": "quit"})
     assert result["ok"]
     assert load_settings(settings_file).close_action == "quit"
+
+
+def css_api(tmp_path: Path, *, allowed: bool = True, css: str | None = None) -> tuple[Api, Path]:
+    css_file = tmp_path / "custom.css"
+    if css is not None:
+        css_file.write_text(css, encoding="utf-8")
+    api = Api(
+        TrackingEngine(
+            open_camera=lambda index: Source(),
+            make_detector=NoHands,
+            render_preview=lambda frame, hands: b"jpeg",
+        ),
+        bindings_file=tmp_path / "bindings.toml",
+        settings_file=tmp_path / "settings.toml",
+        gestures_file=tmp_path / "gestures.toml",
+        probe_cameras=lambda: [0],
+        custom_css_file=css_file,
+        custom_css_allowed=allowed,
+    )
+    return api, css_file
+
+
+def test_the_page_gets_the_saved_css(tmp_path: Path) -> None:
+    api, css_file = css_api(tmp_path, css=":root { --accent: red; }")
+    state = api.get_state()["custom_css"]
+    assert state == {
+        "text": ":root { --accent: red; }",
+        "file": str(css_file),
+        "allowed": True,
+        "error": None,
+    }
+
+
+def test_css_typed_in_settings_is_saved(tmp_path: Path) -> None:
+    api, css_file = css_api(tmp_path)
+    assert api.save_custom_css(".gesture { border-radius: 16px; }") == {"ok": True}
+    assert css_file.read_text(encoding="utf-8") == ".gesture { border-radius: 16px; }"
+    assert api.get_state()["custom_css"]["text"] == ".gesture { border-radius: 16px; }"
+
+
+def test_no_custom_css_flag_is_passed_to_the_page(tmp_path: Path) -> None:
+    """The CSS is still loaded, so it can be fixed in the editor, but not applied."""
+    api, _ = css_api(tmp_path, allowed=False, css="* { display: none; }")
+    state = api.get_state()["custom_css"]
+    assert state["allowed"] is False
+    assert state["text"] == "* { display: none; }"
+
+
+def test_an_oversized_css_file_is_reported_not_used(tmp_path: Path) -> None:
+    api, _ = css_api(tmp_path, css="a" * 300_000)
+    state = api.get_state()["custom_css"]
+    assert state["text"] == ""
+    assert "not used" in state["error"]
+
+
+@pytest.mark.parametrize("bad", ["a" * 300_000, 42])
+def test_bad_css_is_refused(tmp_path: Path, bad: object) -> None:
+    api, css_file = css_api(tmp_path)
+    result = api.save_custom_css(bad)  # type: ignore[arg-type]
+    assert not result["ok"]
+    assert not css_file.exists()
+
+
+def test_without_a_css_file_the_feature_is_off(tmp_path: Path) -> None:
+    api, *_ = build(tmp_path)
+    assert api.get_state()["custom_css"]["file"] is None
+    assert not api.save_custom_css("x")["ok"]

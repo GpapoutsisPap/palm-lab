@@ -194,21 +194,55 @@
         </div>
 
         <h2 class="group-title">Appearance</h2>
-        <div class="card card-row">
-          <span class="card-icon" data-icon="theme"></span>
-          <div class="card-text">
-            <p class="card-title" id="theme-label">Theme</p>
-            <p class="card-desc">Light or dark, or match the mode you picked for Windows.</p>
+        <div class="card-group">
+          <div class="card card-row">
+            <span class="card-icon" data-icon="theme"></span>
+            <div class="card-text">
+              <p class="card-title" id="theme-label">Theme</p>
+              <p class="card-desc">Light or dark, or match the mode you picked for Windows.</p>
+            </div>
+            <div class="card-control">
+              <span class="select-wrap">
+                <select class="select" id="theme" aria-labelledby="theme-label">
+                  <option value="system">Use my Windows setting</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+                <span class="select-chevron" data-icon="chevron"></span>
+              </span>
+            </div>
           </div>
-          <div class="card-control">
-            <span class="select-wrap">
-              <select class="select" id="theme" aria-labelledby="theme-label">
-                <option value="system">Use my Windows setting</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </select>
-              <span class="select-chevron" data-icon="chevron"></span>
-            </span>
+          <div class="card" id="custom-css-card">
+            <div class="card-row">
+              <span class="card-icon" data-icon="paint"></span>
+              <div class="card-text">
+                <p class="card-title" id="custom-css-label">Custom CSS</p>
+                <p class="card-desc">Restyle palm-lab with your own CSS: colours, fonts, spacing, anything. Press Ctrl+Shift+X to turn it off if something goes wrong.</p>
+              </div>
+              <div class="card-control">
+                <label class="toggle">
+                  <span class="toggle-label" data-for="custom-css-on">On</span>
+                  <input class="switch" id="custom-css-on" type="checkbox" role="switch" aria-labelledby="custom-css-label">
+                </label>
+                <button class="btn" id="custom-css-edit" type="button" aria-expanded="false" aria-controls="custom-css-wrap">Edit<span class="btn-icon-slot btn-icon-end btn-chevron" data-icon="chevron"></span></button>
+              </div>
+            </div>
+            <div class="collapse" id="custom-css-wrap">
+              <div class="collapse-inner">
+                <div class="css-editor">
+                  <div class="infobar is-warning" id="custom-css-notice" role="status" hidden>
+                    <span class="infobar-icon" data-icon="warning"></span>
+                    <p class="infobar-text" id="custom-css-notice-text"></p>
+                  </div>
+                  <textarea class="css-input" id="custom-css-input" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off" aria-labelledby="custom-css-label" placeholder="/* For example: */&#10;:root {&#10;  --accent: #E3008C;&#10;}&#10;&#10;.gesture {&#10;  border-radius: 16px;&#10;}"></textarea>
+                  <div class="css-editor-bar">
+                    <p class="css-hint">Changes show as you type and save by themselves. The colour variables are listed in the <a href="#" id="custom-css-docs">README</a>.</p>
+                    <span class="css-state" id="custom-css-state" role="status" aria-live="polite"></span>
+                  </div>
+                  <p class="card-path" id="custom-css-file"></p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

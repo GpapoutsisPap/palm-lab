@@ -24,6 +24,7 @@ from palm_lab.actions.models import (
 )
 from palm_lab.actions.runner import ActionResult, run_binding
 from palm_lab.config import PROJECT_URL
+from palm_lab.custom_css import CustomCssError, load_custom_css, save_custom_css
 from palm_lab.custom_gestures import (
     CustomGesture,
     CustomGestureError,
@@ -131,6 +132,8 @@ class Api:
         open_url: Callable[[str], object] = webbrowser.open,
         on_theme_change: Callable[[], None] = lambda: None,
         on_close_choice: Callable[[str], None] = lambda choice: None,
+        custom_css_file: Path | None = None,
+        custom_css_allowed: bool = True,
     ) -> None:
         self._engine = engine
         self._bindings_file = bindings_file
@@ -145,6 +148,10 @@ class Api:
         self._open_url = open_url
         self._on_theme_change = on_theme_change
         self._on_close_choice = on_close_choice
+        self._custom_css_file = custom_css_file
+        # False for `palm-lab ui --no-custom-css`: the way back from CSS that
+        # hid the window's own controls.
+        self._custom_css_allowed = custom_css_allowed
         self._problems: list[str] = []
         self._bindings_unreadable = False
 
@@ -197,6 +204,21 @@ class Api:
             "version": __version__,
             "accent": list(self._accent()),
             "project_url": PROJECT_URL,
+            "custom_css": self._custom_css_state(),
+        }
+
+    def _custom_css_state(self) -> JsonDict:
+        if self._custom_css_file is None:
+            return {"text": "", "file": None, "allowed": False, "error": None}
+        try:
+            text, error = load_custom_css(self._custom_css_file), None
+        except (CustomCssError, OSError) as exc:
+            text, error = "", str(exc)
+        return {
+            "text": text,
+            "file": str(self._custom_css_file),
+            "allowed": self._custom_css_allowed,
+            "error": error,
         }
 
     def _app_suggestions(self) -> list[str]:
@@ -346,6 +368,22 @@ class Api:
         self._custom_gestures = updated
         self._engine.update_custom_gestures(updated)
         return {"ok": True, "custom_gestures": [_custom_gesture_to_json(g) for g in updated]}
+
+    # Custom CSS ---------------------------------------------------------------------
+
+    def save_custom_css(self, text: str) -> JsonDict:
+        """Save the CSS typed in Settings (the page has already applied it)."""
+        if self._custom_css_file is None:
+            return {"ok": False, "error": "Custom CSS is not available here."}
+        if not isinstance(text, str):
+            return {"ok": False, "error": "Custom CSS must be text."}
+        try:
+            save_custom_css(text, self._custom_css_file)
+        except CustomCssError as exc:
+            return {"ok": False, "error": str(exc)}
+        except OSError as exc:
+            return {"ok": False, "error": f"Could not save {self._custom_css_file}: {exc}"}
+        return {"ok": True}
 
     # Window ------------------------------------------------------------------------
 

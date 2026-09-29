@@ -4,6 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from palm_lab.config import bindings_path, ensure_bindings_file, icon_path, ui_static_dir
+from palm_lab.custom_css import custom_css_path
 from palm_lab.custom_gestures import gestures_path
 from palm_lab.settings import Settings, SettingsError, load_settings, settings_path
 from palm_lab.single_instance import Instance, instance_guard
@@ -67,7 +68,7 @@ def saved_settings() -> Settings:
         return Settings()
 
 
-def run_ui(debug: bool = False, background: bool = False) -> int:
+def run_ui(debug: bool = False, background: bool = False, custom_css: bool = True) -> int:
     """Open the window, or wake the palm-lab that is already running."""
     guard = instance_guard()
     if not guard.acquire():
@@ -78,12 +79,12 @@ def run_ui(debug: bool = False, background: bool = False) -> int:
             guard.wake_existing()
         return 0
     try:
-        return _run_window(debug=debug, background=background, guard=guard)
+        return _run_window(debug=debug, background=background, custom_css=custom_css, guard=guard)
     finally:
         guard.release()
 
 
-def _run_window(*, debug: bool, background: bool, guard: Instance) -> int:
+def _run_window(*, debug: bool, background: bool, custom_css: bool, guard: Instance) -> int:
     """Create the engine, bridge, tray icon and window, and block until quit."""
     import webview
 
@@ -108,6 +109,8 @@ def _run_window(*, debug: bool, background: bool, guard: Instance) -> int:
         # window is running.
         on_theme_change=lambda: colour_title_bar(),
         on_close_choice=lambda choice: lifecycle.choose(choice),
+        custom_css_file=custom_css_path(),
+        custom_css_allowed=custom_css,
     )
     theme = saved_settings().theme
     window = webview.create_window(

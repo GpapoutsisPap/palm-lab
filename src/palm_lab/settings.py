@@ -25,6 +25,7 @@ KNOWN_SETTINGS = {
     "sounds",
     "close_action",
     "theme",
+    "custom_css",
 }
 
 
@@ -42,6 +43,7 @@ class Settings:
     sounds: bool = True
     close_action: str = "ask"
     theme: str = "system"
+    custom_css: bool = True  # apply custom.css; the file itself is kept either way
 
     def as_dict(self) -> dict[str, float | int | bool | str]:
         return asdict(self)
@@ -92,6 +94,10 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
     if not isinstance(theme, str) or theme not in THEMES:
         raise SettingsError(f"'theme' must be one of: {', '.join(THEMES)}")
 
+    custom_css = data.get("custom_css", True)
+    if not isinstance(custom_css, bool):
+        raise SettingsError("'custom_css' must be true or false")
+
     return Settings(
         camera_index=camera,
         dwell_seconds=dwell,
@@ -99,6 +105,7 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
         sounds=sounds,
         close_action=close_action,
         theme=theme,
+        custom_css=custom_css,
     )
 
 
@@ -125,6 +132,7 @@ def save_settings(settings: Settings, path: Path | None = None) -> Path:
         f"sounds = {'true' if settings.sounds else 'false'}\n"
         f'close_action = "{settings.close_action}"\n'
         f'theme = "{settings.theme}"\n'
+        f"custom_css = {'true' if settings.custom_css else 'false'}\n"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")

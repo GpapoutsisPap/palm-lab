@@ -63,6 +63,10 @@ const TEXT = {
     ? "No working camera found. Is DroidCam or your webcam connected?"
     : `Found ${n} working camera${n === 1 ? "" : "s"}.`),
   seconds: (s) => `${Number(s).toFixed(1)} s`,
+  cssSaving: "Saving\u2026",
+  cssSaved: "Saved",
+  cssBlocked: "Custom CSS is off for this run, because palm-lab was started with --no-custom-css. You can still edit it here.",
+  cssOff: "Custom CSS is off. Turn it back on in Settings > Appearance.",
   version: (v) => `Version ${v} \u00B7 Open source under the MIT licence.`,
   dismiss: "Dismiss",
   wizardStarting: "Starting camera\u2026",
@@ -128,6 +132,7 @@ const ICONS = {
   start: [20, ["M2 3.5C2 2.67 2.67 2 3.5 2h1C5.33 2 6 2.67 6 3.5v1C6 5.33 5.33 6 4.5 6h-1A1.5 1.5 0 0 1 2 4.5zM3.5 3a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM2 9.5C2 8.67 2.67 8 3.5 8h1C5.33 8 6 8.67 6 9.5v1c0 .83-.67 1.5-1.5 1.5h-1A1.5 1.5 0 0 1 2 10.5zM3.5 9a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM2 15.5c0-.83.67-1.5 1.5-1.5h1c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5h-1A1.5 1.5 0 0 1 2 16.5zm1.5-.5a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM8 4.5c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 6c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 6c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5"]],
   power: [20, ["M10.5 2.5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0zM13.74 4a.5.5 0 1 0-.5.87 6.5 6.5 0 1 1-6.49 0 .5.5 0 1 0-.5-.87 7.5 7.5 0 1 0 7.5 0"]],
   window: [20, ["M6 3a3 3 0 0 0-3 3v8a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3zM4 6c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2zm0 1h12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"]],
+  paint: [20, ["M5.5 2a.5.5 0 0 0-.5.5V11c0 1.1.9 2 2 2h1v3a2 2 0 1 0 4 0v-3h1a2 2 0 0 0 2-2V2.5a.5.5 0 0 0-.5-.5zm.5 8h8v1a1 1 0 0 1-1 1h-1.5a.5.5 0 0 0-.5.5V16a1 1 0 1 1-2 0v-3.5a.5.5 0 0 0-.5-.5H7a1 1 0 0 1-1-1zm8-1H6V3h4v1.5a.5.5 0 0 0 1 0V3h1v2.5a.5.5 0 0 0 1 0V3h1z"]],
   theme: [20, ["M10 3a7 7 0 1 1 0 14zm0-1a8 8 0 1 0 0 16 8 8 0 0 0 0-16"]],
   code: [20, ["M12.64 1.02a.5.5 0 0 1 .34.62l-5 17a.5.5 0 0 1-.96-.28l5-17a.5.5 0 0 1 .62-.34M5.13 5.17a.5.5 0 0 1 .74.66L2.17 10l3.7 4.17a.5.5 0 0 1-.74.66l-4-4.5a.5.5 0 0 1 0-.66zm9.04-.04a.5.5 0 0 1 .7.04l4 4.5a.5.5 0 0 1 0 .66l-4 4.5a.5.5 0 0 1-.74-.66l3.7-4.17-3.7-4.17a.5.5 0 0 1 .04-.7"]],
   folder: [20, ["M3 5.5v6.6l1.5-2.6A3 3 0 0 1 7.1 8H15v-.5c0-.83-.67-1.5-1.5-1.5h-4a.5.5 0 0 1-.35-.15l-1.71-1.7A.5.5 0 0 0 7.09 4H4.5C3.67 4 3 4.67 3 5.5m1.28 10.48.22.02h9.4a2 2 0 0 0 1.73-1l2.17-3.75A1.5 1.5 0 0 0 16.5 9H7.1a2 2 0 0 0-1.73 1L3.2 13.75a1.5 1.5 0 0 0 1.08 2.23M2 14.46V5.5A2.5 2.5 0 0 1 4.5 3h2.59c.4 0 .78.16 1.06.44L9.7 5h3.79A2.5 2.5 0 0 1 16 7.5V8h.5a2.5 2.5 0 0 1 2.16 3.75L16.5 15.5a3 3 0 0 1-2.6 1.5H4.5a2.5 2.5 0 0 1-1.62-.6A2.5 2.5 0 0 1 2 14.46"]],
@@ -183,6 +188,13 @@ const app = {
   busy: false,
   nextId: 1,
   shortcutsLoaded: false,
+  css: {                 // the user's custom CSS
+    style: null,         // the <style> element it is applied through
+    text: "",
+    allowed: true,       // false when started with --no-custom-css
+    saveTimer: null,
+    saveRequest: 0,
+  },
   wizard: {              // state for the "Add gesture" wizard, while it's open
     open: false,
     polling: false,
@@ -566,6 +578,7 @@ async function init() {
   app.data = data;
   applyAccent(data.accent);
   applyTheme();
+  loadCustomCss(data.custom_css);
   registerCustomGestures(data.custom_gestures);
   const gestureIds = [...data.gestures, ...data.custom_gestures.map((g) => g.name)];
   app.rows = gestureIds.map((gesture) => rowFromBinding(gesture, data.bindings.find((b) => b.gesture === gesture)));
@@ -1379,6 +1392,7 @@ function renderSettings() {
   $("close-action").value = settings.close_action || "ask";
   $("theme").value = settings.theme || "system";
   $("bindings-file").textContent = app.data.bindings_file;
+  setSwitch($("custom-css-on"), settings.custom_css !== false);
   $("about-version").textContent = TEXT.version(app.data.version);
 }
 
@@ -1408,6 +1422,7 @@ async function saveSettings() {
     sounds: $("sounds").checked,
     close_action: $("close-action").value,
     theme: $("theme").value,
+    custom_css: $("custom-css-on").checked,
   };
   let result;
   try {
@@ -1697,6 +1712,81 @@ async function removeCustomGesture(row) {
   await saveNow();
 }
 
+/* Custom CSS ----------------------------------------------------------------------------------------------
+
+   Applied as the text of its own <style> element, placed after palm-lab's
+   styles so it wins ties. Setting textContent (never innerHTML) means the text
+   is only ever CSS, whatever it contains. */
+
+const CSS_SAVE_DELAY_MS = 500;
+
+function loadCustomCss(state) {
+  const css = app.css;
+  css.style = document.createElement("style");
+  css.style.id = "custom-css";
+  document.head.append(css.style);
+  css.text = state.text || "";
+  css.allowed = state.allowed !== false;
+  $("custom-css-input").value = css.text;
+  $("custom-css-file").textContent = state.file || "";
+  $("custom-css-card").hidden = !state.file;
+  const notice = state.error || (css.allowed ? "" : TEXT.cssBlocked);
+  $("custom-css-notice").hidden = !notice;
+  $("custom-css-notice-text").textContent = notice;
+  applyCustomCss();
+}
+
+function customCssOn() {
+  return app.css.allowed && Boolean(app.data) && app.data.settings.custom_css !== false;
+}
+
+function applyCustomCss() {
+  if (app.css.style) app.css.style.textContent = customCssOn() ? app.css.text : "";
+}
+
+function setCssState(state, message = "") {
+  const node = $("custom-css-state");
+  node.dataset.state = state;
+  node.textContent = message;
+}
+
+function editCustomCss(event) {
+  app.css.text = event.target.value;
+  applyCustomCss();
+  clearTimeout(app.css.saveTimer);
+  app.css.saveTimer = setTimeout(saveCustomCss, CSS_SAVE_DELAY_MS);
+  setCssState("saving", TEXT.cssSaving);
+}
+
+async function saveCustomCss() {
+  app.css.saveRequest += 1;
+  const request = app.css.saveRequest;
+  let result;
+  try {
+    result = await api().save_custom_css(app.css.text);
+  } catch (err) {
+    result = { ok: false, error: String(err) };
+  }
+  if (request !== app.css.saveRequest) return; // a newer save superseded this one
+  if (result.ok) setCssState("saved", TEXT.cssSaved);
+  else setCssState("error", result.error);
+}
+
+function toggleCssEditor() {
+  const button = $("custom-css-edit");
+  const open = button.getAttribute("aria-expanded") !== "true";
+  button.setAttribute("aria-expanded", String(open));
+  setCollapse($("custom-css-wrap"), open);
+  if (open) setTimeout(() => $("custom-css-input").focus({ preventScroll: true }), 60);
+}
+
+async function setCustomCssOn(on) {
+  setSwitch($("custom-css-on"), on);
+  if (app.data) app.data.settings.custom_css = on;
+  applyCustomCss();
+  await saveSettings();
+}
+
 /* Closing -----------------------------------------------------------------------------------------------------
 
    Python calls askBeforeClosing() when the window is closed while "When I close
@@ -1820,6 +1910,23 @@ function wireControls() {
   });
 
   $("close-action").addEventListener("change", saveSettings);
+
+  $("custom-css-on").addEventListener("change", (event) => setCustomCssOn(event.target.checked));
+  $("custom-css-edit").addEventListener("click", toggleCssEditor);
+  $("custom-css-input").addEventListener("input", editCustomCss);
+  $("custom-css-docs").addEventListener("click", (event) => {
+    event.preventDefault();
+    api().open_project_page();
+  });
+  // The way back from CSS that hides everything: script keeps working when
+  // CSS has hidden every button, so a key press can always turn it off.
+  window.addEventListener("keydown", (event) => {
+    if (!(event.ctrlKey && event.shiftKey && event.code === "KeyX")) return;
+    event.preventDefault();
+    if (!app.data || app.data.settings.custom_css === false) return;
+    setCustomCssOn(false);
+    toast(TEXT.cssOff, "info");
+  });
   $("close-yes").addEventListener("click", () => answerClose("background"));
   $("close-no").addEventListener("click", () => answerClose("quit"));
   $("close-overlay").addEventListener("click", (event) => {
@@ -1844,6 +1951,7 @@ function wireControls() {
 if (!document.documentElement.dataset.theme) applyTheme("system");
 paintStaticIcons();
 setCollapse($("live-wrap"), false);
+setCollapse($("custom-css-wrap"), false);
 wireControls();
 moveIndicator();
 

@@ -21,6 +21,8 @@ and runs the actions you snap together for each one, all on your own computer.
   website, or press keys (media keys, volume, any combination). Drag action
   pieces into a gesture, reorder them, and test them without the camera.
 - **Live view:** see what the camera sees, the hand it found, and what ran.
+- **Make it yours:** light or dark theme, and your own CSS to restyle
+  anything, typed right in Settings.
 - **Always ready:** close the window and palm-lab can keep running by the
   clock, and it can start with Windows so your gestures work from sign-in.
 - **Feels at home on Windows 11:** light and dark themes, your accent colour,
@@ -61,12 +63,53 @@ uv run python scripts/build.py --installer
 
 The programs land in `dist\palm-lab\` and the installer in `dist\`.
 
+## Custom CSS
+
+Settings > Appearance > Custom CSS restyles the window with your own CSS.
+Changes show as you type and are saved to `custom.css` in palm-lab's settings
+folder (`palm-lab config` prints where), which you can also edit in any
+editor. Sharing a theme is sharing that file.
+
+Most looks come from changing a few variables:
+
+```css
+:root {
+  --accent: #E3008C;        /* buttons, switches, highlights */
+  --radius: 10px;           /* corner rounding */
+  --font: "Comic Sans MS";  /* body text */
+}
+
+/* Only in the dark theme */
+:root[data-theme="dark"] {
+  --mica: #101030;          /* window background */
+  --card: #1A1A40;
+}
+```
+
+| Variables | What they colour |
+| --- | --- |
+| `--mica`, `--layer`, `--card`, `--card-hover`, `--flyout` | Backgrounds, from the window to cards and pop-ups |
+| `--text-1`, `--text-2`, `--text-3` | Text, from main to faint |
+| `--accent`, `--accent-text`, `--on-accent` | The accent, text in it, and text on it |
+| `--stroke`, `--divider`, `--control`, `--control-stroke` | Borders, dividers and input boxes |
+| `--success`, `--caution`, `--critical` | Status colours |
+| `--piece-launch`, `--piece-web`, `--piece-keys`, `--piece-hat` | The action pieces |
+| `--radius`, `--radius-overlay`, `--radius-piece` | Corner rounding |
+| `--font`, `--font-display`, `--font-mono` | Fonts |
+
+Anything else can be targeted by class, such as `.gesture`, `.card`, `.nav`
+or `.piece`; with `palm-lab ui --debug`, right-click > Inspect shows them.
+
+If your CSS hides the window's controls, press **Ctrl+Shift+X** to turn it
+off, or start palm-lab with `palm-lab ui --no-custom-css`.
+
 ## Command line
 
 | Command | What it does |
 | --- | --- |
 | `palm-lab` | Open the window (the default) |
 | `palm-lab ui --background` | Start hidden by the clock with tracking on |
+| `palm-lab ui --no-custom-css` | Open without your custom CSS, to fix it |
 | `palm-lab doctor` | Check the model, libraries and hand detection |
 | `palm-lab config` | Show where configuration lives and what is bound |
 | `palm-lab shortcut [--start-menu] [--startup] [--remove]` | Add or remove the desktop, Start menu and Start with Windows shortcuts |

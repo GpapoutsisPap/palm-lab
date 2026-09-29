@@ -24,6 +24,8 @@ for the people installing the app.
   instead of starting a second copy.
 - A Theme setting under Settings > Appearance: Light, Dark, or follow
   Windows (as before). The title bar follows it too.
+- Custom CSS under Settings > Appearance: restyle palm-lab with your own CSS,
+  previewed as you type. Ctrl+Shift+X turns it off if it goes wrong.
 
 ## [0.2.0] - 2026-09-29
 
