@@ -550,3 +550,32 @@ def test_a_new_shape_still_gets_through_to_the_second_hold() -> None:
     assert status is not None
     assert status.stage == "release"
     assert status.matches is None
+
+
+def test_no_preview_pictures_are_made_while_the_window_is_hidden() -> None:
+    rendered: list[int] = []
+
+    def render(frame: object, hands: Hands) -> bytes:
+        rendered.append(len(hands))
+        return b"jpeg"
+
+    engine = TrackingEngine(
+        open_camera=lambda index: LoopingSource(),
+        make_detector=ScriptedDetector,
+        render_preview=render,
+        clock=FakeClock(),
+    )
+    engine.process_frame(object(), ScriptedDetector([PEACE]))
+    assert engine.snapshot() is not None
+
+    engine.set_preview_enabled(False)
+    assert engine.snapshot() is None  # the last picture is dropped too
+    engine.process_frame(object(), ScriptedDetector([PEACE]))
+    assert rendered == [1]
+    assert engine.snapshot() is None
+    assert engine.status().gesture == "peace"  # tracking itself carries on
+
+    engine.set_preview_enabled(True)
+    engine.process_frame(object(), ScriptedDetector([PEACE]))
+    assert rendered == [1, 1]
+    assert engine.snapshot() is not None

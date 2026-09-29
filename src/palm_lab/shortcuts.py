@@ -1,4 +1,8 @@
-"""Desktop and Start menu shortcuts that open palm-lab.
+"""Desktop, Start menu and Startup shortcuts that open palm-lab.
+
+The Startup one is what "Start with Windows" means: Windows opens everything
+in the user's Startup folder at sign-in, and this shortcut starts palm-lab
+hidden in the notification area with tracking on.
 
 Shortcuts (.lnk files) are made by Windows' own WScript.Shell object through
 PowerShell, which ships with every supported Windows. Folder locations come
@@ -19,7 +23,10 @@ SHORTCUT_FILENAME = f"{APP_NAME}.lnk"
 DESCRIPTION = "Trigger shortcuts with hand gestures"
 
 # Where each kind of shortcut lives, as named by .NET's Environment.SpecialFolder.
-FOLDERS = {"desktop": "Desktop", "start_menu": "Programs"}
+FOLDERS = {"desktop": "Desktop", "start_menu": "Programs", "startup": "Startup"}
+
+# Extra arguments per kind: at sign-in, open quietly in the background.
+KIND_ARGUMENTS = {"startup": "ui --background"}
 
 FIND_FOLDERS = (
     "[Console]::OutputEncoding = [Text.Encoding]::UTF8; "
@@ -120,7 +127,7 @@ class Shortcuts:
         return self._platform == "win32"
 
     def folders(self) -> dict[str, Path]:
-        """Where the Desktop and Start menu are for this user (asked once)."""
+        """Where the Desktop, Start menu and Startup folder are (asked once)."""
         if not self.supported:
             raise ShortcutError("Shortcuts can only be made on Windows.")
         if self._folders is None:
@@ -153,12 +160,13 @@ class Shortcuts:
         link = self.path(kind)
         link.parent.mkdir(parents=True, exist_ok=True)
         target = self._target()
+        arguments = " ".join(filter(None, [target.arguments, KIND_ARGUMENTS.get(kind, "")]))
         self._powershell(
             CREATE_SHORTCUT,
             {
                 "PALM_LINK": str(link),
                 "PALM_TARGET": str(target.target),
-                "PALM_ARGUMENTS": target.arguments,
+                "PALM_ARGUMENTS": arguments,
                 "PALM_WORKDIR": str(target.working_dir),
                 "PALM_ICON": str(target.icon),
                 "PALM_DESCRIPTION": DESCRIPTION,

@@ -126,6 +126,8 @@ const ICONS = {
   speaker: [20, ["M12 3a1 1 0 0 0-1.68-.73l-3.88 3.6A.5.5 0 0 1 6.1 6H3.5C2.67 6 2 6.67 2 7.5v5c0 .83.67 1.5 1.5 1.5h2.6a.5.5 0 0 1 .34.13l3.88 3.6a1 1 0 0 0 1.68-.74zM7.12 6.6 11 3v14l-3.88-3.6A1.5 1.5 0 0 0 6.1 13H3.5a.5.5 0 0 1-.5-.5v-5c0-.28.22-.5.5-.5h2.6c.38 0 .75-.14 1.02-.4m8.14-1.97a.5.5 0 0 1 .7.04 8 8 0 0 1 0 10.66.5.5 0 0 1-.74-.66 7 7 0 0 0 0-9.34.5.5 0 0 1 .04-.7m-1.18 8.3a.5.5 0 0 1-.18-.68 4.5 4.5 0 0 0 0-4.5.5.5 0 1 1 .86-.5 5.5 5.5 0 0 1 0 5.5.5.5 0 0 1-.68.18"]],
   desktop: [20, ["M4 2a2 2 0 0 0-2 2v9c0 1.1.9 2 2 2h3v2H5.5a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1H13v-2h3a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm8 13v2H8v-2zM3 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"]],
   start: [20, ["M2 3.5C2 2.67 2.67 2 3.5 2h1C5.33 2 6 2.67 6 3.5v1C6 5.33 5.33 6 4.5 6h-1A1.5 1.5 0 0 1 2 4.5zM3.5 3a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM2 9.5C2 8.67 2.67 8 3.5 8h1C5.33 8 6 8.67 6 9.5v1c0 .83-.67 1.5-1.5 1.5h-1A1.5 1.5 0 0 1 2 10.5zM3.5 9a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM2 15.5c0-.83.67-1.5 1.5-1.5h1c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5h-1A1.5 1.5 0 0 1 2 16.5zm1.5-.5a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM8 4.5c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 6c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 6c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5"]],
+  power: [20, ["M10.5 2.5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0zM13.74 4a.5.5 0 1 0-.5.87 6.5 6.5 0 1 1-6.49 0 .5.5 0 1 0-.5-.87 7.5 7.5 0 1 0 7.5 0"]],
+  window: [20, ["M6 3a3 3 0 0 0-3 3v8a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3zM4 6c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2zm0 1h12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"]],
   code: [20, ["M12.64 1.02a.5.5 0 0 1 .34.62l-5 17a.5.5 0 0 1-.96-.28l5-17a.5.5 0 0 1 .62-.34M5.13 5.17a.5.5 0 0 1 .74.66L2.17 10l3.7 4.17a.5.5 0 0 1-.74.66l-4-4.5a.5.5 0 0 1 0-.66zm9.04-.04a.5.5 0 0 1 .7.04l4 4.5a.5.5 0 0 1 0 .66l-4 4.5a.5.5 0 0 1-.74-.66l3.7-4.17-3.7-4.17a.5.5 0 0 1 .04-.7"]],
   folder: [20, ["M3 5.5v6.6l1.5-2.6A3 3 0 0 1 7.1 8H15v-.5c0-.83-.67-1.5-1.5-1.5h-4a.5.5 0 0 1-.35-.15l-1.71-1.7A.5.5 0 0 0 7.09 4H4.5C3.67 4 3 4.67 3 5.5m1.28 10.48.22.02h9.4a2 2 0 0 0 1.73-1l2.17-3.75A1.5 1.5 0 0 0 16.5 9H7.1a2 2 0 0 0-1.73 1L3.2 13.75a1.5 1.5 0 0 0 1.08 2.23M2 14.46V5.5A2.5 2.5 0 0 1 4.5 3h2.59c.4 0 .78.16 1.06.44L9.7 5h3.79A2.5 2.5 0 0 1 16 7.5V8h.5a2.5 2.5 0 0 1 2.16 3.75L16.5 15.5a3 3 0 0 1-2.6 1.5H4.5a2.5 2.5 0 0 1-1.62-.6A2.5 2.5 0 0 1 2 14.46"]],
   open: [16, ["M4.5 3C3.67 3 3 3.67 3 4.5v7c0 .83.67 1.5 1.5 1.5h7c.83 0 1.5-.67 1.5-1.5V9.27a.5.5 0 0 1 1 0v2.23a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 11.5v-7A2.5 2.5 0 0 1 4.5 2h2.23a.5.5 0 0 1 0 1zm4.27-.5c0-.28.22-.5.5-.5h4.23c.28 0 .5.22.5.5v4.23a.5.5 0 0 1-1 0V3.71L9.62 7.08a.5.5 0 1 1-.7-.7L12.29 3H9.27a.5.5 0 0 1-.5-.5"]],
@@ -1357,6 +1359,7 @@ function renderSettings() {
     showSliderValue(input);
   }
   setSwitch($("sounds"), settings.sounds !== false);
+  $("close-action").value = settings.close_action || "ask";
   $("bindings-file").textContent = app.data.bindings_file;
   $("about-version").textContent = TEXT.version(app.data.version);
 }
@@ -1385,6 +1388,7 @@ async function saveSettings() {
     dwell_seconds: Number($("dwell").value),
     cooldown_seconds: Number($("cooldown").value),
     sounds: $("sounds").checked,
+    close_action: $("close-action").value,
   };
   let result;
   try {
@@ -1423,7 +1427,7 @@ async function scanCameras() {
   }
 }
 
-const SHORTCUT_SWITCHES = ["shortcut-desktop", "shortcut-start"];
+const SHORTCUT_SWITCHES = ["shortcut-desktop", "shortcut-start", "shortcut-startup"];
 
 async function loadShortcuts() {
   if (app.shortcutsLoaded || !app.data) return;
@@ -1674,6 +1678,47 @@ async function removeCustomGesture(row) {
   await saveNow();
 }
 
+/* Closing -----------------------------------------------------------------------------------------------------
+
+   Python calls askBeforeClosing() when the window is closed while "When I close
+   the window" is "Ask me". Yes keeps palm-lab running in the background, No
+   quits, and closing the question (Escape, or clicking beside it) keeps the
+   window open. */
+
+function askBeforeClosing() {
+  const overlay = $("close-overlay");
+  if (!overlay.hidden) return;
+  $("close-remember").checked = false;
+  overlay.hidden = false;
+  void overlay.offsetHeight; // commit the start state so the transition runs
+  overlay.classList.add("is-in");
+  $("close-yes").focus();
+}
+
+function dismissCloseQuestion() {
+  const overlay = $("close-overlay");
+  if (overlay.hidden) return;
+  overlay.classList.remove("is-in");
+  setTimeout(() => { overlay.hidden = true; }, 150);
+}
+
+async function answerClose(choice) {
+  const remember = $("close-remember").checked;
+  dismissCloseQuestion();
+  if (app.wizard.open) closeWizard();
+  let result;
+  try {
+    result = await api().close_choice(choice, remember);
+  } catch (err) {
+    result = { ok: false, error: String(err) };
+  }
+  if (result.settings && app.data) {
+    app.data.settings = result.settings;
+    $("close-action").value = result.settings.close_action;
+  }
+  if (!result.ok) toast(result.error, "error");
+}
+
 /* Toasts --------------------------------------------------------------------------------------------------- */
 
 function toast(message, kind = "success") {
@@ -1750,7 +1795,16 @@ function wireControls() {
     if (event.target === event.currentTarget) closeWizard();
   });
   window.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && app.wizard.open) closeWizard();
+    if (event.key !== "Escape") return;
+    if (!$("close-overlay").hidden) dismissCloseQuestion();
+    else if (app.wizard.open) closeWizard();
+  });
+
+  $("close-action").addEventListener("change", saveSettings);
+  $("close-yes").addEventListener("click", () => answerClose("background"));
+  $("close-no").addEventListener("click", () => answerClose("quit"));
+  $("close-overlay").addEventListener("click", (event) => {
+    if (event.target === event.currentTarget) dismissCloseQuestion();
   });
 
   // Waking the audio engine on the first click makes the first snap instant.

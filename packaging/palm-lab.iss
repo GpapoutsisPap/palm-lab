@@ -38,6 +38,10 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+; palm-lab can keep running in the notification area. Its single-instance
+; mutex (src/palm_lab/single_instance.py) lets setup see that and ask to close
+; it before updating or uninstalling.
+AppMutex=GpapoutsisPap.palm-lab
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -53,6 +57,12 @@ Source: "..\dist\palm-lab\*"; DestDir: "{app}"; Flags: ignoreversion recursesubd
 ; taskbar icon and the running window are recognised as the same app.
 Name: "{autoprograms}\palm-lab"; Filename: "{app}\palm-lab.exe"; AppUserModelID: "GpapoutsisPap.palm-lab"
 Name: "{autodesktop}\palm-lab"; Filename: "{app}\palm-lab.exe"; AppUserModelID: "GpapoutsisPap.palm-lab"; Tasks: desktopicon
+
+[UninstallDelete]
+; Shortcuts the app itself can make from Settings. The installer's own Start
+; menu and desktop entries are removed without being listed here.
+Type: files; Name: "{userstartup}\palm-lab.lnk"
+Type: files; Name: "{userdesktop}\palm-lab.lnk"
 
 [Run]
 Filename: "{app}\palm-lab.exe"; Description: "{cm:LaunchProgram,palm-lab}"; Flags: nowait postinstall skipifsilent

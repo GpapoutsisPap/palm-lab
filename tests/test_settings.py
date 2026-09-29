@@ -63,6 +63,8 @@ def test_integers_are_accepted_for_times() -> None:
         ({"sounds": 1}, "'sounds' must be true or false"),
         ({"sounds": "yes"}, "'sounds' must be true or false"),
         ({"volume": 3}, "Unknown setting 'volume'"),
+        ({"close_action": "minimize"}, "'close_action' must be one of: ask, background, quit"),
+        ({"close_action": True}, "'close_action' must be one of"),
     ],
 )
 def test_bad_values_are_rejected(data: dict[str, object], expected: str) -> None:
@@ -90,3 +92,21 @@ def test_an_older_settings_file_keeps_sounds_on(tmp_path: Path) -> None:
     path = tmp_path / "settings.toml"
     path.write_text("camera_index = 1\ndwell_seconds = 0.8\ncooldown_seconds = 5.0\n", "utf-8")
     assert load_settings(path) == Settings(camera_index=1)
+
+
+def test_closing_asks_by_default() -> None:
+    """Nobody is sent to the background, or has the app quit, without being asked."""
+    assert Settings().close_action == "ask"
+
+
+@pytest.mark.parametrize("action", ["ask", "background", "quit"])
+def test_the_close_action_round_trips(tmp_path: Path, action: str) -> None:
+    path = tmp_path / "settings.toml"
+    save_settings(Settings(close_action=action), path)
+    assert load_settings(path).close_action == action
+
+
+def test_a_settings_file_from_before_closing_options_still_loads(tmp_path: Path) -> None:
+    path = tmp_path / "settings.toml"
+    path.write_text("camera_index = 1\nsounds = false\n", encoding="utf-8")
+    assert load_settings(path).close_action == "ask"

@@ -10,7 +10,7 @@
 import re
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, copy_metadata
 from PyInstaller.utils.win32.versioninfo import (
     FixedFileInfo,
     StringFileInfo,
@@ -70,6 +70,10 @@ mp_datas, mp_binaries, mp_hiddenimports = collect_all("mediapipe")
 # bridge. Its loader DLLs and helper modules also need collecting explicitly.
 wv_datas, wv_binaries, wv_hiddenimports = collect_all("webview")
 
+# pystray (the notification-area icon) is LGPL-3.0: ship its licence texts,
+# which live in its package metadata, alongside it.
+tray_licences = copy_metadata("pystray")
+
 a = Analysis(  # noqa: F821
     [str(ROOT / "packaging" / "launcher.py")],
     pathex=[str(SRC)],
@@ -82,8 +86,10 @@ a = Analysis(  # noqa: F821
         (str(ROOT / "THIRD_PARTY_NOTICES.md"), "."),
         *mp_datas,
         *wv_datas,
+        *tray_licences,
     ],
-    hiddenimports=[*mp_hiddenimports, *wv_hiddenimports],
+    # pystray picks its Windows backend at runtime, out of sight of the scanner.
+    hiddenimports=[*mp_hiddenimports, *wv_hiddenimports, "pystray._win32"],
     excludes=["pytest", "mypy", "ruff", "pre_commit", "PyInstaller"],
     noarchive=False,
 )

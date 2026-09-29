@@ -5,7 +5,10 @@ from pathlib import Path
 
 from palm_lab.config import bindings_path, ensure_bindings_file, icon_path, ui_static_dir
 from palm_lab.custom_gestures import gestures_path
-from palm_lab.settings import settings_path
+from palm_lab.settings import Settings, SettingsError, load_settings, settings_path
+from palm_lab.single_instance import Instance, instance_guard
+from palm_lab.ui.lifecycle import Lifecycle, WindowControls
+from palm_lab.ui.tray import Tray
 from palm_lab.windows import apps_use_light_theme, set_app_id, set_caption_colour
 
 WINDOW_TITLE = "palm-lab"
@@ -41,8 +44,32 @@ def load_page(static_dir: Path) -> str:
     )
 
 
-def run_ui(debug: bool = False) -> int:
-    """Create the engine and bridge, open the window, and block until closed."""
+def saved_settings() -> Settings:
+    """The settings as last saved, or the defaults if the file can't be read."""
+    try:
+        return load_settings()
+    except (SettingsError, OSError):
+        return Settings()
+
+
+def run_ui(debug: bool = False, background: bool = False) -> int:
+    """Open the window, or wake the palm-lab that is already running."""
+    guard = instance_guard()
+    if not guard.acquire():
+        # Already running (perhaps hidden in the notification area): bring it
+        # forward instead of starting a second copy that fights over the camera.
+        # A sign-in launch finding one already running has nothing to do.
+        if not background:
+            guard.wake_existing()
+        return 0
+    try:
+        return _run_window(debug=debug, background=background, guard=guard)
+    finally:
+        guard.release()
+
+
+def _run_window(*, debug: bool, background: bool, guard: Instance) -> int:
+    """Create the engine, bridge, tray icon and window, and block until quit."""
     import webview
 
     from palm_lab.camera import MediaPipeDetector, open_camera, probe_cameras, render_preview
@@ -62,8 +89,10 @@ def run_ui(debug: bool = False) -> int:
         settings_file=settings_path(),
         gestures_file=gestures_path(),
         probe_cameras=probe_cameras,
-        # Called when Windows switches theme; colour_title_bar is defined below.
+        # These refer to names defined below; they are only called once the
+        # window is running.
         on_theme_change=lambda: colour_title_bar(),
+        on_close_choice=lambda choice: lifecycle.choose(choice),
     )
     window = webview.create_window(
         WINDOW_TITLE,
@@ -73,6 +102,53 @@ def run_ui(debug: bool = False) -> int:
         height=WINDOW_SIZE[1],
         min_size=WINDOW_MIN_SIZE,
         background_color=window_background(),
+        hidden=background,
+    )
+    if window is None:
+        return 1
+
+    # Whether the window was minimized when someone closed it from the taskbar,
+    # so the close question (or the window, later) comes back into view.
+    minimized = False
+
+    def show_window() -> None:
+        nonlocal minimized
+        window.show()
+        if minimized:
+            window.restore()
+            minimized = False
+
+    def ask_before_closing() -> None:
+        nonlocal minimized
+        if minimized:
+            window.restore()
+            minimized = False
+        window.evaluate_js("askBeforeClosing()")
+
+    def toggle_tracking() -> None:
+        result = api.stop() if engine.running else api.start()
+        if not result["ok"]:
+            tray.notify("palm-lab could not start tracking", str(result["error"]))
+        tray.refresh()
+
+    tray = Tray(
+        icon_file=icon_path(),
+        on_open=lambda: lifecycle.show(),
+        on_toggle_tracking=toggle_tracking,
+        on_quit=lambda: lifecycle.quit(),
+        is_tracking=lambda: engine.running,
+    )
+    lifecycle = Lifecycle(
+        settings=saved_settings,
+        controls=WindowControls(
+            show=show_window,
+            hide=window.hide,
+            destroy=window.destroy,
+            ask_before_closing=ask_before_closing,
+            set_preview=engine.set_preview_enabled,
+            notify=tray.notify,
+        ),
+        can_run_in_background=lambda: tray.available,
     )
 
     def colour_title_bar() -> None:
@@ -85,10 +161,46 @@ def run_ui(debug: bool = False) -> int:
         except Exception as exc:  # the window works without it
             print(f"Could not colour the title bar: {exc}")
 
-    if window is not None:
-        window.events.shown += colour_title_bar
+    def watch_closing() -> None:
+        """Route closing through Lifecycle, knowing why the window is closing.
+
+        Hooked on the Windows Forms window itself, because only it says
+        whether a person closed the window or Windows is shutting down.
+        """
+        form = getattr(window, "native", None)
+        if form is None or not hasattr(form, "FormClosing"):
+            window.events.closing += lambda: lifecycle.close_requested()
+            return
+
+        def on_form_closing(sender: object, args: object) -> None:
+            nonlocal minimized
+            by_user = str(getattr(args, "CloseReason", "")) == "UserClosing"
+            minimized = str(getattr(sender, "WindowState", "")) == "Minimized"
+            if not lifecycle.close_requested(by_user=by_user):
+                args.Cancel = True  # type: ignore[attr-defined]
+
+        form.FormClosing += on_form_closing
+
+    def on_started() -> None:
+        """Runs once the window exists (on its own thread)."""
+        guard.listen(lifecycle.show)
+        if background:
+            if tray.available:
+                lifecycle.start_hidden()
+            else:
+                # No icon to find it by: a hidden palm-lab could not be opened
+                # or quit, so show the window after all.
+                lifecycle.show()
+            result = api.start()
+            if not result["ok"]:
+                tray.notify("palm-lab could not start tracking", str(result["error"]))
+
+    window.events.shown += colour_title_bar
+    window.events.shown += watch_closing
+    tray.start()
     try:
-        webview.start(debug=debug, icon=str(icon_path()))
+        webview.start(on_started, debug=debug, icon=str(icon_path()))
     finally:
+        tray.stop()
         engine.stop()
     return 0

@@ -130,6 +130,7 @@ class Api:
         open_path: Callable[[Path], None] = open_folder,
         open_url: Callable[[str], object] = webbrowser.open,
         on_theme_change: Callable[[], None] = lambda: None,
+        on_close_choice: Callable[[str], None] = lambda choice: None,
     ) -> None:
         self._engine = engine
         self._bindings_file = bindings_file
@@ -143,6 +144,7 @@ class Api:
         self._open_path = open_path
         self._open_url = open_url
         self._on_theme_change = on_theme_change
+        self._on_close_choice = on_close_choice
         self._problems: list[str] = []
         self._bindings_unreadable = False
 
@@ -346,6 +348,22 @@ class Api:
         return {"ok": True, "custom_gestures": [_custom_gesture_to_json(g) for g in updated]}
 
     # Window ------------------------------------------------------------------------
+
+    def close_choice(self, choice: str, remember: bool) -> JsonDict:
+        """The answer to "keep palm-lab running in the background?" on closing.
+
+        choice is "background" or "quit". With remember, it becomes the
+        close_action setting, so the question is not asked again (Settings can
+        change it back).
+        """
+        if choice not in ("background", "quit"):
+            return {"ok": False, "error": f"Unknown choice {choice!r}."}
+        if remember:
+            result = self.save_settings({**self._settings.as_dict(), "close_action": choice})
+            if not result["ok"]:
+                return result
+        self._on_close_choice(choice)
+        return {"ok": True, "settings": self._settings.as_dict()}
 
     def theme_changed(self) -> JsonDict:
         """The page saw Windows switch between light and dark."""

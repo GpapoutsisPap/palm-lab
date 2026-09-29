@@ -1707,6 +1707,41 @@ button.gesture-head:focus-visible {
   flex: 1;
 }
 
+/* Close question -------------------------------------------------------------- */
+
+.close-dialog {
+  width: min(460px, 100%);
+}
+
+.modal-text {
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.check-input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.check-hint {
+  color: var(--text-2);
+}
+
 /* Feedback ---------------------------------------------------------------- */
 
 .infobar {

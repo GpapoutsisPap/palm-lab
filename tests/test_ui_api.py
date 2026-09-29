@@ -151,6 +151,7 @@ def test_only_the_intended_methods_are_exposed_to_javascript() -> None:
         "open_config_folder",
         "open_project_page",
         "theme_changed",
+        "close_choice",
         "start_gesture_capture",
         "cancel_gesture_capture",
         "capture_status",
@@ -592,3 +593,58 @@ def test_theme_change_reaches_python(tmp_path: Path) -> None:
     api = bare_api(tmp_path, on_theme_change=lambda: calls.append("changed"))
     assert api.theme_changed() == {"ok": True}
     assert calls == ["changed"]
+
+
+def close_api(tmp_path: Path) -> tuple[Api, list[str], Path]:
+    chosen: list[str] = []
+    settings_file = tmp_path / "settings.toml"
+    api = Api(
+        TrackingEngine(
+            open_camera=lambda index: Source(),
+            make_detector=NoHands,
+            render_preview=lambda frame, hands: b"jpeg",
+        ),
+        bindings_file=tmp_path / "bindings.toml",
+        settings_file=settings_file,
+        gestures_file=tmp_path / "gestures.toml",
+        probe_cameras=lambda: [0],
+        on_close_choice=chosen.append,
+    )
+    return api, chosen, settings_file
+
+
+@pytest.mark.parametrize("choice", ["background", "quit"])
+def test_a_close_answer_is_passed_on_without_being_remembered(tmp_path: Path, choice: str) -> None:
+    api, chosen, settings_file = close_api(tmp_path)
+    result = api.close_choice(choice, False)
+    assert result["ok"]
+    assert chosen == [choice]
+    assert result["settings"]["close_action"] == "ask"
+    assert not settings_file.exists()
+
+
+def test_dont_show_again_saves_the_answer(tmp_path: Path) -> None:
+    api, chosen, settings_file = close_api(tmp_path)
+    api.save_settings({"camera_index": 2, "sounds": False})
+    result = api.close_choice("background", True)
+    assert result["ok"]
+    assert chosen == ["background"]
+    saved = load_settings(settings_file)
+    assert saved.close_action == "background"
+    # Remembering the answer leaves every other setting as it was.
+    assert saved.camera_index == 2 and saved.sounds is False
+    assert api.get_state()["settings"]["close_action"] == "background"
+
+
+def test_an_unknown_close_answer_is_refused(tmp_path: Path) -> None:
+    api, chosen, _ = close_api(tmp_path)
+    result = api.close_choice("minimize", True)
+    assert not result["ok"]
+    assert chosen == []
+
+
+def test_the_close_setting_can_be_changed_from_settings(tmp_path: Path) -> None:
+    api, _, settings_file = close_api(tmp_path)
+    result = api.save_settings({"close_action": "quit"})
+    assert result["ok"]
+    assert load_settings(settings_file).close_action == "quit"

@@ -20,7 +20,11 @@ class FakePowerShell:
     """Answers the folder query and 'creates' links by writing empty files."""
 
     def __init__(self, root: Path) -> None:
-        self.folders = {"desktop": root / "Desktop", "start_menu": root / "Start Menu" / "Programs"}
+        self.folders = {
+            "desktop": root / "Desktop",
+            "start_menu": root / "Start Menu" / "Programs",
+            "startup": root / "Start Menu" / "Programs" / "Startup",
+        }
         self.calls: list[tuple[str, dict[str, str]]] = []
 
     def __call__(self, script: str, env: dict[str, str]) -> str:
@@ -46,7 +50,12 @@ def shortcuts(powershell: FakePowerShell) -> Shortcuts:
 
 
 def test_state_before_anything_is_made(shortcuts: Shortcuts) -> None:
-    assert shortcuts.state() == {"supported": True, "desktop": False, "start_menu": False}
+    assert shortcuts.state() == {
+        "supported": True,
+        "desktop": False,
+        "start_menu": False,
+        "startup": False,
+    }
 
 
 def test_create_passes_everything_through_the_environment(
@@ -110,7 +119,12 @@ def test_garbled_folder_answer_is_an_error() -> None:
 
 def test_other_platforms_report_unsupported() -> None:
     shortcuts = Shortcuts(powershell=lambda s, e: "", target=lambda: TARGET, platform="linux")
-    assert shortcuts.state() == {"supported": False, "desktop": False, "start_menu": False}
+    assert shortcuts.state() == {
+        "supported": False,
+        "desktop": False,
+        "start_menu": False,
+        "startup": False,
+    }
     with pytest.raises(ShortcutError, match="only be made on Windows"):
         shortcuts.create("desktop")
 
@@ -161,3 +175,44 @@ def test_from_source_pythonw_is_preferred(tmp_path: Path) -> None:
     (tmp_path / "pythonw.exe").write_bytes(b"")
     target = launch_target(executable=python, frozen=False)
     assert target.target == tmp_path / "pythonw.exe"
+
+
+def test_the_startup_shortcut_opens_palm_lab_in_the_background(
+    shortcuts: Shortcuts, powershell: FakePowerShell
+) -> None:
+    """Start with Windows: hidden in the notification area, tracking on."""
+    link = shortcuts.create("startup")
+    assert link == powershell.folders["startup"] / "palm-lab.lnk"
+    assert powershell.calls[-1][1]["PALM_ARGUMENTS"] == "ui --background"
+    assert shortcuts.state()["startup"] is True
+
+
+def test_from_source_the_startup_shortcut_adds_to_the_module_arguments(
+    powershell: FakePowerShell,
+) -> None:
+    source = LaunchTarget(Path("C:/py/pythonw.exe"), "-m palm_lab", Path("C:/"), Path("x.ico"))
+    shortcuts = Shortcuts(powershell=powershell, target=lambda: source, platform="win32")
+    shortcuts.create("startup")
+    assert powershell.calls[-1][1]["PALM_ARGUMENTS"] == "-m palm_lab ui --background"
+
+
+def test_the_desktop_shortcut_takes_no_extra_arguments(
+    shortcuts: Shortcuts, powershell: FakePowerShell
+) -> None:
+    shortcuts.create("desktop")
+    assert powershell.calls[-1][1]["PALM_ARGUMENTS"] == ""
+
+
+def test_cli_can_add_the_startup_shortcut_and_remove_everything(
+    monkeypatch: pytest.MonkeyPatch, powershell: FakePowerShell
+) -> None:
+    monkeypatch.setattr(
+        "palm_lab.shortcuts.Shortcuts",
+        lambda: Shortcuts(powershell=powershell, target=lambda: TARGET, platform="win32"),
+    )
+    assert cli.main(["shortcut", "--startup"]) == 0
+    assert (powershell.folders["startup"] / "palm-lab.lnk").exists()
+    assert not (powershell.folders["start_menu"] / "palm-lab.lnk").exists()
+
+    assert cli.main(["shortcut", "--remove"]) == 0
+    assert not any((folder / "palm-lab.lnk").exists() for folder in powershell.folders.values())

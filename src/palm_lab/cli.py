@@ -34,6 +34,11 @@ def build_parser() -> argparse.ArgumentParser:
     ui.add_argument(
         "--debug", action="store_true", help="enable browser developer tools in the window"
     )
+    ui.add_argument(
+        "--background",
+        action="store_true",
+        help="start hidden in the notification area with tracking on (used at sign-in)",
+    )
 
     run = subparsers.add_parser("run", help="watch the camera in a plain preview window")
     run.add_argument("--camera", type=int, default=0, help="camera index (default: 0)")
@@ -51,11 +56,14 @@ def build_parser() -> argparse.ArgumentParser:
     shortcut.add_argument(
         "--start-menu", action="store_true", help="also add palm-lab to the Start menu"
     )
-    shortcut.add_argument("--remove", action="store_true", help="remove both shortcuts instead")
+    shortcut.add_argument(
+        "--startup", action="store_true", help="also start palm-lab when you sign in to Windows"
+    )
+    shortcut.add_argument("--remove", action="store_true", help="remove all its shortcuts instead")
 
     # A bare `palm-lab`, which is what double-clicking the .exe runs, opens the
     # window. This must come after add_subparsers, which resets dest="command".
-    parser.set_defaults(command="ui", debug=False, camera=0)
+    parser.set_defaults(command="ui", debug=False, background=False, camera=0)
     return parser
 
 
@@ -63,7 +71,7 @@ def _cmd_ui(args: argparse.Namespace) -> int:
     # Imported here so config/doctor never load pywebview, OpenCV or MediaPipe.
     from palm_lab.ui.app import run_ui
 
-    return run_ui(debug=args.debug)
+    return run_ui(debug=args.debug, background=args.background)
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
@@ -198,7 +206,14 @@ def _cmd_shortcut(args: argparse.Namespace) -> int:
     from palm_lab.shortcuts import ShortcutError, Shortcuts
 
     shortcuts = Shortcuts()
-    kinds = ["desktop", "start_menu"] if args.start_menu or args.remove else ["desktop"]
+    if args.remove:
+        kinds = ["desktop", "start_menu", "startup"]
+    else:
+        kinds = ["desktop"]
+        if args.start_menu:
+            kinds.append("start_menu")
+        if args.startup:
+            kinds.append("startup")
     try:
         for kind in kinds:
             if args.remove:
