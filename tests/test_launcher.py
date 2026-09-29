@@ -76,3 +76,60 @@ def test_no_pause_when_run_from_a_terminal(
     monkeypatch.setattr(launcher, "main", lambda: 1)
     assert launcher.run() == 1
     assert prompts == []
+
+
+@pytest.fixture
+def windowed(
+    launcher: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> list[tuple[str, str]]:
+    """Simulate palm-lab.exe, which has no console, recording any dialog."""
+    dialogs: list[tuple[str, str]] = []
+    monkeypatch.setenv("PALM_LAB_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr(launcher, "_has_console", lambda: False)
+    monkeypatch.setattr(launcher, "show_error", lambda title, text: dialogs.append((title, text)))
+    # run() swaps the streams for the log file; put the real ones back afterwards.
+    monkeypatch.setattr(sys, "stdout", sys.stdout)
+    monkeypatch.setattr(sys, "stderr", sys.stderr)
+    return dialogs
+
+
+def test_windowed_crash_is_logged_and_shown_in_a_dialog(
+    launcher: ModuleType,
+    windowed: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """With no console, the traceback goes to a log file the dialog points at."""
+
+    def crash() -> int:
+        raise FileNotFoundError("Hand landmarker model not found")
+
+    monkeypatch.setattr(launcher, "main", crash)
+    assert launcher.run() == 1
+    sys.stderr.flush()
+    log = tmp_path / "logs" / "palm-lab.log"
+    assert "Hand landmarker model not found" in log.read_text(encoding="utf-8")
+    assert len(windowed) == 1 and str(log) in windowed[0][1]
+
+
+def test_windowed_success_is_silent(
+    launcher: ModuleType, windowed: list[tuple[str, str]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(launcher, "main", lambda: 0)
+    assert launcher.run() == 0
+    assert windowed == []
+
+
+def test_a_large_log_starts_afresh(
+    launcher: ModuleType,
+    windowed: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The log never grows without limit."""
+    log = tmp_path / "logs" / "palm-lab.log"
+    log.parent.mkdir()
+    log.write_text("x" * (launcher.LOG_LIMIT_BYTES + 1), encoding="utf-8")
+    monkeypatch.setattr(launcher, "main", lambda: 0)
+    launcher.run()
+    assert log.stat().st_size < 200

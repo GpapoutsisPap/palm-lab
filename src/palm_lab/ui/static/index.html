@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>palm-lab</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <!-- Launch splash: the app icon waves, drawn here so it shows on the first paint. -->
+  <div class="splash" id="splash" aria-hidden="true">
+    <div class="splash-inner">
+      <svg class="splash-icon" viewBox="0 0 48 48">
+        <defs>
+          <linearGradient id="splash-tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6E6BFF"/><stop offset="1" stop-color="#4338CA"/></linearGradient>
+          <linearGradient id="splash-shine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
+          <clipPath id="splash-clip"><rect x="2" y="2" width="44" height="44" rx="11"/></clipPath>
+        </defs>
+        <rect x="2" y="2" width="44" height="44" rx="11" fill="url(#splash-tile)"/>
+        <rect x="2" y="2" width="44" height="44" rx="11" fill="url(#splash-shine)"/>
+        <g clip-path="url(#splash-clip)" fill="#fff">
+          <g class="splash-wave">
+            <g transform="translate(0.8 1) rotate(-6 25 40)"><rect x="13.80" y="12.5" width="5.2" height="18.5" rx="2.6" transform="rotate(-7 16.4 31)"/><rect x="19.70" y="8.5" width="5.2" height="22.5" rx="2.6" transform="rotate(-2.5 22.3 31)"/><rect x="25.60" y="10" width="5.2" height="21" rx="2.6" transform="rotate(2 28.2 31)"/><rect x="31.40" y="14.5" width="5.2" height="16.5" rx="2.6" transform="rotate(6.5 34 31)"/><rect x="-2.7" y="-11.5" width="5.4" height="13" rx="2.7" transform="translate(15.6 34.5) rotate(-46)"/><path d="M17.4 25H33a4 4 0 0 1 4 4v2.5c0 5-1.4 9.5-3.5 12.5V54H17V44c-2.2-3.2-3.6-7.2-3.6-12.5V29a4 4 0 0 1 4-4z"/></g>
+          </g>
+        </g>
+        <rect x="2.5" y="2.5" width="43" height="43" rx="10.5" fill="none" stroke="#000" stroke-opacity=".1"/>
+      </svg>
+      <p class="splash-name">palm-lab</p>
+    </div>
+  </div>
+
+  <div class="app" id="shell">
+    <nav class="nav" aria-label="palm-lab">
+      <div class="nav-items">
+        <button class="nav-item" type="button" data-page="gestures" aria-current="page">
+          <span class="nav-icon" data-icon="nav_gestures"></span><span>Gestures</span>
+        </button>
+        <button class="nav-item" type="button" data-page="activity">
+          <span class="nav-icon" data-icon="nav_activity"></span><span>Activity</span>
+          <span class="nav-badge" id="activity-badge" hidden>0</span>
+        </button>
+      </div>
+      <div class="nav-foot">
+        <p class="nav-status" id="nav-status" data-state="stopped">
+          <span class="status-dot" aria-hidden="true"></span><span id="nav-status-text">Tracking is off</span>
+        </p>
+        <button class="nav-item" type="button" data-page="settings">
+          <span class="nav-icon" data-icon="nav_settings"></span><span>Settings</span>
+        </button>
+      </div>
+      <span class="nav-indicator" id="nav-indicator" aria-hidden="true"></span>
+    </nav>
+
+    <main class="content" id="content">
+      <!-- Gestures ------------------------------------------------------------------>
+      <section class="page" id="page-gestures" data-page="gestures" aria-labelledby="gestures-title">
+        <header class="page-head">
+          <h1 class="page-title" id="gestures-title">Gestures</h1>
+          <span class="save-state" id="save-state" data-state="idle" role="status" aria-live="polite"></span>
+        </header>
+
+        <div class="infobar is-warning" id="problems" role="alert" hidden>
+          <span class="infobar-icon" data-icon="warning"></span>
+          <p class="infobar-text" id="problems-text"></p>
+          <button class="btn btn-subtle btn-icon" id="close-problems" type="button" aria-label="Dismiss"><span data-icon="close"></span></button>
+        </div>
+
+        <div class="infobar is-info" id="welcome" hidden>
+          <span class="infobar-icon" data-icon="info"></span>
+          <p class="infobar-text"><strong>Get started.</strong> Open a gesture below and drag actions into it. Then turn on gesture tracking.</p>
+          <button class="btn btn-subtle btn-icon" id="close-welcome" type="button" aria-label="Dismiss"><span data-icon="close"></span></button>
+        </div>
+
+        <section class="card tracking" id="tracking" data-state="stopped" aria-label="Gesture tracking">
+          <div class="card-row">
+            <span class="card-icon" data-icon="video"></span>
+            <div class="card-text">
+              <p class="card-title">Gesture tracking</p>
+              <p class="card-desc" id="tracking-desc">Watch the camera and run your shortcuts.</p>
+            </div>
+            <label class="toggle">
+              <span class="toggle-label" id="tracking-label">Off</span>
+              <input class="switch" id="tracking-switch" type="checkbox" role="switch" aria-label="Gesture tracking" disabled>
+            </label>
+          </div>
+          <div class="infobar is-error infobar-inset" id="tracking-error" role="alert" hidden>
+            <span class="infobar-icon" data-icon="error"></span>
+            <p class="infobar-text" id="tracking-error-text"></p>
+          </div>
+          <div class="collapse" id="live-wrap">
+            <div class="collapse-inner">
+              <div class="live">
+                <div class="camera-frame" id="camera-frame" data-state="starting">
+                  <div class="skeleton skeleton-dark camera-skeleton"><span class="camera-skeleton-label">Opening camera&hellip;</span></div>
+                  <img id="preview-img" alt="Live camera view">
+                  <svg class="bones" id="bones" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
+                </div>
+                <dl class="facts">
+                  <div class="fact">
+                    <dt>Seeing</dt>
+                    <dd><span class="fact-glyph" id="seen-glyph"></span><span id="seen-text">No hand in view</span></dd>
+                  </div>
+                  <div class="fact">
+                    <dt>Frame rate</dt>
+                    <dd id="fps">&ndash;</dd>
+                  </div>
+                  <div class="fact">
+                    <dt>Last shortcut</dt>
+                    <dd id="last-run">Nothing yet</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="group-title-row">
+          <h2 class="group-title">Your gestures</h2>
+          <button class="btn" id="add-gesture" type="button"><span class="btn-icon-slot" data-icon="add"></span>Add gesture</button>
+        </div>
+        <ul class="gesture-list" id="gesture-list" aria-busy="true">
+          <li class="card gesture skeleton-row" aria-hidden="true"><div class="gesture-head"><span class="skeleton sk-glyph"></span><span class="sk-lines"><span class="skeleton sk-line"></span><span class="skeleton sk-line sk-short"></span></span><span class="skeleton sk-chip"></span></div></li>
+          <li class="card gesture skeleton-row" aria-hidden="true"><div class="gesture-head"><span class="skeleton sk-glyph"></span><span class="sk-lines"><span class="skeleton sk-line sk-mid"></span><span class="skeleton sk-line sk-short"></span></span><span class="skeleton sk-chip"></span></div></li>
+          <li class="card gesture skeleton-row" aria-hidden="true"><div class="gesture-head"><span class="skeleton sk-glyph"></span><span class="sk-lines"><span class="skeleton sk-line"></span><span class="skeleton sk-line sk-short"></span></span></div></li>
+          <li class="card gesture skeleton-row" aria-hidden="true"><div class="gesture-head"><span class="skeleton sk-glyph"></span><span class="sk-lines"><span class="skeleton sk-line sk-mid"></span><span class="skeleton sk-line sk-short"></span></span></div></li>
+        </ul>
+      </section>
+
+      <!-- Activity ------------------------------------------------------------------>
+      <section class="page" id="page-activity" data-page="activity" aria-labelledby="activity-title" hidden>
+        <header class="page-head">
+          <h1 class="page-title" id="activity-title">Activity</h1>
+        </header>
+        <ol class="activity" id="activity"></ol>
+        <div class="empty" id="activity-empty">
+          <span class="empty-glyph" id="activity-empty-glyph"></span>
+          <p class="empty-title">No activity yet</p>
+          <p class="empty-text">When tracking is on, every gesture you hold shows up here with what it ran.</p>
+        </div>
+      </section>
+
+      <!-- Settings ------------------------------------------------------------------>
+      <section class="page" id="page-settings" data-page="settings" aria-labelledby="settings-title" hidden>
+        <header class="page-head">
+          <h1 class="page-title" id="settings-title">Settings</h1>
+        </header>
+
+        <div class="infobar is-error" id="settings-error" role="alert" hidden>
+          <span class="infobar-icon" data-icon="error"></span>
+          <p class="infobar-text" id="settings-error-text"></p>
+        </div>
+
+        <h2 class="group-title">Camera</h2>
+        <div class="card card-row">
+          <span class="card-icon" data-icon="camera"></span>
+          <div class="card-text">
+            <p class="card-title" id="camera-label">Camera</p>
+            <p class="card-desc" id="camera-help">The webcam or phone camera palm-lab watches.</p>
+          </div>
+          <div class="card-control">
+            <span class="select-wrap">
+              <select class="select" id="camera-select" aria-labelledby="camera-label"></select>
+              <span class="select-chevron" data-icon="chevron"></span>
+            </span>
+            <button class="btn" id="scan-cameras" type="button"><span class="btn-icon-slot" data-icon="refresh"></span>Scan</button>
+          </div>
+        </div>
+
+        <h2 class="group-title">Timing</h2>
+        <div class="card-group">
+          <div class="card card-row">
+            <span class="card-icon" data-icon="timer"></span>
+            <div class="card-text">
+              <p class="card-title" id="dwell-label">Hold time</p>
+              <p class="card-desc">How long to hold a gesture before it runs. Longer means fewer accidents.</p>
+            </div>
+            <div class="card-control">
+              <output class="slider-value" id="dwell-value" for="dwell"></output>
+              <input class="slider" id="dwell" type="range" step="0.1" aria-labelledby="dwell-label">
+            </div>
+          </div>
+          <div class="card card-row">
+            <span class="card-icon" data-icon="cooldown"></span>
+            <div class="card-text">
+              <p class="card-title" id="cooldown-label">Cooldown</p>
+              <p class="card-desc">How long before the same gesture can run again.</p>
+            </div>
+            <div class="card-control">
+              <output class="slider-value" id="cooldown-value" for="cooldown"></output>
+              <input class="slider" id="cooldown" type="range" step="0.5" aria-labelledby="cooldown-label">
+            </div>
+          </div>
+        </div>
+
+        <h2 class="group-title">Sound</h2>
+        <div class="card card-row">
+          <span class="card-icon" data-icon="speaker"></span>
+          <div class="card-text">
+            <p class="card-title" id="sounds-label">Snap sounds</p>
+            <p class="card-desc">A soft click when action pieces connect.</p>
+          </div>
+          <label class="toggle">
+            <span class="toggle-label" data-for="sounds">On</span>
+            <input class="switch" id="sounds" type="checkbox" role="switch" aria-labelledby="sounds-label">
+          </label>
+        </div>
+
+        <h2 class="group-title">Shortcuts</h2>
+        <div class="card-group">
+          <div class="card card-row">
+            <span class="card-icon" data-icon="desktop"></span>
+            <div class="card-text">
+              <p class="card-title" id="desktop-label">Desktop shortcut</p>
+              <p class="card-desc">Open palm-lab from your desktop.</p>
+            </div>
+            <label class="toggle">
+              <span class="toggle-label" data-for="shortcut-desktop">Off</span>
+              <input class="switch" id="shortcut-desktop" type="checkbox" role="switch" data-kind="desktop" aria-labelledby="desktop-label" disabled>
+            </label>
+          </div>
+          <div class="card card-row">
+            <span class="card-icon" data-icon="start"></span>
+            <div class="card-text">
+              <p class="card-title" id="start-label">Start menu</p>
+              <p class="card-desc">Find palm-lab by searching in the Start menu.</p>
+            </div>
+            <label class="toggle">
+              <span class="toggle-label" data-for="shortcut-start">Off</span>
+              <input class="switch" id="shortcut-start" type="checkbox" role="switch" data-kind="start_menu" aria-labelledby="start-label" disabled>
+            </label>
+          </div>
+        </div>
+
+        <h2 class="group-title">Advanced</h2>
+        <div class="card card-row">
+          <span class="card-icon" data-icon="code"></span>
+          <div class="card-text">
+            <p class="card-title">Shortcut file</p>
+            <p class="card-desc">Your gestures live in a TOML file you can edit by hand while palm-lab is closed.</p>
+            <p class="card-path" id="bindings-file"></p>
+          </div>
+          <button class="btn" id="open-folder" type="button"><span class="btn-icon-slot" data-icon="folder"></span>Open folder</button>
+        </div>
+
+        <h2 class="group-title">About</h2>
+        <div class="card card-row">
+          <span class="card-icon card-icon-app" id="about-icon"></span>
+          <div class="card-text">
+            <p class="card-title">palm-lab</p>
+            <p class="card-desc" id="about-version">Open source under the MIT licence.</p>
+          </div>
+          <button class="btn" id="open-project" type="button">View on GitHub<span class="btn-icon-slot btn-icon-end" data-icon="open"></span></button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Add-gesture wizard: hold your shape twice, then name it. -->
+  <div class="modal-overlay" id="wizard-overlay" hidden>
+    <div class="modal wizard" id="wizard" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
+      <div class="modal-head">
+        <h2 class="modal-title" id="wizard-title">Add a gesture</h2>
+        <button class="btn btn-subtle btn-icon" id="wizard-close" type="button" aria-label="Close"><span data-icon="close"></span></button>
+      </div>
+
+      <div class="infobar is-error" id="wizard-error" role="alert" hidden>
+        <span class="infobar-icon" data-icon="error"></span>
+        <p class="infobar-text" id="wizard-error-text"></p>
+      </div>
+
+      <div class="wizard-capture" id="wizard-capture">
+        <div class="camera-frame wizard-frame" id="wizard-frame" data-state="starting">
+          <div class="skeleton skeleton-dark camera-skeleton"><span class="camera-skeleton-label" id="wizard-frame-label">Starting camera&hellip;</span></div>
+          <img id="wizard-preview-img" alt="Live camera view">
+          <svg class="bones" id="wizard-bones" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </div>
+        <p class="wizard-stage" id="wizard-stage-text" role="status" aria-live="polite"></p>
+        <div class="wizard-progress"><span class="wizard-progress-fill" id="wizard-progress-fill"></span></div>
+      </div>
+
+      <div class="wizard-done" id="wizard-done" hidden>
+        <span class="wizard-glyph" id="wizard-glyph" aria-hidden="true"></span>
+        <p class="wizard-taken" id="wizard-taken" role="alert" hidden></p>
+        <label class="wizard-name-field" id="wizard-name-field">
+          <span>Name</span>
+          <input class="textbox" id="wizard-name" type="text" maxlength="40" placeholder="Name this gesture" spellcheck="false">
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn" id="wizard-retry" type="button" hidden>Try again</button>
+        <span class="spacer"></span>
+        <button class="btn" id="wizard-cancel" type="button">Cancel</button>
+        <button class="btn btn-accent" id="wizard-save" type="button" hidden>Save gesture</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+
+  <datalist id="known-apps"></datalist>
+  <datalist id="hotkey-presets"></datalist>
+
+  <script src="app.js"></script>
+</body>
+</html>
