@@ -704,7 +704,9 @@ def test_an_oversized_css_file_is_reported_not_used(tmp_path: Path) -> None:
     assert "not used" in state["error"]
 
 
-@pytest.mark.parametrize("bad", ["a" * 300_000, 42])
+# Short ids: pytest names a test after its parameters, and a 300,000-character
+# name overflows Windows' 32,767-character limit on environment variables.
+@pytest.mark.parametrize("bad", ["a" * 300_000, 42], ids=["too-large", "not-text"])
 def test_bad_css_is_refused(tmp_path: Path, bad: object) -> None:
     api, css_file = css_api(tmp_path)
     result = api.save_custom_css(bad)  # type: ignore[arg-type]
