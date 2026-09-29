@@ -20,7 +20,10 @@ and runs the actions you snap together for each one, all on your own computer.
 - **Actions that snap together:** open an app from your Start menu, open a
   website, or press keys (media keys, volume, any combination). Drag action
   pieces into a gesture, reorder them, and test them without the camera.
-- **Live view:** see what the camera sees, the hand it found, and what ran.
+- **Live view:** see what the camera sees, the hand it found, how far through
+  a hold you are, and what ran, or why nothing did.
+- **Pause:** stop gestures for 15 minutes to a few hours, with the camera off,
+  from the window or the icon by the clock.
 - **Make it yours:** light or dark theme, and your own CSS to restyle
   anything, typed right in Settings.
 - **Always ready:** close the window and palm-lab can keep running by the

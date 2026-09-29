@@ -54,7 +54,7 @@
 
     <main class="content" id="content">
       <!-- Gestures ------------------------------------------------------------------>
-      <section class="page" id="page-gestures" data-page="gestures" aria-labelledby="gestures-title">
+      <section class="page page-gestures" id="page-gestures" data-page="gestures" aria-labelledby="gestures-title">
         <header class="page-head">
           <h1 class="page-title" id="gestures-title">Gestures</h1>
           <span class="save-state" id="save-state" data-state="idle" role="status" aria-live="polite"></span>
@@ -72,6 +72,9 @@
           <button class="btn btn-subtle btn-icon" id="close-welcome" type="button" aria-label="Dismiss"><span data-icon="close"></span></button>
         </div>
 
+        <!-- One column; two on a wide window (tracking left, gestures right). -->
+        <div class="gestures-layout">
+        <div class="gestures-side">
         <section class="card tracking" id="tracking" data-state="stopped" aria-label="Gesture tracking">
           <div class="card-row">
             <span class="card-icon" data-icon="video"></span>
@@ -79,10 +82,21 @@
               <p class="card-title">Gesture tracking</p>
               <p class="card-desc" id="tracking-desc">Watch the camera and run your shortcuts.</p>
             </div>
-            <label class="toggle">
-              <span class="toggle-label" id="tracking-label">Off</span>
-              <input class="switch" id="tracking-switch" type="checkbox" role="switch" aria-label="Gesture tracking" disabled>
-            </label>
+            <div class="card-control">
+              <div class="pause-wrap">
+                <button class="btn" id="pause-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="pause-menu" hidden><span class="btn-icon-slot" data-icon="pause"></span>Pause<span class="btn-icon-slot btn-icon-end btn-chevron" data-icon="chevron"></span></button>
+                <button class="btn" id="resume-button" type="button" hidden><span class="btn-icon-slot" data-icon="play"></span>Resume now</button>
+                <div class="menu" id="pause-menu" role="menu" aria-label="Pause tracking" hidden>
+                  <button class="menu-item" type="button" role="menuitem" data-minutes="15">For 15 minutes</button>
+                  <button class="menu-item" type="button" role="menuitem" data-minutes="60">For 1 hour</button>
+                  <button class="menu-item" type="button" role="menuitem" data-minutes="240">For 4 hours</button>
+                </div>
+              </div>
+              <label class="toggle">
+                <span class="toggle-label" id="tracking-label">Off</span>
+                <input class="switch" id="tracking-switch" type="checkbox" role="switch" aria-label="Gesture tracking" disabled>
+              </label>
+            </div>
           </div>
           <div class="infobar is-error infobar-inset" id="tracking-error" role="alert" hidden>
             <span class="infobar-icon" data-icon="error"></span>
@@ -96,11 +110,18 @@
                   <img id="preview-img" alt="Live camera view">
                   <svg class="bones" id="bones" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
                 </div>
-                <dl class="facts">
-                  <div class="fact">
-                    <dt>Seeing</dt>
-                    <dd><span class="fact-glyph" id="seen-glyph"></span><span id="seen-text">No hand in view</span></dd>
+                <div class="facts">
+                  <div class="hold" id="hold" data-phase="idle">
+                    <span class="hold-ring" aria-hidden="true">
+                      <svg viewBox="0 0 48 48" focusable="false"><circle class="hold-track" cx="24" cy="24" r="22"/><circle class="hold-fill" cx="24" cy="24" r="22" pathLength="100"/></svg>
+                      <span class="hold-glyph" id="seen-glyph"></span>
+                    </span>
+                    <span class="hold-text">
+                      <span class="hold-title" id="seen-text" aria-live="polite">No hand in view</span>
+                      <span class="hold-sub" id="hold-sub"></span>
+                    </span>
                   </div>
+                  <dl class="facts-list">
                   <div class="fact">
                     <dt>Frame rate</dt>
                     <dd id="fps">&ndash;</dd>
@@ -109,12 +130,24 @@
                     <dt>Last shortcut</dt>
                     <dd id="last-run">Nothing yet</dd>
                   </div>
-                </dl>
+                  </dl>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
+        <section class="card recent" id="recent" aria-labelledby="recent-title">
+          <div class="recent-head">
+            <h2 class="recent-title" id="recent-title">Recently ran</h2>
+            <button class="btn btn-subtle" id="recent-all" type="button">See all</button>
+          </div>
+          <ul class="recent-list" id="recent-list"></ul>
+          <p class="recent-empty" id="recent-empty">Nothing has run yet. Hold up a gesture while tracking is on.</p>
+        </section>
+        </div>
+
+        <div class="gestures-main">
         <div class="group-title-row">
           <h2 class="group-title">Your gestures</h2>
           <button class="btn" id="add-gesture" type="button"><span class="btn-icon-slot" data-icon="add"></span>Add gesture</button>
@@ -125,6 +158,8 @@
           <li class="card gesture skeleton-row" aria-hidden="true"><div class="gesture-head"><span class="skeleton sk-glyph"></span><span class="sk-lines"><span class="skeleton sk-line"></span><span class="skeleton sk-line sk-short"></span></span></div></li>
           <li class="card gesture skeleton-row" aria-hidden="true"><div class="gesture-head"><span class="skeleton sk-glyph"></span><span class="sk-lines"><span class="skeleton sk-line sk-mid"></span><span class="skeleton sk-line sk-short"></span></span></div></li>
         </ul>
+        </div>
+        </div>
       </section>
 
       <!-- Activity ------------------------------------------------------------------>

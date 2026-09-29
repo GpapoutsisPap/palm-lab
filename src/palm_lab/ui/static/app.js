@@ -23,7 +23,22 @@ const TEXT = {
     stopping: "Stopping\u2026",
     running: "Tracking",
     error: "Camera problem",
+    paused: "Paused",
   },
+  navPaused: (time) => `Paused until ${time}`,
+  trackingPaused: "Paused",
+  trackingDescPaused: (time) => `Paused until ${time}. Your gestures won\u2019t run until then.`,
+  holdRaise: "Hold up a gesture to run it",
+  holdMake: "Make one of your gestures",
+  holding: (label) => `Holding ${label}`,
+  holdKeep: "Keep holding\u2026",
+  holdUnbound: "Not set up yet, so nothing will run",
+  ran: (name) => `Ran ${name}`,
+  readyIn: (s) => `Ready again in ${Number(s).toFixed(1)} s`,
+  lowerHand: "Lower your hand, then show it again",
+  coolingDown: (label) => `${label} is cooling down`,
+  recentOk: "Ran",
+  recentFailed: "Something failed; see Activity",
   when: "When I show",
   nameLabel: "Name",
   namePlaceholder: "Name this shortcut",
@@ -153,6 +168,8 @@ const ICONS = {
   app: [16, ["M4.5 2A2.5 2.5 0 0 0 2 4.5v7A2.5 2.5 0 0 0 4.5 14h7a2.5 2.5 0 0 0 2.5-2.5v-7A2.5 2.5 0 0 0 11.5 2zM13 5H3v-.5C3 3.67 3.67 3 4.5 3h7c.83 0 1.5.67 1.5 1.5zM3 6h10v5.5c0 .83-.67 1.5-1.5 1.5h-7A1.5 1.5 0 0 1 3 11.5z"]],
   globe: [16, ["M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12M8 3c.37 0 .88.36 1.31 1.32q.14.3.26.68H6.43q.12-.37.26-.68C7.12 3.36 7.63 3 8 3m-2.22.9q-.23.5-.4 1.1H4a5 5 0 0 1 2.04-1.6q-.14.24-.26.5M5.16 6a12 12 0 0 0 0 4H3.42a5 5 0 0 1 0-4zm.22 5a8 8 0 0 0 .66 1.6A5 5 0 0 1 4 11zm1.05 0h3.14a6 6 0 0 1-.26.68C8.88 12.64 8.37 13 8 13s-.88-.36-1.31-1.32a6 6 0 0 1-.26-.68m3.4-1H6.17a11 11 0 0 1 0-4h3.64a11 11 0 0 1 0 4m.79 1H12a5 5 0 0 1-2.04 1.6q.15-.24.26-.5.23-.5.4-1.1m1.96-1h-1.74a12 12 0 0 0 0-4h1.74a5 5 0 0 1 0 4M9.96 3.4c.81.35 1.52.9 2.04 1.6h-1.38a8 8 0 0 0-.66-1.6"]],
   keyboard: [16, ["M3 10.5c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M3.25 7a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M10 6.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M6.25 7a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M13 6.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M5.25 9a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M9 8.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m2.25.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M1 4.75C1 3.78 1.78 3 2.75 3h10.5c.97 0 1.75.78 1.75 1.75v6.5c0 .97-.78 1.75-1.75 1.75H2.75C1.78 13 1 12.22 1 11.25zM2.75 4a.75.75 0 0 0-.75.75v6.5c0 .41.34.75.75.75h10.5c.41 0 .75-.34.75-.75v-6.5a.75.75 0 0 0-.75-.75z"]],
+  pause: [16, ["M3.75 2C2.78 2 2 2.78 2 3.75v8.5c0 .97.78 1.75 1.75 1.75h1.5C6.22 14 7 13.22 7 12.25v-8.5C7 2.78 6.22 2 5.25 2zM3 3.75c0-.41.34-.75.75-.75h1.5c.41 0 .75.34.75.75v8.5c0 .41-.34.75-.75.75h-1.5a.75.75 0 0 1-.75-.75zM10.75 2C9.78 2 9 2.78 9 3.75v8.5c0 .97.78 1.75 1.75 1.75h1.5c.97 0 1.75-.78 1.75-1.75v-8.5C14 2.78 13.22 2 12.25 2zM10 3.75c0-.41.34-.75.75-.75h1.5c.41 0 .75.34.75.75v8.5c0 .41-.34.75-.75.75h-1.5a.75.75 0 0 1-.75-.75z"]],
+  play: [16, ["M5.75 3.06A.5.5 0 0 0 5 3.5v9c0 .38.41.62.75.44l8-4.5a.5.5 0 0 0 0-.88zM4 3.5a1.5 1.5 0 0 1 2.24-1.3l8 4.5a1.5 1.5 0 0 1 0 2.6l-8 4.5A1.5 1.5 0 0 1 4 12.5z"]],
   add: [16, ["M8 2c.28 0 .5.22.5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5c0-.28.22-.5.5-.5"]],
 };
 
@@ -178,6 +195,9 @@ const app = {
   status: null,
   startError: null,    // why the last start failed, shown in the tracking card
   seen: null,
+  holdGlyph: "open_palm", // gesture drawn inside the hold ring
+  holdRow: null,       // gesture whose row shows the hold bar
+  recent: [],          // newest shortcuts that ran, for "Recently ran"
   drag: null,          // {kind: "new", type} or {kind: "move", gesture, id, type}
   saveTimer: null,
   saveRequest: 0,
@@ -676,7 +696,7 @@ function renderRow(row) {
     ondragover: (event) => rowDragOver(event, row, node),
     ondragleave: (event) => rowDragLeave(event, node),
     ondrop: (event) => rowDrop(event, row, node),
-  }, [head, body]);
+  }, [head, body, el("span", { class: "gesture-hold", "aria-hidden": "true" })]);
   if (app.seen === row.gesture) node.classList.add("is-seen");
   updateHead(row, node);
   return node;
@@ -1193,20 +1213,29 @@ async function pollStatus() {
   }
 }
 
-function showTrackingState(state) {
+function shortTime(seconds) {
+  return new Date(seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function showTrackingState(state, pausedUntil = null) {
   const running = state === "running";
+  const paused = state === "paused";
   const toggle = $("tracking-switch");
   toggle.checked = running || state === "starting";
   toggle.disabled = state === "starting" || state === "stopping";
   $("tracking-label").textContent = {
-    starting: TEXT.starting, stopping: TEXT.stopping, running: TEXT.switchOn,
+    starting: TEXT.starting, stopping: TEXT.stopping, running: TEXT.switchOn, paused: TEXT.trackingPaused,
   }[state] || TEXT.switchOff;
-  $("tracking-desc").textContent = running && app.data
-    ? TEXT.trackingDescOn(app.data.settings.camera_index)
-    : TEXT.trackingDesc;
+  let desc = TEXT.trackingDesc;
+  if (running && app.data) desc = TEXT.trackingDescOn(app.data.settings.camera_index);
+  if (paused) desc = TEXT.trackingDescPaused(shortTime(pausedUntil));
+  $("tracking-desc").textContent = desc;
   $("tracking").dataset.state = state;
   $("nav-status").dataset.state = state;
-  $("nav-status-text").textContent = TEXT.navStatus[state];
+  $("nav-status-text").textContent = paused ? TEXT.navPaused(shortTime(pausedUntil)) : TEXT.navStatus[state];
+  $("pause-button").hidden = !running;
+  $("resume-button").hidden = !paused;
+  if (!running) closePauseMenu(false);
 }
 
 function showTrackingError(message) {
@@ -1221,7 +1250,12 @@ function applyStatus(status) {
   if (app.busy) return;
 
   const error = status.running ? null : status.error || app.startError;
-  showTrackingState(status.running ? "running" : error ? "error" : "stopped");
+  const paused = !status.running && Boolean(status.paused_until);
+  let state = "stopped";
+  if (status.running) state = "running";
+  else if (paused) state = "paused";
+  else if (error) state = "error";
+  showTrackingState(state, status.paused_until);
   if (error) $("tracking-label").textContent = TEXT.switchOff;
   showTrackingError(error);
   $("scan-cameras").disabled = status.running;
@@ -1252,11 +1286,127 @@ function showSeen(status) {
     document.querySelectorAll(".gesture[data-gesture]").forEach((node) => {
       node.classList.toggle("is-seen", node.dataset.gesture === seen);
     });
-    $("seen-glyph").hidden = !seen;
-    if (seen) $("seen-glyph").innerHTML = glyph(gestureInfo(seen).fingers);
   }
-  $("seen-text").textContent = seen ? gestureInfo(seen).label : status.hands ? TEXT.handInView : TEXT.noHands;
+  // While preview frames arrive they carry the hold too, many times a second.
+  if (!app.hasFrame) showHold(status.running ? status.hold : null, status.hands);
   $("fps").textContent = status.running ? TEXT.fps(status.fps) : "\u2013";
+}
+
+/* The hold in progress, as a filling ring and a line of words. Every phase has
+   its own wording, because "why didn't that run?" is the question it answers. */
+function showHold(hold, hands) {
+  const box = $("hold");
+  const gesture = hold && hold.phase !== "idle" ? hold.gesture : null;
+  const info = gesture ? gestureInfo(gesture) : null;
+  const row = gesture ? rowOf(gesture) : null;
+  let phase = gesture ? hold.phase : "idle";
+  let title;
+  let sub = "";
+  let fill = 0;
+
+  if (!gesture) {
+    title = hands ? TEXT.handInView : TEXT.noHands;
+    sub = hands ? TEXT.holdMake : TEXT.holdRaise;
+  } else if (!row || row.actions.length === 0) {
+    phase = "unbound";
+    title = info.label;
+    sub = TEXT.holdUnbound;
+  } else if (phase === "holding") {
+    title = TEXT.holding(info.label);
+    sub = TEXT.holdKeep;
+    fill = hold.progress;
+  } else if (phase === "fired") {
+    title = TEXT.ran(row.name.trim() || info.label);
+    sub = hold.cooldown > 0 ? TEXT.readyIn(hold.cooldown) : TEXT.lowerHand;
+    fill = 1;
+  } else if (phase === "cooldown") {
+    title = TEXT.coolingDown(info.label);
+    sub = TEXT.readyIn(hold.cooldown);
+    const total = app.data ? app.data.settings.cooldown_seconds : 0;
+    fill = total > 0 ? Math.min(hold.cooldown / total, 1) : 0;
+  } else {
+    title = info.label;
+    sub = TEXT.lowerHand;
+  }
+
+  box.dataset.phase = phase;
+  box.style.setProperty("--hold", String(fill));
+  // Only a changed line is written, so screen readers hear each phase once.
+  if ($("seen-text").textContent !== title) $("seen-text").textContent = title;
+  if ($("hold-sub").textContent !== sub) $("hold-sub").textContent = sub;
+  const shown = gesture || "open_palm";
+  if (app.holdGlyph !== shown) {
+    app.holdGlyph = shown;
+    $("seen-glyph").innerHTML = glyph(gestureInfo(shown).fingers);
+  }
+
+  const rowFill = phase === "holding" || phase === "fired" ? fill : 0;
+  if (app.holdRow && app.holdRow !== gesture) {
+    const old = rowNode(app.holdRow);
+    if (old) old.style.setProperty("--hold", "0");
+  }
+  app.holdRow = gesture;
+  const node = gesture && rowNode(gesture);
+  if (node) node.style.setProperty("--hold", String(rowFill));
+}
+
+/* Pausing ------------------------------------------------------------------ */
+
+function openPauseMenu() {
+  $("pause-menu").hidden = false;
+  $("pause-button").setAttribute("aria-expanded", "true");
+  $("pause-menu").querySelector(".menu-item").focus();
+}
+
+function closePauseMenu(focusButton = true) {
+  const menu = $("pause-menu");
+  if (menu.hidden) return;
+  menu.hidden = true;
+  $("pause-button").setAttribute("aria-expanded", "false");
+  if (focusButton) $("pause-button").focus();
+}
+
+function pauseMenuKeys(event) {
+  const items = [...$("pause-menu").querySelectorAll(".menu-item")];
+  const index = items.indexOf(document.activeElement);
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    const step = event.key === "ArrowDown" ? 1 : -1;
+    items[(index + step + items.length) % items.length].focus();
+  } else if (event.key === "Home" || event.key === "End") {
+    event.preventDefault();
+    items[event.key === "Home" ? 0 : items.length - 1].focus();
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    closePauseMenu();
+  } else if (event.key === "Tab") {
+    closePauseMenu(false);
+  }
+}
+
+async function pauseFor(minutes) {
+  closePauseMenu(false);
+  let result;
+  try {
+    result = await api().pause(minutes);
+  } catch (err) {
+    result = { ok: false, error: String(err) };
+  }
+  if (!result.ok) toast(result.error, "error");
+  if (result.status) applyStatus(result.status);
+  $("tracking-switch").focus();
+}
+
+async function resumeNow() {
+  let result;
+  try {
+    result = await api().resume();
+  } catch (err) {
+    result = { ok: false, error: String(err), status: app.status };
+  }
+  app.startError = result.ok ? null : result.error;
+  applyStatus(result.status);
 }
 
 async function startPreview() {
@@ -1272,6 +1422,7 @@ async function startPreview() {
     if (frame && app.status.running) {
       img.src = frame.image;
       drawHands(frame.hands);
+      showHold(frame.hold, frame.hands.length);
       if (!app.hasFrame) {
         app.hasFrame = true;
         setLive("on");
@@ -1316,6 +1467,7 @@ function recordActivity(event) {
   while (list.children.length > ACTIVITY_LIMIT) list.lastElementChild.remove();
   $("activity-empty").hidden = true;
   showLastRun(event);
+  updateRecent(event);
 
   if (isNew) {
     if (app.page !== "activity") app.unread += 1;
@@ -1328,6 +1480,35 @@ function recordActivity(event) {
       toast(`${event.name || gestureInfo(event.gesture).label}: ${failures.map((r) => r.message).join(" ")}`, "error");
     }
   }
+}
+
+/* "Recently ran": the newest few shortcuts on the Gestures page itself. */
+const RECENT_LIMIT = 3;
+
+function updateRecent(event) {
+  if (!event.name) return; // a gesture with nothing set up ran nothing
+  app.recent = [event, ...app.recent.filter((e) => e.at !== event.at)].slice(0, RECENT_LIMIT);
+  renderRecent();
+}
+
+function renderRecent() {
+  $("recent-list").replaceChildren(...app.recent.map((event) => {
+    const failed = event.finished && event.results.some((r) => !r.ok);
+    const state = !event.finished ? "spinner" : failed ? "error" : "success";
+    return el("li", { class: "recent-item" }, [
+      el("span", { class: "recent-glyph", html: glyph(gestureInfo(event.gesture).fingers) }),
+      el("span", { class: "recent-name", textContent: event.name }),
+      el("span", { class: "recent-time", textContent: clock(event.at) }),
+      el("span", {
+        class: `recent-result ${failed ? "run-fail" : "run-ok"}`,
+        title: failed ? TEXT.recentFailed : TEXT.recentOk,
+        "aria-label": failed ? TEXT.recentFailed : TEXT.recentOk,
+        role: "img",
+        html: icon(state),
+      }),
+    ]);
+  }));
+  $("recent-empty").hidden = app.recent.length > 0;
 }
 
 function updateBadge() {
@@ -1865,6 +2046,19 @@ function wireControls() {
   }
   window.addEventListener("resize", moveIndicator);
   $("tracking-switch").addEventListener("change", toggleTracking);
+  $("pause-button").addEventListener("click", () => {
+    if ($("pause-menu").hidden) openPauseMenu();
+    else closePauseMenu();
+  });
+  $("pause-menu").addEventListener("keydown", pauseMenuKeys);
+  for (const item of document.querySelectorAll("#pause-menu .menu-item")) {
+    item.addEventListener("click", () => pauseFor(Number(item.dataset.minutes)));
+  }
+  $("resume-button").addEventListener("click", resumeNow);
+  $("recent-all").addEventListener("click", () => showPage("activity"));
+  document.addEventListener("pointerdown", (event) => {
+    if (!event.target.closest(".pause-wrap")) closePauseMenu(false);
+  });
   $("close-problems").addEventListener("click", () => { $("problems").hidden = true; });
   $("close-welcome").addEventListener("click", () => { $("welcome").hidden = true; });
 

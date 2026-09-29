@@ -294,6 +294,45 @@ input,
   margin: 0;
 }
 
+/* Gestures page: one column, or two on a wide window ------------------------
+
+   Past about 1000px of page width, tracking moves to a left column and the
+   gestures to a wider right one, the way Microsoft's PowerToys dashboard uses
+   a wide window. Container queries measure the page itself, so the switch
+   follows the space the page really has, not the screen size. */
+
+.page-gestures {
+  max-width: 1600px;
+  container: gestures-page / inline-size;
+}
+
+.gestures-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recent {
+  display: none;
+}
+
+@container gestures-page (min-width: 1000px) {
+  .gestures-layout {
+    display: grid;
+    grid-template-columns: minmax(400px, 5fr) minmax(0, 8fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .gestures-main > .group-title-row {
+    margin-top: 0;
+  }
+
+  .recent {
+    display: block;
+  }
+}
+
 /* Navigation ------------------------------------------------------------- */
 
 .nav {
@@ -401,6 +440,12 @@ input,
 
 .nav-status[data-state="error"] .status-dot {
   background: var(--critical);
+}
+
+/* Paused: a small pause symbol, so it differs from "off" by shape, not only colour. */
+.nav-status[data-state="paused"] .status-dot {
+  border-radius: 1px;
+  background: linear-gradient(to right, var(--caution) 0 3px, transparent 3px 5px, var(--caution) 5px);
 }
 
 @media (max-width: 1100px) {
@@ -777,6 +822,26 @@ input,
 }
 
 .gesture.is-seen::after {
+  opacity: 1;
+}
+
+/* A thin bar along the bottom of the row whose gesture is being held. */
+.gesture-hold {
+  position: absolute;
+  right: 12px;
+  bottom: 3px;
+  left: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  opacity: 0;
+  transform: scaleX(var(--hold, 0));
+  transform-origin: left;
+  transition: transform 90ms linear, opacity 150ms ease;
+  pointer-events: none;
+}
+
+.gesture.is-seen .gesture-hold {
   opacity: 1;
 }
 
@@ -1364,12 +1429,32 @@ button.gesture-head:focus-visible {
   margin: 0 16px 16px 52px;
 }
 
+.tracking {
+  container: tracking / inline-size;
+}
+
 .live {
   display: grid;
   grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
   gap: 24px;
   padding: 16px 16px 16px 52px;
   border-top: 1px solid var(--divider);
+}
+
+/* In a narrow column (the left of the wide layout): the preview takes the
+   full width, and the status sits under it. */
+@container tracking (max-width: 620px) {
+  .live {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding-left: 16px;
+  }
+
+  .facts-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: 32px;
+  }
 }
 
 .camera-frame {
@@ -1454,14 +1539,210 @@ button.gesture-head:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-.fact-glyph {
+.facts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+}
+
+/* The hold in progress: a ring that fills while a gesture is held, and what
+   is happening in words. Fixed sizes, so the card never jumps as it changes. */
+.hold {
+  --hold: 0;
+  --ring: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+}
+
+.hold-ring {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+}
+
+.hold-ring > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  fill: none;
+  stroke-width: 3;
+}
+
+.hold-track {
+  stroke: var(--control-stroke);
+}
+
+.hold-fill {
+  stroke: var(--ring);
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc(100 - var(--hold) * 100);
+  transition: stroke-dashoffset 90ms linear, stroke 150ms ease;
+}
+
+.hold[data-phase="fired"] {
+  --ring: var(--success);
+}
+
+.hold[data-phase="cooldown"],
+.hold[data-phase="rearm"] {
+  --ring: var(--text-3);
+}
+
+.hold-glyph {
   --glyph-bg: var(--card);
   color: var(--accent);
 }
 
-.fact-glyph .glyph {
+.hold[data-phase="idle"] .hold-glyph,
+.hold[data-phase="unbound"] .hold-glyph {
+  opacity: 0.45;
+}
+
+.hold-glyph .glyph {
+  width: 28px;
+  height: 28px;
+}
+
+.hold-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hold-title {
+  font-weight: 600;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.hold-sub {
+  min-height: 16px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pause menu ---------------------------------------------------------------- */
+
+.pause-wrap {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  min-width: 170px;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--flyout-stroke);
+  border-radius: var(--radius-overlay);
+  background: var(--flyout);
+  box-shadow: var(--shadow-flyout);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-1);
+  text-align: left;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--subtle-hover);
+}
+
+.menu-item:active {
+  background: var(--subtle-pressed);
+}
+
+/* Recently ran (left column of the wide layout) ------------------------------ */
+
+.recent {
+  padding: 8px 16px 12px;
+}
+
+.recent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+}
+
+.recent-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.recent-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  border-top: 1px solid var(--divider);
+}
+
+.recent-glyph {
+  --glyph-bg: var(--card);
+  flex: none;
+  color: var(--text-1);
+}
+
+.recent-glyph .glyph {
   width: 24px;
   height: 24px;
+}
+
+.recent-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-time {
+  flex: none;
+  color: var(--text-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.recent-result {
+  flex: none;
+}
+
+.recent-empty {
+  padding: 4px 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .run-ok {
@@ -2162,6 +2443,11 @@ button.gesture-head:focus-visible {
   }
 
   .btn-chevron .icon {
+    transition: none;
+  }
+
+  .hold-fill,
+  .gesture-hold {
     transition: none;
   }
 

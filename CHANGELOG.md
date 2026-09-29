@@ -26,6 +26,16 @@ for the people installing the app.
   Windows (as before). The title bar follows it too.
 - Custom CSS under Settings > Appearance: restyle palm-lab with your own CSS,
   previewed as you type. Ctrl+Shift+X turns it off if it goes wrong.
+- The Gestures page shows what palm-lab is doing as you hold a gesture: a
+  ring fills over the hold time, and a status line says "Holding peace sign",
+  "Ran Morning setup", "Cooling down, ready again in 3 s", or that a gesture
+  isn't set up yet. The gesture's row fills in step.
+- Pause tracking for 15 minutes, 1 hour or 4 hours, from the Gestures page or
+  the icon by the clock. The camera turns off while paused and tracking comes
+  back by itself.
+- On a wide window the Gestures page uses two columns: tracking, a larger
+  camera preview and a "Recently ran" list on the left, your gestures on the
+  right. Narrower windows keep the single column.
 
 ## [0.2.0] - 2026-09-29
 

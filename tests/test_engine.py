@@ -579,3 +579,32 @@ def test_no_preview_pictures_are_made_while_the_window_is_hidden() -> None:
     engine.process_frame(object(), ScriptedDetector([PEACE]))
     assert rendered == [1, 1]
     assert engine.snapshot() is not None
+
+
+def test_no_hold_is_reported_while_tracking_is_off() -> None:
+    engine = make_engine()
+    engine.process_frame(object(), ScriptedDetector([PEACE]))
+    assert engine.status().trigger.phase == "idle"
+
+
+def test_the_hold_is_reported_while_tracking_and_hidden_while_capturing() -> None:
+    clock = FakeClock()
+    engine = make_engine(clock=clock)
+    detector = ScriptedDetector([PEACE])
+    running = threading.Event()
+    engine._thread = threading.Thread(target=running.wait, daemon=True)
+    engine._thread.start()
+    try:
+        clock.now = 100.0
+        engine.process_frame(object(), detector)
+        clock.now = 100.25
+        engine.process_frame(object(), detector)
+        trigger = engine.status().trigger
+        assert trigger.phase == "holding"
+        assert trigger.gesture == "peace"
+        assert trigger.progress == pytest.approx(0.5)  # 0.25 s of a 0.5 s dwell
+
+        engine.start_gesture_capture()
+        assert engine.status().trigger.phase == "idle"
+    finally:
+        running.set()

@@ -3,7 +3,7 @@
 import inspect
 import json
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -152,6 +152,8 @@ def test_only_the_intended_methods_are_exposed_to_javascript() -> None:
         "open_project_page",
         "theme_changed",
         "close_choice",
+        "pause",
+        "resume",
         "save_custom_css",
         "start_gesture_capture",
         "cancel_gesture_capture",
@@ -718,3 +720,131 @@ def test_without_a_css_file_the_feature_is_off(tmp_path: Path) -> None:
     api, *_ = build(tmp_path)
     assert api.get_state()["custom_css"]["file"] is None
     assert not api.save_custom_css("x")["ok"]
+
+
+class FakeTimers:
+    """Stands in for threading.Timer: jobs run only when a test says time is up."""
+
+    def __init__(self) -> None:
+        self.jobs: list[tuple[float, Callable[[], None]]] = []
+        self.cancelled = 0
+
+    def __call__(self, delay: float, job: Callable[[], None]) -> Callable[[], None]:
+        entry = (delay, job)
+        self.jobs.append(entry)
+
+        def cancel() -> None:
+            if entry in self.jobs:
+                self.jobs.remove(entry)
+                self.cancelled += 1
+
+        return cancel
+
+    def run_all(self) -> None:
+        jobs, self.jobs = self.jobs, []
+        for _, job in jobs:
+            job()
+
+
+def pause_api(
+    tmp_path: Path, *, cameras: tuple[int, ...] = (0, 1)
+) -> tuple[Api, TrackingEngine, FakeTimers]:
+    timers = FakeTimers()
+
+    def open_camera(index: int) -> Source:
+        if index not in cameras:
+            raise RuntimeError(f"Could not open camera {index}")
+        return Source()
+
+    engine = TrackingEngine(
+        open_camera=open_camera,
+        make_detector=NoHands,
+        render_preview=lambda frame, hands: b"jpeg",
+    )
+    api = Api(
+        engine,
+        bindings_file=tmp_path / "bindings.toml",
+        settings_file=tmp_path / "settings.toml",
+        gestures_file=tmp_path / "gestures.toml",
+        probe_cameras=lambda: [0],
+        schedule=timers,
+        wall_clock=lambda: 1_000.0,
+    )
+    return api, engine, timers
+
+
+def test_pausing_stops_tracking_and_says_until_when(tmp_path: Path) -> None:
+    api, engine, timers = pause_api(tmp_path)
+    api.start()
+    result = api.pause(15)
+    try:
+        assert result["ok"]
+        assert not engine.running  # the camera is released while paused
+        assert result["status"]["paused_until"] == 1_000.0 + 15 * 60
+        assert [delay for delay, _ in timers.jobs] == [15 * 60]
+    finally:
+        engine.stop()
+
+
+def test_tracking_comes_back_by_itself_when_the_pause_ends(tmp_path: Path) -> None:
+    api, engine, timers = pause_api(tmp_path)
+    api.pause(60)
+    timers.run_all()
+    try:
+        assert engine.running
+        assert api.status()["paused_until"] is None
+    finally:
+        engine.stop()
+
+
+@pytest.mark.parametrize("end", ["resume", "start", "stop"])
+def test_resuming_starting_or_switching_off_ends_the_pause(tmp_path: Path, end: str) -> None:
+    api, engine, timers = pause_api(tmp_path)
+    api.pause(15)
+    getattr(api, end)()
+    try:
+        assert api.status()["paused_until"] is None
+        assert timers.jobs == [] and timers.cancelled == 1
+        assert engine.running == (end != "stop")
+    finally:
+        engine.stop()
+
+
+def test_a_camera_failure_after_the_pause_is_reported(tmp_path: Path) -> None:
+    api, engine, timers = pause_api(tmp_path, cameras=())
+    api.pause(15)
+    timers.run_all()
+    status = api.status()
+    assert not status["running"]
+    assert "could not start again after the pause" in status["error"]
+    assert "Could not open camera 0" in status["error"]
+
+
+@pytest.mark.parametrize("minutes", [0, -5, 24 * 60 + 1, True, "15"])
+def test_odd_pause_lengths_are_refused(tmp_path: Path, minutes: object) -> None:
+    api, engine, timers = pause_api(tmp_path)
+    result = api.pause(minutes)  # type: ignore[arg-type]
+    assert not result["ok"]
+    assert timers.jobs == []
+
+
+def test_status_and_preview_describe_the_hold(tmp_path: Path) -> None:
+    api, engine, _ = pause_api(tmp_path)
+    assert api.status()["hold"] == {
+        "phase": "idle",
+        "gesture": None,
+        "progress": 0.0,
+        "cooldown": 0.0,
+    }
+    api.start()
+    try:
+        preview = None
+        for _ in range(200):
+            preview = api.preview()
+            if preview is not None:
+                break
+            time.sleep(0.01)
+        assert preview is not None
+        assert preview["hold"]["phase"] == "idle"
+    finally:
+        engine.stop()

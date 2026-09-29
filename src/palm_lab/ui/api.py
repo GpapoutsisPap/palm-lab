@@ -8,6 +8,8 @@ rather than raising, so the page can always show the user a message.
 
 import base64
 import shutil
+import threading
+import time
 import webbrowser
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -45,6 +47,7 @@ from palm_lab.settings import (
     settings_from_data,
 )
 from palm_lab.shortcuts import ShortcutError, Shortcuts
+from palm_lab.state import TriggerState
 from palm_lab.version import __version__
 from palm_lab.windows import accent_palette, open_folder
 
@@ -102,6 +105,30 @@ def _custom_gesture_to_json(gesture: CustomGesture) -> JsonDict:
     return {"name": gesture.name, "fingers": list(gesture.fingers)}
 
 
+# Pausing is for a while, not for good: longer than this is what the switch is for.
+MAX_PAUSE_MINUTES = 24 * 60
+
+# Starts `job` after `delay` seconds; returns a function that cancels it.
+Scheduler = Callable[[float, Callable[[], None]], Callable[[], None]]
+
+
+def run_after(delay: float, job: Callable[[], None]) -> Callable[[], None]:
+    timer = threading.Timer(delay, job)
+    timer.daemon = True
+    timer.start()
+    return timer.cancel
+
+
+def _hold_to_json(trigger: TriggerState) -> JsonDict:
+    """The hold in progress, for the ring and status line on the Gestures page."""
+    return {
+        "phase": trigger.phase,
+        "gesture": trigger.gesture,
+        "progress": round(trigger.progress, 3),
+        "cooldown": round(trigger.cooldown_remaining, 1),
+    }
+
+
 def _status_to_json(status: EngineStatus) -> JsonDict:
     return {
         "running": status.running,
@@ -110,6 +137,7 @@ def _status_to_json(status: EngineStatus) -> JsonDict:
         "fps": round(status.fps, 1),
         "error": status.error,
         "last_fired": _fired_to_json(status.last_fired),
+        "hold": _hold_to_json(status.trigger),
     }
 
 
@@ -134,6 +162,8 @@ class Api:
         on_close_choice: Callable[[str], None] = lambda choice: None,
         custom_css_file: Path | None = None,
         custom_css_allowed: bool = True,
+        schedule: Scheduler = run_after,
+        wall_clock: Callable[[], float] = time.time,
     ) -> None:
         self._engine = engine
         self._bindings_file = bindings_file
@@ -152,6 +182,12 @@ class Api:
         # False for `palm-lab ui --no-custom-css`: the way back from CSS that
         # hid the window's own controls.
         self._custom_css_allowed = custom_css_allowed
+        self._schedule = schedule
+        self._wall_clock = wall_clock
+        self._pause_lock = threading.Lock()
+        self._paused_until: float | None = None  # wall-clock time tracking comes back
+        self._cancel_resume: Callable[[], None] | None = None
+        self._resume_error: str | None = None
         self._problems: list[str] = []
         self._bindings_unreadable = False
 
@@ -294,6 +330,8 @@ class Api:
     # Tracking ----------------------------------------------------------------
 
     def start(self) -> JsonDict:
+        """Start tracking. Also ends a pause early."""
+        self._clear_pause()
         try:
             self._engine.start()
         except (RuntimeError, OSError) as exc:
@@ -301,11 +339,63 @@ class Api:
         return {"ok": True, "status": self.status()}
 
     def stop(self) -> JsonDict:
+        """Stop tracking for good (until switched back on), cancelling any pause."""
+        self._clear_pause()
         self._engine.stop()
         return {"ok": True, "status": self.status()}
 
     def status(self) -> JsonDict:
-        return _status_to_json(self._engine.status())
+        status = _status_to_json(self._engine.status())
+        with self._pause_lock:
+            status["paused_until"] = self._paused_until
+            if not status["running"] and not status["error"] and self._resume_error:
+                status["error"] = self._resume_error
+        return status
+
+    # Pausing -------------------------------------------------------------------
+
+    def pause(self, minutes: float) -> JsonDict:
+        """Stop tracking for a while, releasing the camera, then start again by itself."""
+        if (
+            isinstance(minutes, bool)
+            or not isinstance(minutes, int | float)
+            or not 0 < minutes <= MAX_PAUSE_MINUTES
+        ):
+            return {
+                "ok": False,
+                "error": f"Pause for between 1 and {MAX_PAUSE_MINUTES} minutes.",
+                "status": self.status(),
+            }
+        self._clear_pause()
+        self._engine.stop()
+        with self._pause_lock:
+            self._paused_until = self._wall_clock() + minutes * 60
+            self._cancel_resume = self._schedule(minutes * 60, self._resume_when_due)
+        return {"ok": True, "status": self.status()}
+
+    def resume(self) -> JsonDict:
+        """End a pause now."""
+        return self.start()
+
+    def _resume_when_due(self) -> None:
+        with self._pause_lock:
+            if self._paused_until is None:
+                return  # resumed or switched off in the meantime
+            self._paused_until = None
+            self._cancel_resume = None
+        try:
+            self._engine.start()
+        except (RuntimeError, OSError) as exc:
+            with self._pause_lock:
+                self._resume_error = f"Tracking could not start again after the pause: {exc}"
+
+    def _clear_pause(self) -> None:
+        with self._pause_lock:
+            cancel, self._cancel_resume = self._cancel_resume, None
+            self._paused_until = None
+            self._resume_error = None
+        if cancel is not None:
+            cancel()
 
     def preview(self) -> JsonDict | None:
         """The latest camera frame and its hands, or None when not tracking."""
@@ -315,12 +405,15 @@ class Api:
         return {
             "image": "data:image/jpeg;base64," + base64.b64encode(frame.image).decode("ascii"),
             "hands": _hands_to_json(frame.hands),
+            # Sent with every frame, so the hold ring moves as smoothly as the video.
+            "hold": _hold_to_json(self._engine.status().trigger),
         }
 
     # Custom gestures -----------------------------------------------------------
 
     def start_gesture_capture(self) -> JsonDict:
         """Begin recording a new gesture, starting the camera if it isn't running."""
+        self._clear_pause()  # the camera is coming on, so a pause is over
         if not self._engine.running:
             try:
                 self._engine.start()

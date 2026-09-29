@@ -150,12 +150,25 @@ def _run_window(*, debug: bool, background: bool, custom_css: bool, guard: Insta
             tray.notify("palm-lab could not start tracking", str(result["error"]))
         tray.refresh()
 
+    def pause_tracking(minutes: int) -> None:
+        api.pause(minutes)
+        tray.refresh()
+
+    def resume_tracking() -> None:
+        result = api.resume()
+        if not result["ok"]:
+            tray.notify("palm-lab could not start tracking", str(result["error"]))
+        tray.refresh()
+
     tray = Tray(
         icon_file=icon_path(),
         on_open=lambda: lifecycle.show(),
         on_toggle_tracking=toggle_tracking,
         on_quit=lambda: lifecycle.quit(),
         is_tracking=lambda: engine.running,
+        on_pause=pause_tracking,
+        on_resume=resume_tracking,
+        is_paused=lambda: api.status()["paused_until"] is not None,
     )
     lifecycle = Lifecycle(
         settings=saved_settings,

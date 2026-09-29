@@ -20,7 +20,7 @@ from palm_lab.features import HandFeatures, extract
 from palm_lab.gestures import FingerTuple, classify
 from palm_lab.landmarks import Point, normalise
 from palm_lab.settings import Settings
-from palm_lab.state import GestureTrigger
+from palm_lab.state import GestureTrigger, TriggerState
 
 Hands = list[list[Point]]
 
@@ -90,6 +90,7 @@ class EngineStatus:
     fps: float
     error: str | None
     last_fired: FiredEvent | None
+    trigger: TriggerState = TriggerState()
 
 
 @dataclass(frozen=True)
@@ -315,13 +316,20 @@ class TrackingEngine:
 
     def status(self) -> EngineStatus:
         with self._lock:
+            running = self.running
+            capturing = self._capture is not None
+            # While recording a new gesture nothing fires, so there is no hold to show.
+            trigger = (
+                self._trigger.state(self._clock()) if running and not capturing else TriggerState()
+            )
             return EngineStatus(
-                running=self.running,
+                running=running,
                 gesture=self._gesture,
                 hands=self._hands,
                 fps=self._fps,
                 error=self._error,
                 last_fired=self._last_fired,
+                trigger=trigger,
             )
 
     def preview(self) -> bytes | None:

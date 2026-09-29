@@ -19,11 +19,13 @@ class FakeMenuItem:
         *,
         default: bool = False,
         checked: Callable[[Any], bool] | None = None,
+        visible: Callable[[Any], bool] | bool = True,
     ) -> None:
         self.text = text
         self.action = action
         self.default = default
         self.checked = checked
+        self.visible = visible
 
 
 class FakeMenu:
@@ -70,6 +72,7 @@ class App:
     def __init__(self) -> None:
         self.calls: list[str] = []
         self.tracking = False
+        self.paused = False
 
     def tray(self, backend: Callable[[], Any] = lambda: FAKE_PYSTRAY) -> Tray:
         return Tray(
@@ -78,6 +81,9 @@ class App:
             on_toggle_tracking=lambda: self.calls.append("toggle"),
             on_quit=lambda: self.calls.append("quit"),
             is_tracking=lambda: self.tracking,
+            on_pause=lambda minutes: self.calls.append(f"pause {minutes}"),
+            on_resume=lambda: self.calls.append("resume"),
+            is_paused=lambda: self.paused,
             backend=backend,
             image=lambda path: f"image of {path.name}",
             sleep=lambda seconds: None,
@@ -88,6 +94,16 @@ class App:
 def app() -> App:
     FakeIcon.instances.clear()
     return App()
+
+
+def item(icon: FakeIcon, text: str) -> FakeMenuItem:
+    found = [i for i in icon.menu.items if isinstance(i, FakeMenuItem) and i.text == text]
+    return found[0]
+
+
+def shown(menu_item: FakeMenuItem) -> bool:
+    visible = menu_item.visible
+    return visible(menu_item) if callable(visible) else visible
 
 
 def started(app: App) -> tuple[Tray, FakeIcon]:
@@ -104,7 +120,15 @@ def test_the_icon_shows_the_app_icon_and_a_menu(app: App) -> None:
     assert icon.image == "image of palm-lab.ico"
     assert icon.title == TOOLTIP
     texts = [item if isinstance(item, str) else item.text for item in icon.menu.items]
-    assert texts == ["Open palm-lab", "Tracking", "separator", "Quit palm-lab"]
+    assert texts == [
+        "Open palm-lab",
+        "Tracking",
+        "Pause for 15 minutes",
+        "Pause for 1 hour",
+        "Resume now",
+        "separator",
+        "Quit palm-lab",
+    ]
     tray.stop()
 
 
@@ -120,16 +144,17 @@ def test_clicking_the_icon_opens_the_window(app: App) -> None:
 
 def test_menu_items_call_through(app: App) -> None:
     tray, icon = started(app)
-    tracking, quit_item = icon.menu.items[1], icon.menu.items[3]
-    tracking.action()
-    quit_item.action()
-    assert app.calls == ["toggle", "quit"]
+    for text in ("Tracking", "Pause for 15 minutes", "Pause for 1 hour", "Resume now"):
+        item(icon, text).action()
+    item(icon, "Quit palm-lab").action()
+    assert app.calls == ["toggle", "pause 15", "pause 60", "resume", "quit"]
     tray.stop()
 
 
 def test_the_tracking_tick_follows_the_engine(app: App) -> None:
     tray, icon = started(app)
-    tracking = icon.menu.items[1]
+    tracking = item(icon, "Tracking")
+    assert tracking.checked is not None
     assert tracking.checked(tracking) is False
     app.tracking = True
     assert tracking.checked(tracking) is True
@@ -178,3 +203,16 @@ def test_a_missing_tray_library_leaves_palm_lab_working(
     tray.refresh()
     tray.stop()
     assert "notification-area icon" in capsys.readouterr().out
+
+
+def test_pause_items_show_while_tracking_and_resume_while_paused(app: App) -> None:
+    tray, icon = started(app)
+    pause, resume = item(icon, "Pause for 1 hour"), item(icon, "Resume now")
+    assert not shown(pause) and not shown(resume)
+    app.tracking = True
+    assert shown(pause) and not shown(resume)
+    app.tracking, app.paused = False, True
+    assert not shown(pause) and shown(resume)
+    tray.refresh()
+    assert icon.title == "palm-lab: paused"
+    tray.stop()

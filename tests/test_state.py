@@ -2,7 +2,7 @@
 
 import pytest
 
-from palm_lab.state import GestureTrigger
+from palm_lab.state import GestureTrigger, TriggerState
 
 
 def test_does_not_fire_before_dwell_completes() -> None:
@@ -104,3 +104,71 @@ def test_dwell_is_configurable(dwell: float) -> None:
     trigger.update("peace", 0.0)
     assert trigger.update("peace", dwell - 0.01) is None
     assert trigger.update("peace", dwell) == "peace"
+
+
+# What the window shows about the hold in progress ---------------------------
+
+
+def test_nothing_recognised_is_idle() -> None:
+    trigger = GestureTrigger(dwell_seconds=0.8, cooldown_seconds=5.0)
+    assert trigger.state(0.0) == TriggerState()
+    trigger.update(None, 0.0)
+    assert trigger.state(0.1).phase == "idle"
+
+
+def test_a_hold_fills_towards_firing() -> None:
+    trigger = GestureTrigger(dwell_seconds=0.8, cooldown_seconds=5.0)
+    trigger.update("peace", 10.0)
+    trigger.update("peace", 10.4)
+    state = trigger.state(10.4)
+    assert state.phase == "holding"
+    assert state.gesture == "peace"
+    assert state.progress == pytest.approx(0.5)
+
+
+def test_after_firing_it_says_fired_and_counts_down_the_cooldown() -> None:
+    trigger = GestureTrigger(dwell_seconds=0.8, cooldown_seconds=5.0)
+    trigger.update("peace", 10.0)
+    assert trigger.update("peace", 10.8) == "peace"
+    state = trigger.state(11.8)
+    assert state.phase == "fired"
+    assert state.progress == 1.0
+    assert state.cooldown_remaining == pytest.approx(4.0)
+
+
+def test_showing_it_again_too_soon_says_cooling_down() -> None:
+    """The commonest reason a correct gesture seems to do nothing."""
+    trigger = GestureTrigger(dwell_seconds=0.8, cooldown_seconds=5.0)
+    trigger.update("peace", 10.0)
+    trigger.update("peace", 10.8)
+    trigger.update(None, 11.0)
+    trigger.update("peace", 12.0)
+    state = trigger.state(12.5)
+    assert state.phase == "cooldown"
+    assert state.cooldown_remaining == pytest.approx(3.3)
+
+
+def test_a_hold_that_outlasts_its_cooldown_asks_for_a_fresh_start() -> None:
+    trigger = GestureTrigger(dwell_seconds=0.8, cooldown_seconds=5.0)
+    trigger.update("peace", 10.0)
+    trigger.update("peace", 10.8)  # fires
+    trigger.update(None, 11.0)
+    trigger.update("peace", 11.1)
+    trigger.update("peace", 12.0)  # dwell complete, blocked by the cooldown
+    assert trigger.state(16.0).phase == "rearm"
+
+
+def test_another_gesture_is_not_held_back_by_the_first_ones_cooldown() -> None:
+    trigger = GestureTrigger(dwell_seconds=0.8, cooldown_seconds=5.0)
+    trigger.update("peace", 10.0)
+    trigger.update("peace", 10.8)
+    trigger.update("fist", 11.0)
+    assert trigger.state(11.2).phase == "holding"
+
+
+def test_reading_the_state_changes_nothing() -> None:
+    trigger = GestureTrigger(dwell_seconds=0.8, cooldown_seconds=5.0)
+    trigger.update("peace", 10.0)
+    trigger.state(10.5)
+    trigger.state(10.9)
+    assert trigger.update("peace", 10.8) == "peace"
