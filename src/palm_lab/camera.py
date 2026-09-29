@@ -1,9 +1,11 @@
 """Live webcam preview with hand landmarks drawn on each frame."""
 
 import json
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import cv2
 import mediapipe as mp
@@ -60,6 +62,86 @@ def _landmarker_options(num_hands: int) -> HandLandmarkerOptions:
         running_mode=RunningMode.IMAGE,
         num_hands=num_hands,
     )
+
+
+PREVIEW_WIDTH = 480
+PREVIEW_JPEG_QUALITY = 70
+PROBE_LIMIT = 5
+
+
+class OpenCVSource:
+    """A webcam opened through OpenCV, shaped for the tracking engine."""
+
+    def __init__(self, capture: Any) -> None:
+        self._capture = capture
+
+    def read(self) -> tuple[bool, object]:
+        ok, frame = self._capture.read()
+        return bool(ok), frame
+
+    def release(self) -> None:
+        self._capture.release()
+
+
+def open_camera(index: int) -> OpenCVSource:
+    """Open a camera by number, or raise with a message a user can act on."""
+    capture = cv2.VideoCapture(index)
+    if not capture.isOpened():
+        capture.release()
+        raise RuntimeError(
+            f"Could not open camera {index}. It may be in use by another app, "
+            "or your camera may have a different number. Try Scan in Settings."
+        )
+    return OpenCVSource(capture)
+
+
+def probe_cameras(limit: int = PROBE_LIMIT) -> list[int]:
+    """Camera numbers that open and deliver a frame right now."""
+    # DirectShow fails fast on missing devices; the default backend can take
+    # several seconds per index on Windows.
+    backend = cv2.CAP_DSHOW if sys.platform == "win32" else cv2.CAP_ANY
+    found = []
+    for index in range(limit):
+        capture = cv2.VideoCapture(index, backend)
+        try:
+            if capture.isOpened() and capture.read()[0]:
+                found.append(index)
+        finally:
+            capture.release()
+    return found
+
+
+class MediaPipeDetector:
+    """Finds hands with MediaPipe, returning plain landmark points."""
+
+    def __init__(self, num_hands: int = 1) -> None:
+        if not MODEL_PATH.exists():
+            raise FileNotFoundError(f"Hand landmarker model not found at {MODEL_PATH}")
+        self._landmarker = HandLandmarker.create_from_options(
+            _landmarker_options(num_hands=num_hands)
+        )
+
+    def detect(self, frame: Any) -> list[list[Point]]:
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        result = self._landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
+        return [[Point(lm.x, lm.y, lm.z) for lm in hand] for hand in result.hand_landmarks]
+
+    def close(self) -> None:
+        self._landmarker.close()
+
+
+def render_preview(frame: Any, hands: list[list[Point]]) -> bytes | None:
+    """Mirror the frame like a selfie, shrink it and encode it as JPEG.
+
+    The hand skeleton is not drawn here: the window draws it on top from the
+    landmarks, so it stays sharp and matches the rest of the interface.
+    """
+    height, width = frame.shape[:2]
+    mirrored = cv2.flip(frame, 1)
+    scale = PREVIEW_WIDTH / width
+    small = cv2.resize(mirrored, (PREVIEW_WIDTH, int(height * scale)))
+    ok, encoded = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, PREVIEW_JPEG_QUALITY])
+    return encoded.tobytes() if ok else None
 
 
 def self_test() -> None:

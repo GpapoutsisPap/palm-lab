@@ -37,11 +37,18 @@ def present_model(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return model
 
 
-def test_bare_invocation_defaults_to_run() -> None:
-    """`palm-lab` with no arguments should start watching, not print help."""
+def test_bare_invocation_opens_the_window() -> None:
+    """Double-clicking the .exe runs it with no arguments: open the window."""
     args = cli.build_parser().parse_args([])
-    assert args.command == "run"
-    assert args.camera == 0
+    assert args.command == "ui"
+    assert args.debug is False
+
+
+def test_ui_accepts_a_debug_flag() -> None:
+    """Developer tools can be switched on for troubleshooting the page."""
+    args = cli.build_parser().parse_args(["ui", "--debug"])
+    assert args.command == "ui"
+    assert args.debug is True
 
 
 def test_run_accepts_a_camera_index() -> None:
@@ -66,7 +73,7 @@ def test_capture_parses_its_arguments() -> None:
     assert args.camera == 1
 
 
-@pytest.mark.parametrize("command", ["run", "capture", "config", "doctor"])
+@pytest.mark.parametrize("command", ["ui", "run", "capture", "config", "doctor", "shortcut"])
 def test_every_subcommand_maps_to_a_handler(command: str) -> None:
     """A subcommand with no handler would silently print help instead."""
     assert command in cli.HANDLERS
@@ -94,6 +101,31 @@ def test_config_reports_a_broken_file(
     (config_home / "bindings.toml").write_text("[[binding]\n", encoding="utf-8")
     assert cli.main(["config"]) == 1
     assert "problem" in capsys.readouterr().out
+
+
+def test_config_reports_custom_gestures(
+    config_home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`palm-lab config` also lists any gestures recorded through the window."""
+    config_home.mkdir(parents=True)
+    (config_home / "gestures.toml").write_text(
+        '[[gesture]]\nname = "Three up"\nfingers = [false, true, true, true, false]\n',
+        encoding="utf-8",
+    )
+    assert cli.main(["config"]) == 0
+    out = capsys.readouterr().out
+    assert "1 custom gesture(s)" in out
+    assert "Three up" in out
+    assert "index, middle, ring" in out
+
+
+def test_config_reports_a_broken_gestures_file(
+    config_home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    config_home.mkdir(parents=True)
+    (config_home / "gestures.toml").write_text("not [ valid toml", encoding="utf-8")
+    assert cli.main(["config"]) == 1
+    assert "gestures file has a problem".lower() in capsys.readouterr().out.lower()
 
 
 def test_doctor_fails_when_the_model_is_missing(
@@ -125,6 +157,21 @@ def test_doctor_passes_when_everything_is_present(
     assert "hand detection runs" in out
     assert "All good." in out
     assert self_test_calls == ["ran"]
+
+
+def test_doctor_reports_missing_window_files(
+    config_home: Path,
+    present_model: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    self_test_calls: list[str],
+) -> None:
+    """A build that forgot the HTML, CSS or JS is caught before a user sees it."""
+    monkeypatch.setattr(cli, "ui_static_dir", lambda: tmp_path / "missing")
+    cli.main(["config"])
+    assert cli.main(["doctor"]) == 1
+    assert "[FAIL] window files" in capsys.readouterr().out
 
 
 def test_doctor_reports_a_detection_failure(

@@ -7,9 +7,14 @@ import pytest
 from palm_lab.actions.errors import InvalidBindingError
 from palm_lab.actions.models import (
     DEFAULT_STEP_DELAY_SECONDS,
+    Action,
     ActionType,
+    Binding,
+    bindings_from_data,
+    format_bindings,
     load_bindings,
     parse_bindings,
+    save_bindings,
 )
 
 MINIMAL = """
@@ -99,7 +104,7 @@ def test_bindings_are_immutable() -> None:
     ("text", "expected"),
     [
         pytest.param("[[binding]\ngesture=", "not valid TOML", id="malformed-toml"),
-        pytest.param("other = 1", "[[binding]] sections", id="no-binding-section"),
+        pytest.param("other = 1", "Unknown top-level key 'other'", id="unknown-top-level-key"),
         pytest.param("binding = 5", "[[binding]] sections", id="binding-not-a-list"),
         pytest.param(
             '[[binding]]\ngesture=""\nname="n"\n[[binding.action]]\ntype="launch"\ntarget="x"',
@@ -209,3 +214,81 @@ def test_load_bindings_reports_a_missing_file(tmp_path) -> None:  # type: ignore
     missing = tmp_path / "nope.toml"
     with pytest.raises(InvalidBindingError, match=re.escape(missing.name)):
         load_bindings(missing)
+
+
+def test_an_empty_configuration_is_valid() -> None:
+    """Deleting every binding in the window must still save and load."""
+    assert parse_bindings("") == ()
+    assert parse_bindings("# only a comment\n") == ()
+
+
+def test_the_same_gesture_cannot_be_bound_twice() -> None:
+    """Previously the second binding silently replaced the first."""
+    one = '[[binding]]\ngesture="peace"\nname="A"\n[[binding.action]]\ntype="launch"\ntarget="x"\n'
+    two = one.replace('name="A"', 'name="B"')
+    with pytest.raises(InvalidBindingError, match=re.escape("already bound by binding 1")):
+        parse_bindings(one + two)
+
+
+def test_data_from_the_window_is_validated_the_same_way() -> None:
+    """The page sends plain dicts; they go through the same checks as a file."""
+    good = {
+        "binding": [
+            {
+                "gesture": "fist",
+                "name": "Pause",
+                "action": [{"type": "hotkey", "target": "media_play_pause"}],
+            }
+        ]
+    }
+    (binding,) = bindings_from_data(good)
+    assert binding.actions[0].target == "media_play_pause"
+    bad = {
+        "binding": [
+            {
+                "gesture": "fist",
+                "name": "Pause",
+                "action": [{"type": "hotkey", "target": "ctrl+banana"}],
+            }
+        ]
+    }
+    with pytest.raises(InvalidBindingError, match="unknown key"):
+        bindings_from_data(bad)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "plain",
+        'with "quotes"',
+        r"C:\Program Files\Spotify\Spotify.exe",
+        "line\nbreak and\ttab",
+        "\u03a0\u03b1\u03cd\u03c3\u03b7 and emoji \U0001f44d",
+    ],
+)
+def test_formatting_round_trips_awkward_text(value: str) -> None:
+    """Whatever a user types in the window must load back exactly the same."""
+    original = (
+        Binding(
+            gesture="peace",
+            name=value,
+            actions=(Action(type=ActionType.LAUNCH, target=value),),
+            step_delay_seconds=1.5,
+        ),
+    )
+    assert parse_bindings(format_bindings(original)) == original
+
+
+def test_default_delay_is_left_out_of_the_file() -> None:
+    """Only non-default values are written, keeping the file readable."""
+    (binding,) = parse_bindings(MINIMAL)
+    assert "step_delay_seconds" not in format_bindings([binding])
+
+
+def test_saving_writes_a_loadable_file(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """save_bindings creates folders as needed and leaves no temporary file."""
+    path = tmp_path / "nested" / "bindings.toml"
+    bindings = parse_bindings(MINIMAL)
+    save_bindings(bindings, path)
+    assert load_bindings(path) == bindings
+    assert list(path.parent.iterdir()) == [path]

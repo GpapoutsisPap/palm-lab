@@ -7,6 +7,7 @@ import webbrowser
 import pytest
 
 from palm_lab.actions import hotkeys, runner
+from palm_lab.actions.apps import KNOWN_APPS
 from palm_lab.actions.errors import AppNotFoundError, LaunchFailedError
 from palm_lab.actions.models import Action, ActionType, Binding
 
@@ -52,7 +53,7 @@ def test_launch_action_resolves_a_known_name(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setattr(os, "startfile", seen.append, raising=False)
     runner._launch("Spotify")
-    assert seen == [runner.KNOWN_APPS["spotify"]]
+    assert seen == [KNOWN_APPS["spotify"]]
 
 
 def test_launch_action_passes_an_unknown_target_through(

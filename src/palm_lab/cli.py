@@ -10,7 +10,9 @@ from palm_lab.config import (
     bindings_path,
     config_dir,
     ensure_bindings_file,
+    ui_static_dir,
 )
+from palm_lab.custom_gestures import CustomGestureError, gestures_path, load_custom_gestures
 from palm_lab.version import __version__
 
 MODEL_URL = (
@@ -28,7 +30,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"palm-lab {__version__}")
     subparsers = parser.add_subparsers(dest="command")
 
-    run = subparsers.add_parser("run", help="watch the camera and run bindings")
+    ui = subparsers.add_parser("ui", help="open the palm-lab window (the default)")
+    ui.add_argument(
+        "--debug", action="store_true", help="enable browser developer tools in the window"
+    )
+
+    run = subparsers.add_parser("run", help="watch the camera in a plain preview window")
     run.add_argument("--camera", type=int, default=0, help="camera index (default: 0)")
 
     capture = subparsers.add_parser("capture", help="save landmark fixtures for a gesture")
@@ -38,10 +45,25 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("config", help="show the config location and bindings")
     subparsers.add_parser("doctor", help="check that everything needed is in place")
 
-    # A bare `palm-lab` runs no subparser, so supply what _cmd_run needs.
-    # This must come after add_subparsers, which resets dest="command" to None.
-    parser.set_defaults(command="run", camera=0)
+    shortcut = subparsers.add_parser(
+        "shortcut", help="put a palm-lab shortcut on the desktop (Windows)"
+    )
+    shortcut.add_argument(
+        "--start-menu", action="store_true", help="also add palm-lab to the Start menu"
+    )
+    shortcut.add_argument("--remove", action="store_true", help="remove both shortcuts instead")
+
+    # A bare `palm-lab`, which is what double-clicking the .exe runs, opens the
+    # window. This must come after add_subparsers, which resets dest="command".
+    parser.set_defaults(command="ui", debug=False, camera=0)
     return parser
+
+
+def _cmd_ui(args: argparse.Namespace) -> int:
+    # Imported here so config/doctor never load pywebview, OpenCV or MediaPipe.
+    from palm_lab.ui.app import run_ui
+
+    return run_ui(debug=args.debug)
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
@@ -80,6 +102,21 @@ def _cmd_config(_: argparse.Namespace) -> int:
         print(f"  {binding.gesture:<12} {binding.name}")
         for action in binding.actions:
             print(f"    {action.type.value:<10} {action.target}")
+
+    try:
+        custom = load_custom_gestures()
+    except CustomGestureError as exc:
+        print(f"\nCustom gestures file has a problem: {exc}")
+        return 1
+    print(f"\nGestures file:    {gestures_path()}")
+    print(f"{len(custom)} custom gesture(s):")
+    for gesture in custom:
+        finger_names = ("thumb", "index", "middle", "ring", "pinky")
+        fingers = (
+            ", ".join(name for name, up in zip(finger_names, gesture.fingers, strict=True) if up)
+            or "no fingers"
+        )
+        print(f"  {gesture.name:<20} ({fingers})")
     return 0
 
 
@@ -123,6 +160,24 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
     else:
         print(f"[ok]   mediapipe {mediapipe.__version__}")
 
+    try:
+        import webview  # noqa: F401
+    except ImportError:
+        problems += 1
+        print("[FAIL] pywebview not installed; run: uv pip install -e '.[dev]'")
+    else:
+        print("[ok]   pywebview installed")
+
+    from palm_lab.ui.app import load_page
+
+    try:
+        load_page(ui_static_dir())
+    except (OSError, ValueError) as exc:
+        problems += 1
+        print(f"[FAIL] window files could not be loaded: {exc}")
+    else:
+        print("[ok]   window files")
+
     # Only worth trying once the model and libraries are known to be present.
     if not problems:
         try:
@@ -139,11 +194,31 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
     return 1 if problems else 0
 
 
+def _cmd_shortcut(args: argparse.Namespace) -> int:
+    from palm_lab.shortcuts import ShortcutError, Shortcuts
+
+    shortcuts = Shortcuts()
+    kinds = ["desktop", "start_menu"] if args.start_menu or args.remove else ["desktop"]
+    try:
+        for kind in kinds:
+            if args.remove:
+                shortcuts.remove(kind)
+                print(f"Removed {shortcuts.path(kind)}")
+            else:
+                print(f"Created {shortcuts.create(kind)}")
+    except ShortcutError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
 HANDLERS = {
+    "ui": _cmd_ui,
     "run": _cmd_run,
     "capture": _cmd_capture,
     "config": _cmd_config,
     "doctor": _cmd_doctor,
+    "shortcut": _cmd_shortcut,
 }
 
 

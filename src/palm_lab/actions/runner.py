@@ -8,17 +8,10 @@ import webbrowser
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from palm_lab.actions.apps import resolve_app
 from palm_lab.actions.errors import ActionError, AppNotFoundError, LaunchFailedError
 from palm_lab.actions.hotkeys import parse_hotkey, send_hotkey
 from palm_lab.actions.models import Action, ActionType, Binding
-
-KNOWN_APPS = {
-    "spotify": "spotify:",
-    "notepad": "notepad.exe",
-    "notes": "notepad.exe",
-    "calculator": "calc.exe",
-    "explorer": "explorer.exe",
-}
 
 
 @dataclass(frozen=True)
@@ -40,8 +33,8 @@ def _open_url(target: str) -> None:
 
 
 def _launch(target: str) -> None:
-    """Start an application, resolving known names to launchable targets."""
-    resolved = KNOWN_APPS.get(target.lower(), target)
+    """Start an application by Start menu name, program name, path or URL."""
+    resolved = resolve_app(target)
     try:
         if sys.platform == "win32":
             os.startfile(resolved)

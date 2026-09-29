@@ -7,7 +7,10 @@ from pathlib import Path
 APP_NAME = "palm-lab"
 BINDINGS_FILENAME = "bindings.toml"
 MODEL_FILENAME = "hand_landmarker.task"
+ICON_FILENAME = "palm-lab.ico"
 CAPTURES_DIRNAME = "captures"
+LOGS_DIRNAME = "logs"
+PROJECT_URL = "https://github.com/GpapoutsisPap/palm-lab"
 
 DEFAULT_BINDINGS_TOML = """\
 # palm-lab gesture bindings.
@@ -20,7 +23,8 @@ DEFAULT_BINDINGS_TOML = """\
 #               open_url  - open a URL in the default browser
 #               hotkey    - press a key or combination
 #
-# Known launch names: spotify, notepad, notes, calculator, explorer
+# Open app accepts any name from your Start menu (Steam, Discord, a game...),
+# a program on your PATH, or a full path to an .exe.
 # Hotkey examples:    media_play_pause, media_next, media_previous,
 #                     volume_up, volume_down, volume_mute,
 #                     ctrl+alt+t, win+d, alt+tab, f5
@@ -52,21 +56,36 @@ def is_frozen() -> bool:
     return bool(getattr(sys, "frozen", False)) and hasattr(sys, "_MEIPASS")
 
 
-def resource_dir() -> Path:
-    """Directory holding bundled read-only files such as the hand model.
+def package_dir() -> Path:
+    """The palm_lab package folder, from source or inside a build.
 
     In a PyInstaller build, bundled files are unpacked under sys._MEIPASS, which
     has nothing to do with where this source file used to live.
     """
     if is_frozen():
         # getattr, because the attribute only exists inside a build.
-        return Path(getattr(sys, "_MEIPASS", "")) / "palm_lab" / "assets"
-    return Path(__file__).parent / "assets"
+        return Path(getattr(sys, "_MEIPASS", "")) / "palm_lab"
+    return Path(__file__).parent
+
+
+def resource_dir() -> Path:
+    """Directory holding bundled read-only files such as the hand model."""
+    return package_dir() / "assets"
+
+
+def ui_static_dir() -> Path:
+    """Directory holding the window's HTML, CSS and JavaScript."""
+    return package_dir() / "ui" / "static"
 
 
 def model_path() -> Path:
     """Full path to the hand landmarker model, from source or a build."""
     return resource_dir() / MODEL_FILENAME
+
+
+def icon_path() -> Path:
+    """The app icon, used for the window and for shortcuts made from source."""
+    return resource_dir() / ICON_FILENAME
 
 
 def fixture_dir() -> Path:
@@ -102,6 +121,11 @@ def config_dir() -> Path:
     xdg = os.environ.get("XDG_CONFIG_HOME")
     base = Path(xdg) if xdg else Path.home() / ".config"
     return base / APP_NAME
+
+
+def log_dir() -> Path:
+    """Where the windowed app writes what would otherwise go to a console."""
+    return config_dir() / LOGS_DIRNAME
 
 
 MODEL_PATH = model_path()

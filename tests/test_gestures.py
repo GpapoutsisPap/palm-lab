@@ -32,3 +32,12 @@ def test_unrecognised_shape_returns_none() -> None:
 
     odd = HandFeatures(thumb=False, index=False, middle=True, ring=False, pinky=True)
     assert classify(odd) is None
+
+
+def test_custom_rules_are_recognised_alongside_the_default_set() -> None:
+    """Passing a rules mapping lets classify() see gestures beyond the four built-ins."""
+    from palm_lab.features import HandFeatures
+
+    three_up = HandFeatures(thumb=False, index=True, middle=True, ring=True, pinky=False)
+    assert classify(three_up) is None  # not built in
+    assert classify(three_up, {three_up.as_tuple(): "three_up"}) == "three_up"
