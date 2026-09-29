@@ -1,4 +1,4 @@
-"""User-adjustable settings: the camera, how gestures are timed, and sound."""
+"""User-adjustable settings: camera, gesture timing, sound, theme and closing."""
 
 import tomllib
 from collections.abc import Mapping
@@ -13,6 +13,20 @@ MAX_CAMERA_INDEX = 9
 DWELL_RANGE = (0.2, 5.0)
 COOLDOWN_RANGE = (0.0, 60.0)
 
+# What closing the window does: ask each time, hide it and keep palm-lab
+# running in the notification area, or quit.
+CLOSE_ACTIONS = ("ask", "background", "quit")
+# "system" follows Windows' own light or dark mode.
+THEMES = ("system", "light", "dark")
+KNOWN_SETTINGS = {
+    "camera_index",
+    "dwell_seconds",
+    "cooldown_seconds",
+    "sounds",
+    "close_action",
+    "theme",
+}
+
 
 class SettingsError(ValueError):
     """Settings that are missing, the wrong type, or out of range."""
@@ -26,8 +40,10 @@ class Settings:
     dwell_seconds: float = DEFAULT_DWELL_SECONDS
     cooldown_seconds: float = DEFAULT_COOLDOWN_SECONDS
     sounds: bool = True
+    close_action: str = "ask"
+    theme: str = "system"
 
-    def as_dict(self) -> dict[str, float | int | bool]:
+    def as_dict(self) -> dict[str, float | int | bool | str]:
         return asdict(self)
 
 
@@ -44,7 +60,7 @@ def _number(data: Mapping[str, object], key: str, default: float) -> float:
 
 def settings_from_data(data: Mapping[str, object]) -> Settings:
     """Validate settings from a file or the UI. Missing keys keep defaults."""
-    unknown = sorted(set(data) - {"camera_index", "dwell_seconds", "cooldown_seconds", "sounds"})
+    unknown = sorted(set(data) - KNOWN_SETTINGS)
     if unknown:
         raise SettingsError(f"Unknown setting {unknown[0]!r}")
 
@@ -68,8 +84,21 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
     if not isinstance(sounds, bool):
         raise SettingsError("'sounds' must be true or false")
 
+    close_action = data.get("close_action", "ask")
+    if not isinstance(close_action, str) or close_action not in CLOSE_ACTIONS:
+        raise SettingsError(f"'close_action' must be one of: {', '.join(CLOSE_ACTIONS)}")
+
+    theme = data.get("theme", "system")
+    if not isinstance(theme, str) or theme not in THEMES:
+        raise SettingsError(f"'theme' must be one of: {', '.join(THEMES)}")
+
     return Settings(
-        camera_index=camera, dwell_seconds=dwell, cooldown_seconds=cooldown, sounds=sounds
+        camera_index=camera,
+        dwell_seconds=dwell,
+        cooldown_seconds=cooldown,
+        sounds=sounds,
+        close_action=close_action,
+        theme=theme,
     )
 
 
@@ -94,6 +123,8 @@ def save_settings(settings: Settings, path: Path | None = None) -> Path:
         f"dwell_seconds = {settings.dwell_seconds!r}\n"
         f"cooldown_seconds = {settings.cooldown_seconds!r}\n"
         f"sounds = {'true' if settings.sounds else 'false'}\n"
+        f'close_action = "{settings.close_action}"\n'
+        f'theme = "{settings.theme}"\n'
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")

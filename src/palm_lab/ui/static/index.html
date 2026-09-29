@@ -193,6 +193,25 @@
           </div>
         </div>
 
+        <h2 class="group-title">Appearance</h2>
+        <div class="card card-row">
+          <span class="card-icon" data-icon="theme"></span>
+          <div class="card-text">
+            <p class="card-title" id="theme-label">Theme</p>
+            <p class="card-desc">Light or dark, or match the mode you picked for Windows.</p>
+          </div>
+          <div class="card-control">
+            <span class="select-wrap">
+              <select class="select" id="theme" aria-labelledby="theme-label">
+                <option value="system">Use my Windows setting</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+              <span class="select-chevron" data-icon="chevron"></span>
+            </span>
+          </div>
+        </div>
+
         <h2 class="group-title">Sound</h2>
         <div class="card card-row">
           <span class="card-icon" data-icon="speaker"></span>
@@ -204,6 +223,38 @@
             <span class="toggle-label" data-for="sounds">On</span>
             <input class="switch" id="sounds" type="checkbox" role="switch" aria-labelledby="sounds-label">
           </label>
+        </div>
+
+        <h2 class="group-title">Startup and closing</h2>
+        <div class="card-group">
+          <div class="card card-row">
+            <span class="card-icon" data-icon="power"></span>
+            <div class="card-text">
+              <p class="card-title" id="startup-label">Start with Windows</p>
+              <p class="card-desc">When you sign in, palm-lab starts in the background by the clock, already watching for gestures.</p>
+            </div>
+            <label class="toggle">
+              <span class="toggle-label" data-for="shortcut-startup">Off</span>
+              <input class="switch" id="shortcut-startup" type="checkbox" role="switch" data-kind="startup" aria-labelledby="startup-label" disabled>
+            </label>
+          </div>
+          <div class="card card-row">
+            <span class="card-icon" data-icon="window"></span>
+            <div class="card-text">
+              <p class="card-title" id="close-action-label">When I close the window</p>
+              <p class="card-desc">In the background, your gestures keep working. Open or quit palm-lab from its icon by the clock.</p>
+            </div>
+            <div class="card-control">
+              <span class="select-wrap">
+                <select class="select" id="close-action" aria-labelledby="close-action-label">
+                  <option value="ask">Ask me</option>
+                  <option value="background">Keep running in the background</option>
+                  <option value="quit">Quit palm-lab</option>
+                </select>
+                <span class="select-chevron" data-icon="chevron"></span>
+              </span>
+            </div>
+          </div>
         </div>
 
         <h2 class="group-title">Shortcuts</h2>
@@ -293,6 +344,23 @@
         <span class="spacer"></span>
         <button class="btn" id="wizard-cancel" type="button">Cancel</button>
         <button class="btn btn-accent" id="wizard-save" type="button" hidden>Save gesture</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Asked on closing the window, while "When I close the window" is "Ask me". -->
+  <div class="modal-overlay" id="close-overlay" hidden>
+    <div class="modal close-dialog" id="close-dialog" role="alertdialog" aria-modal="true" aria-labelledby="close-title" aria-describedby="close-desc">
+      <h2 class="modal-title" id="close-title">Keep palm-lab running in the background?</h2>
+      <p class="modal-text" id="close-desc">Your gestures keep working with the window closed. palm-lab waits by the clock, where you can open it again or quit. No quits palm-lab completely.</p>
+      <label class="check">
+        <input class="check-input" id="close-remember" type="checkbox">
+        <span>Don&rsquo;t show this again <span class="check-hint">(you can change it in Settings)</span></span>
+      </label>
+      <div class="modal-actions">
+        <span class="spacer"></span>
+        <button class="btn btn-accent" id="close-yes" type="button">Yes</button>
+        <button class="btn" id="close-no" type="button">No</button>
       </div>
     </div>
   </div>

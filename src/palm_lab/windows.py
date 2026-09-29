@@ -18,7 +18,9 @@ ACCENT_KEY = r"Software\Microsoft\Windows\CurrentVersion\Explorer\Accent"
 # instead of under python.exe when running from source.
 APP_ID = "GpapoutsisPap.palm-lab"
 
-# DwmSetWindowAttribute: title bar background colour (Windows 11 and later).
+# DwmSetWindowAttribute: dark title bar text and buttons, and the title bar
+# background colour (Windows 11 and later).
+DWMWA_USE_IMMERSIVE_DARK_MODE = 20
 DWMWA_CAPTION_COLOR = 35
 
 # Windows' default blue, lightest to darkest: Light3, Light2, Light1, Accent,
@@ -76,12 +78,21 @@ def colorref(hex_colour: str) -> int:
     return (blue << 16) | (green << 8) | red
 
 
-def set_caption_colour(hwnd: int, hex_colour: str) -> bool:
-    """Colour a window's title bar. Returns False where that is unsupported."""
+def set_caption_colour(hwnd: int, hex_colour: str, dark: bool | None = None) -> bool:
+    """Colour a window's title bar. Returns False where that is unsupported.
+
+    With dark set, also choose light or dark title text and window buttons, so
+    they stay readable when palm-lab's theme differs from Windows' own.
+    """
     if sys.platform != "win32":
         return False
     import ctypes
 
+    if dark is not None:
+        mode = ctypes.c_int(1 if dark else 0)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(mode), ctypes.sizeof(mode)
+        )
     value = ctypes.c_int(colorref(hex_colour))
     result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
         hwnd, DWMWA_CAPTION_COLOR, ctypes.byref(value), ctypes.sizeof(value)

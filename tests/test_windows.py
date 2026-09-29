@@ -56,6 +56,7 @@ def test_colorref_is_blue_green_red() -> None:
 def test_everything_is_harmless_off_windows() -> None:
     assert windows.read_registry(PERSONALIZE_KEY, "AppsUseLightTheme") is None
     assert windows.set_caption_colour(0, "#202020") is False
+    assert windows.set_caption_colour(0, "#202020", dark=True) is False
     windows.set_app_id()
     windows.show_error("title", "message")
 

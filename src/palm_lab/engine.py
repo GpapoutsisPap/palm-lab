@@ -144,6 +144,7 @@ class TrackingEngine:
         self._last_fired: FiredEvent | None = None
         self._capture: GestureCapture | None = None
         self._capture_status: CaptureStatus | None = None
+        self._preview_enabled = True
 
     @staticmethod
     def _new_trigger(settings: Settings) -> GestureTrigger:
@@ -218,8 +219,10 @@ class TrackingEngine:
         hands = detector.detect(frame)
         with self._lock:
             rules = self._rules
+            preview_enabled = self._preview_enabled
         gesture = classify_hand(hands[0], rules) if hands else None
-        preview = self._render_preview(frame, hands)
+        # Encoding a picture every frame is wasted work while the window is hidden.
+        preview = self._render_preview(frame, hands) if preview_enabled else None
         now = self._clock()
 
         with self._lock:
@@ -282,6 +285,14 @@ class TrackingEngine:
             # A newer gesture may have fired meanwhile; don't overwrite it.
             if self._last_fired is event:
                 self._last_fired = replace(event, results=results, finished=True)
+
+    def set_preview_enabled(self, enabled: bool) -> None:
+        """Turn preview pictures off while no window is showing them."""
+        with self._lock:
+            self._preview_enabled = enabled
+            if not enabled:
+                self._preview = None
+                self._preview_hands = []
 
     def update_bindings(self, bindings: Iterable[Binding]) -> None:
         with self._lock:

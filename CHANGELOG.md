@@ -10,6 +10,21 @@ for the people installing the app.
 
 ## [Unreleased]
 
+### Added
+
+- palm-lab can keep running in the background with its window closed, so your
+  gestures keep working. It waits in the notification area by the clock:
+  click its icon to open it, or right-click it to switch tracking or quit.
+- Closing the window asks whether to keep palm-lab running in the
+  background, with a "Don't show this again" box. Settings > "When I close
+  the window" changes the answer later.
+- Start with Windows: a switch in Settings that starts palm-lab in the
+  background when you sign in, already watching for gestures.
+- Opening palm-lab while it is already running brings up the running window
+  instead of starting a second copy.
+- A Theme setting under Settings > Appearance: Light, Dark, or follow
+  Windows (as before). The title bar follows it too.
+
 ## [0.2.0] - 2026-09-29
 
 The first release with a window and an installer.

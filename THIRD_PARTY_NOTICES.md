@@ -11,9 +11,14 @@ on the following work, some of which is included in the app you download.
 | [NumPy](https://numpy.org/doc/stable/license.html) | BSD 3-Clause | Image data |
 | [pywebview](https://github.com/r0x0r/pywebview) | BSD 3-Clause | The window |
 | [pythonnet](https://github.com/pythonnet/pythonnet) | MIT | pywebview's bridge to Windows |
+| [pystray](https://github.com/moses-palmer/pystray) | LGPL 3.0 | The icon in the notification area |
+| [Pillow](https://github.com/python-pillow/Pillow) | MIT-CMU | Loading that icon's image |
 | [Microsoft Edge WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) | Part of Windows | Drawing the window |
 
-The full licence texts are available at the links above. The Fluent icons'
+The full licence texts are available at the links above. pystray's licence
+texts (GPL 3.0 and LGPL 3.0) are also included in the installed app, in its
+`pystray-*.dist-info` folder. As the LGPL allows, you can use a different
+version of pystray by building palm-lab from its source code. The Fluent icons'
 notice is reproduced here because their path data is copied into
 `src/palm_lab/ui/static/app.js`.
 

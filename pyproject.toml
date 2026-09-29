@@ -12,6 +12,8 @@ dependencies = [
     "opencv-python>=4.10",
     "numpy>=1.26,<2.0",
     "pywebview>=5.0",
+    # The notification-area icon; Windows only, like the rest of the window.
+    "pystray>=0.19; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -54,5 +56,5 @@ testpaths = ["tests"]
 addopts = "-v --cov=palm_lab --cov-report=term-missing"
 
 [[tool.mypy.overrides]]
-module = ["mediapipe.*", "cv2.*"]
+module = ["mediapipe.*", "cv2.*", "pystray", "pystray.*"]
 ignore_missing_imports = true

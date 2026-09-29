@@ -51,6 +51,13 @@ def test_ui_accepts_a_debug_flag() -> None:
     assert args.debug is True
 
 
+def test_ui_can_start_in_the_background() -> None:
+    """What the Start with Windows shortcut runs at sign-in."""
+    args = cli.build_parser().parse_args(["ui", "--background"])
+    assert args.background is True
+    assert cli.build_parser().parse_args([]).background is False
+
+
 def test_run_accepts_a_camera_index() -> None:
     """A non-default camera can be selected."""
     args = cli.build_parser().parse_args(["run", "--camera", "2"])

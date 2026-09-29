@@ -21,6 +21,8 @@ and runs the actions you snap together for each one, all on your own computer.
   website, or press keys (media keys, volume, any combination). Drag action
   pieces into a gesture, reorder them, and test them without the camera.
 - **Live view:** see what the camera sees, the hand it found, and what ran.
+- **Always ready:** close the window and palm-lab can keep running by the
+  clock, and it can start with Windows so your gestures work from sign-in.
 - **Feels at home on Windows 11:** light and dark themes, your accent colour,
   a Start menu entry and an optional desktop shortcut.
 - **For programmers:** gestures live in a plain TOML file, and everything the
@@ -64,9 +66,10 @@ The programs land in `dist\palm-lab\` and the installer in `dist\`.
 | Command | What it does |
 | --- | --- |
 | `palm-lab` | Open the window (the default) |
+| `palm-lab ui --background` | Start hidden by the clock with tracking on |
 | `palm-lab doctor` | Check the model, libraries and hand detection |
 | `palm-lab config` | Show where configuration lives and what is bound |
-| `palm-lab shortcut [--start-menu] [--remove]` | Add or remove the desktop and Start menu shortcuts |
+| `palm-lab shortcut [--start-menu] [--startup] [--remove]` | Add or remove the desktop, Start menu and Start with Windows shortcuts |
 | `palm-lab run` | Watch the camera in a plain preview window |
 | `palm-lab capture GESTURE` | Save landmark samples for testing |
 
