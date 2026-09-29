@@ -22,6 +22,8 @@ for the people installing the app.
   background when you sign in, already watching for gestures.
 - Opening palm-lab while it is already running brings up the running window
   instead of starting a second copy.
+- A Theme setting under Settings > Appearance: Light, Dark, or follow
+  Windows (as before). The title bar follows it too.
 
 ## [0.2.0] - 2026-09-29
 

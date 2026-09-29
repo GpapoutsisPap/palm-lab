@@ -128,6 +128,7 @@ const ICONS = {
   start: [20, ["M2 3.5C2 2.67 2.67 2 3.5 2h1C5.33 2 6 2.67 6 3.5v1C6 5.33 5.33 6 4.5 6h-1A1.5 1.5 0 0 1 2 4.5zM3.5 3a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM2 9.5C2 8.67 2.67 8 3.5 8h1C5.33 8 6 8.67 6 9.5v1c0 .83-.67 1.5-1.5 1.5h-1A1.5 1.5 0 0 1 2 10.5zM3.5 9a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM2 15.5c0-.83.67-1.5 1.5-1.5h1c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5h-1A1.5 1.5 0 0 1 2 16.5zm1.5-.5a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM8 4.5c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 6c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 6c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5"]],
   power: [20, ["M10.5 2.5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0zM13.74 4a.5.5 0 1 0-.5.87 6.5 6.5 0 1 1-6.49 0 .5.5 0 1 0-.5-.87 7.5 7.5 0 1 0 7.5 0"]],
   window: [20, ["M6 3a3 3 0 0 0-3 3v8a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3zM4 6c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2zm0 1h12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"]],
+  theme: [20, ["M10 3a7 7 0 1 1 0 14zm0-1a8 8 0 1 0 0 16 8 8 0 0 0 0-16"]],
   code: [20, ["M12.64 1.02a.5.5 0 0 1 .34.62l-5 17a.5.5 0 0 1-.96-.28l5-17a.5.5 0 0 1 .62-.34M5.13 5.17a.5.5 0 0 1 .74.66L2.17 10l3.7 4.17a.5.5 0 0 1-.74.66l-4-4.5a.5.5 0 0 1 0-.66zm9.04-.04a.5.5 0 0 1 .7.04l4 4.5a.5.5 0 0 1 0 .66l-4 4.5a.5.5 0 0 1-.74-.66l3.7-4.17-3.7-4.17a.5.5 0 0 1 .04-.7"]],
   folder: [20, ["M3 5.5v6.6l1.5-2.6A3 3 0 0 1 7.1 8H15v-.5c0-.83-.67-1.5-1.5-1.5h-4a.5.5 0 0 1-.35-.15l-1.71-1.7A.5.5 0 0 0 7.09 4H4.5C3.67 4 3 4.67 3 5.5m1.28 10.48.22.02h9.4a2 2 0 0 0 1.73-1l2.17-3.75A1.5 1.5 0 0 0 16.5 9H7.1a2 2 0 0 0-1.73 1L3.2 13.75a1.5 1.5 0 0 0 1.08 2.23M2 14.46V5.5A2.5 2.5 0 0 1 4.5 3h2.59c.4 0 .78.16 1.06.44L9.7 5h3.79A2.5 2.5 0 0 1 16 7.5V8h.5a2.5 2.5 0 0 1 2.16 3.75L16.5 15.5a3 3 0 0 1-2.6 1.5H4.5a2.5 2.5 0 0 1-1.62-.6A2.5 2.5 0 0 1 2 14.46"]],
   open: [16, ["M4.5 3C3.67 3 3 3.67 3 4.5v7c0 .83.67 1.5 1.5 1.5h7c.83 0 1.5-.67 1.5-1.5V9.27a.5.5 0 0 1 1 0v2.23a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 11.5v-7A2.5 2.5 0 0 1 4.5 2h2.23a.5.5 0 0 1 0 1zm4.27-.5c0-.28.22-.5.5-.5h4.23c.28 0 .5.22.5.5v4.23a.5.5 0 0 1-1 0V3.71L9.62 7.08a.5.5 0 1 1-.7-.7L12.29 3H9.27a.5.5 0 0 1-.5-.5"]],
@@ -494,6 +495,21 @@ function applyAccent(palette) {
   root.setProperty("--sys-accent-light3", light3);
 }
 
+/* Theme ---------------------------------------------------------------------------------
+
+   The page is light unless <html data-theme="dark">. Python writes the
+   starting theme before the page loads; from then on it follows the Theme
+   setting, and Windows' own mode while that setting is "system". */
+
+function themeSetting() {
+  return (app.data && app.data.settings.theme) || "system";
+}
+
+function applyTheme(setting = themeSetting()) {
+  const dark = setting === "dark" || (setting === "system" && darkTheme.matches);
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+}
+
 /* Navigation ------------------------------------------------------------------------ */
 
 function showPage(name) {
@@ -549,6 +565,7 @@ async function init() {
   }
   app.data = data;
   applyAccent(data.accent);
+  applyTheme();
   registerCustomGestures(data.custom_gestures);
   const gestureIds = [...data.gestures, ...data.custom_gestures.map((g) => g.name)];
   app.rows = gestureIds.map((gesture) => rowFromBinding(gesture, data.bindings.find((b) => b.gesture === gesture)));
@@ -1360,6 +1377,7 @@ function renderSettings() {
   }
   setSwitch($("sounds"), settings.sounds !== false);
   $("close-action").value = settings.close_action || "ask";
+  $("theme").value = settings.theme || "system";
   $("bindings-file").textContent = app.data.bindings_file;
   $("about-version").textContent = TEXT.version(app.data.version);
 }
@@ -1389,6 +1407,7 @@ async function saveSettings() {
     cooldown_seconds: Number($("cooldown").value),
     sounds: $("sounds").checked,
     close_action: $("close-action").value,
+    theme: $("theme").value,
   };
   let result;
   try {
@@ -1809,12 +1828,20 @@ function wireControls() {
 
   // Waking the audio engine on the first click makes the first snap instant.
   window.addEventListener("pointerdown", () => { if (sound.enabled()) sound.context(); }, { once: true, capture: true });
-  // The title bar is coloured by Python; tell it when Windows switches theme.
+  // The title bar is coloured by Python; tell it whenever the theme changes.
   darkTheme.addEventListener("change", () => {
+    applyTheme();
     if (window.pywebview && window.pywebview.api) api().theme_changed();
+  });
+  $("theme").addEventListener("change", async () => {
+    applyTheme($("theme").value);
+    await saveSettings();
+    api().theme_changed();
   });
 }
 
+// Without a theme from Python (a page opened on its own), start from Windows'.
+if (!document.documentElement.dataset.theme) applyTheme("system");
 paintStaticIcons();
 setCollapse($("live-wrap"), false);
 wireControls();

@@ -11,8 +11,11 @@
 
 /* Tokens ------------------------------------------------------------------ */
 
+/* Light by default. <html data-theme="dark"> switches to the dark tokens below;
+   ui/app.py writes it before the page loads, and app.js keeps it in step with
+   the Theme setting and with Windows. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   /* Surfaces. --mica is also the title bar colour (see ui/app.py). */
   --mica: #F3F3F3;
@@ -90,59 +93,59 @@
   --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --mica: #202020;
-    --layer: #272727;
-    --layer-stroke: #1D1D1D;
-    --card: #2B2B2B;
-    --card-hover: #313131;
-    --card-2: #262626;
-    --stroke: #1D1D1D;
-    --divider: #1F1F1F;
-    --flyout: #2C2C2C;
-    --flyout-stroke: #3A3A3A;
+:root[data-theme="dark"] {
+  color-scheme: dark;
 
-    --text-1: #FFFFFF;
-    --text-2: #CFCFCF;
-    --text-3: #9D9D9D;
+  --mica: #202020;
+  --layer: #272727;
+  --layer-stroke: #1D1D1D;
+  --card: #2B2B2B;
+  --card-hover: #313131;
+  --card-2: #262626;
+  --stroke: #1D1D1D;
+  --divider: #1F1F1F;
+  --flyout: #2C2C2C;
+  --flyout-stroke: #3A3A3A;
 
-    --control: #2D2D2D;
-    --control-hover: #323232;
-    --control-pressed: #272727;
-    --control-stroke: #353535;
-    --control-stroke-strong: #454545;
-    --subtle-hover: rgba(255, 255, 255, 0.06);
-    --subtle-pressed: rgba(255, 255, 255, 0.04);
-    --field-underline: #9D9D9D;
-    --focus: #FFFFFF;
+  --text-1: #FFFFFF;
+  --text-2: #CFCFCF;
+  --text-3: #9D9D9D;
 
-    --accent: var(--sys-accent-light2, #4CC2FF);
-    --accent-hover: color-mix(in srgb, var(--accent) 90%, var(--mica));
-    --accent-text: var(--sys-accent-light3, #99EBFF);
-    --on-accent: #000000;
+  --control: #2D2D2D;
+  --control-hover: #323232;
+  --control-pressed: #272727;
+  --control-stroke: #353535;
+  --control-stroke-strong: #454545;
+  --subtle-hover: rgba(255, 255, 255, 0.06);
+  --subtle-pressed: rgba(255, 255, 255, 0.04);
+  --field-underline: #9D9D9D;
+  --focus: #FFFFFF;
 
-    --success: #6CCB5F;
-    --success-bg: #393D1B;
-    --caution: #FCE100;
-    --caution-bg: #433519;
-    --critical: #FF99A4;
-    --critical-bg: #442726;
-    --info-bg: #262A30;
+  --accent: var(--sys-accent-light2, #4CC2FF);
+  --accent-hover: color-mix(in srgb, var(--accent) 90%, var(--mica));
+  --accent-text: var(--sys-accent-light3, #99EBFF);
+  --on-accent: #000000;
 
-    --switch-off: rgba(255, 255, 255, 0.78);
-    --slider-track: rgba(255, 255, 255, 0.54);
-    --skeleton: #333333;
-    --shimmer: rgba(255, 255, 255, 0.05);
+  --success: #6CCB5F;
+  --success-bg: #393D1B;
+  --caution: #FCE100;
+  --caution-bg: #433519;
+  --critical: #FF99A4;
+  --critical-bg: #442726;
+  --info-bg: #262A30;
 
-    --piece-edge: rgba(0, 0, 0, 0.3);
-    --piece-field: rgba(0, 0, 0, 0.28);
-    --piece-field-ink: #FFFFFF;
-    --piece-field-stroke: rgba(255, 255, 255, 0.1);
-    --piece-placeholder: rgba(255, 255, 255, 0.65);
+  --switch-off: rgba(255, 255, 255, 0.78);
+  --slider-track: rgba(255, 255, 255, 0.54);
+  --skeleton: #333333;
+  --shimmer: rgba(255, 255, 255, 0.05);
 
-    --shadow-flyout: 0 8px 16px rgba(0, 0, 0, 0.26);
-  }
+  --piece-edge: rgba(0, 0, 0, 0.3);
+  --piece-field: rgba(0, 0, 0, 0.28);
+  --piece-field-ink: #FFFFFF;
+  --piece-field-stroke: rgba(255, 255, 255, 0.1);
+  --piece-placeholder: rgba(255, 255, 255, 0.65);
+
+  --shadow-flyout: 0 8px 16px rgba(0, 0, 0, 0.26);
 }
 
 /* Base -------------------------------------------------------------------- */

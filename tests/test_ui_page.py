@@ -10,6 +10,7 @@ from palm_lab.ui.app import (
     DARK_BACKGROUND,
     LIGHT_BACKGROUND,
     load_page,
+    resolved_theme,
     window_background,
 )
 
@@ -70,3 +71,37 @@ def test_window_backgrounds_match_the_page() -> None:
     css = (config.ui_static_dir() / "app.css").read_text(encoding="utf-8")
     light, dark = re.findall(r"--mica: (#[0-9A-Fa-f]{6});", css)
     assert (light, dark) == (LIGHT_BACKGROUND, DARK_BACKGROUND)
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_the_page_starts_in_the_chosen_theme(theme: str) -> None:
+    """Written onto <html> before loading, so the first frame is already right."""
+    page = load_page(config.ui_static_dir(), theme=theme)
+    assert f'<html data-theme="{theme}" lang="en">' in page
+
+
+def test_without_a_theme_the_page_is_left_to_choose(tmp_path: Path) -> None:
+    html = '<html><head><link rel="stylesheet" href="app.css"></head><script src="app.js"></script>'
+    assert "data-theme" not in load_page(write_static(tmp_path, html))
+
+
+@pytest.mark.parametrize(
+    ("setting", "windows", "expected"),
+    [
+        ("system", 0, "dark"),
+        ("system", 1, "light"),
+        ("system", None, "light"),
+        ("light", 0, "light"),
+        ("dark", 1, "dark"),
+    ],
+)
+def test_the_theme_setting_overrides_windows(
+    setting: str, windows: int | None, expected: str
+) -> None:
+    assert resolved_theme(setting, lambda: windows) == expected
+
+
+def test_the_window_frame_matches_a_chosen_theme() -> None:
+    """A dark palm-lab on a light Windows still gets a dark frame and title bar."""
+    assert window_background(lambda: 1, theme="dark") == DARK_BACKGROUND
+    assert window_background(lambda: 0, theme="light") == LIGHT_BACKGROUND

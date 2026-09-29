@@ -1,4 +1,4 @@
-"""User-adjustable settings: the camera, gesture timing, sound, and closing."""
+"""User-adjustable settings: camera, gesture timing, sound, theme and closing."""
 
 import tomllib
 from collections.abc import Mapping
@@ -16,7 +16,16 @@ COOLDOWN_RANGE = (0.0, 60.0)
 # What closing the window does: ask each time, hide it and keep palm-lab
 # running in the notification area, or quit.
 CLOSE_ACTIONS = ("ask", "background", "quit")
-KNOWN_SETTINGS = {"camera_index", "dwell_seconds", "cooldown_seconds", "sounds", "close_action"}
+# "system" follows Windows' own light or dark mode.
+THEMES = ("system", "light", "dark")
+KNOWN_SETTINGS = {
+    "camera_index",
+    "dwell_seconds",
+    "cooldown_seconds",
+    "sounds",
+    "close_action",
+    "theme",
+}
 
 
 class SettingsError(ValueError):
@@ -32,6 +41,7 @@ class Settings:
     cooldown_seconds: float = DEFAULT_COOLDOWN_SECONDS
     sounds: bool = True
     close_action: str = "ask"
+    theme: str = "system"
 
     def as_dict(self) -> dict[str, float | int | bool | str]:
         return asdict(self)
@@ -78,12 +88,17 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
     if not isinstance(close_action, str) or close_action not in CLOSE_ACTIONS:
         raise SettingsError(f"'close_action' must be one of: {', '.join(CLOSE_ACTIONS)}")
 
+    theme = data.get("theme", "system")
+    if not isinstance(theme, str) or theme not in THEMES:
+        raise SettingsError(f"'theme' must be one of: {', '.join(THEMES)}")
+
     return Settings(
         camera_index=camera,
         dwell_seconds=dwell,
         cooldown_seconds=cooldown,
         sounds=sounds,
         close_action=close_action,
+        theme=theme,
     )
 
 
@@ -109,6 +124,7 @@ def save_settings(settings: Settings, path: Path | None = None) -> Path:
         f"cooldown_seconds = {settings.cooldown_seconds!r}\n"
         f"sounds = {'true' if settings.sounds else 'false'}\n"
         f'close_action = "{settings.close_action}"\n'
+        f'theme = "{settings.theme}"\n'
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")

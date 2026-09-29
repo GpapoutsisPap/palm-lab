@@ -21,16 +21,29 @@ LIGHT_BACKGROUND = "#F3F3F3"
 DARK_BACKGROUND = "#202020"
 
 
-def window_background(read_setting: Callable[[], int | None] = apps_use_light_theme) -> str:
-    """The page follows the Windows theme through CSS; the window frame must too."""
-    return DARK_BACKGROUND if read_setting() == 0 else LIGHT_BACKGROUND
+def resolved_theme(
+    theme: str = "system", read_setting: Callable[[], int | None] = apps_use_light_theme
+) -> str:
+    """The theme to draw, light or dark: the setting, with "system" read from Windows."""
+    if theme in ("light", "dark"):
+        return theme
+    return "dark" if read_setting() == 0 else "light"
 
 
-def load_page(static_dir: Path) -> str:
+def window_background(
+    read_setting: Callable[[], int | None] = apps_use_light_theme, theme: str = "system"
+) -> str:
+    """The window frame is the page's background colour, in either theme."""
+    return DARK_BACKGROUND if resolved_theme(theme, read_setting) == "dark" else LIGHT_BACKGROUND
+
+
+def load_page(static_dir: Path, theme: str | None = None) -> str:
     """Build one self-contained HTML page with the CSS and JS inlined.
 
     Inlining avoids serving files or resolving URLs, which behaves differently
-    between running from source and running from a PyInstaller build.
+    between running from source and running from a PyInstaller build. A theme
+    ("light" or "dark") is written onto <html> so the very first frame is
+    drawn in it, with no flash of the other one.
     """
     html = (static_dir / "index.html").read_text(encoding="utf-8")
     css = (static_dir / "app.css").read_text(encoding="utf-8")
@@ -39,6 +52,8 @@ def load_page(static_dir: Path) -> str:
     script_tag = '<script src="app.js"></script>'
     if style_tag not in html or script_tag not in html:
         raise ValueError("index.html must reference app.css and app.js exactly once")
+    if theme is not None:
+        html = html.replace("<html", f'<html data-theme="{theme}"', 1)
     return html.replace(style_tag, f"<style>\n{css}\n</style>").replace(
         script_tag, f"<script>\n{js}\n</script>"
     )
@@ -94,14 +109,15 @@ def _run_window(*, debug: bool, background: bool, guard: Instance) -> int:
         on_theme_change=lambda: colour_title_bar(),
         on_close_choice=lambda choice: lifecycle.choose(choice),
     )
+    theme = saved_settings().theme
     window = webview.create_window(
         WINDOW_TITLE,
-        html=load_page(ui_static_dir()),
+        html=load_page(ui_static_dir(), theme=resolved_theme(theme)),
         js_api=api,
         width=WINDOW_SIZE[0],
         height=WINDOW_SIZE[1],
         min_size=WINDOW_MIN_SIZE,
-        background_color=window_background(),
+        background_color=window_background(theme=theme),
         hidden=background,
     )
     if window is None:
@@ -154,10 +170,16 @@ def _run_window(*, debug: bool, background: bool, guard: Instance) -> int:
     def colour_title_bar() -> None:
         # window.native is the Windows Forms window; other platforms have no Handle.
         # This runs on a pywebview event thread: cosmetic, so it must never raise.
+        # Called at start, when Windows switches theme, and when the setting changes.
         try:
             handle = getattr(getattr(window, "native", None), "Handle", None)
             if handle is not None:
-                set_caption_colour(int(handle.ToInt32()), window_background())
+                theme = resolved_theme(saved_settings().theme)
+                set_caption_colour(
+                    int(handle.ToInt32()),
+                    window_background(theme=theme),
+                    dark=theme == "dark",
+                )
         except Exception as exc:  # the window works without it
             print(f"Could not colour the title bar: {exc}")
 
