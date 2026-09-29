@@ -9,12 +9,14 @@
 ---
 
 Hold up a peace sign and your browser, notes and music open. Make a fist to
-pause what's playing. palm-lab watches your camera, recognises four gestures,
+pause what's playing. palm-lab watches your camera, recognises your gestures,
 and runs the actions you snap together for each one, all on your own computer.
 
 ## Features
 
-- **Four gestures:** peace sign, fist, open palm and thumbs up.
+- **Four gestures built in:** peace sign, fist, open palm and thumbs up.
+- **Add your own:** hold a new hand shape up twice, name it, and it gets its
+  own icon. palm-lab tells you straight away if you already use that shape.
 - **Actions that snap together:** open an app from your Start menu, open a
   website, or press keys (media keys, volume, any combination). Drag action
   pieces into a gesture, reorder them, and test them without the camera.
@@ -29,9 +31,8 @@ and runs the actions you snap together for each one, all on your own computer.
 ## Install
 
 Download `palm-lab-setup-X.Y.Z.exe` from the
-[releases page](https://github.com/GpapoutsisPap/palm-lab/releases) once a
-release is published (until then, build it yourself as below) and run it. No
-administrator rights are needed. The app is not code-signed yet, so
+[latest release](https://github.com/GpapoutsisPap/palm-lab/releases/latest)
+and run it. No administrator rights are needed. The app is not code-signed yet, so
 Windows SmartScreen may ask you to confirm the first time.
 
 A webcam is needed. A phone works too, through an app such as DroidCam.
@@ -79,10 +80,35 @@ uv run ruff check .  # lint
 uv run mypy          # strict type checking
 ```
 
-Design decisions are recorded in [docs/adr](docs/adr). The window is plain
+Design decisions are recorded in [docs/adr](docs/adr), and what changed in
+each version in [CHANGELOG.md](CHANGELOG.md). The window is plain
 HTML, CSS and JavaScript in `src/palm_lab/ui/static`, shown by
 [pywebview](https://pywebview.flowrl.com/) and talking to Python through
 `src/palm_lab/ui/api.py`.
+
+## Releasing
+
+The version number lives in one place, `src/palm_lab/version.py`. Settings
+shows it, and the executables, the installer and the package all read it.
+
+1. Change `__version__` in `src/palm_lab/version.py`, following
+   [Semantic Versioning](https://semver.org/): a new feature raises the middle
+   number (0.2.0 to 0.3.0), a fix raises the last (0.2.0 to 0.2.1).
+2. In [CHANGELOG.md](CHANGELOG.md), move the notes under `[Unreleased]` into a
+   new `## [X.Y.Z] - YYYY-MM-DD` section, and add its link at the bottom.
+3. Merge that into `main`, then tag the merge and push the tag:
+
+   ```powershell
+   git checkout main
+   git pull
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+The [Release workflow](.github/workflows/release.yml) then builds the
+installer on Windows and publishes it on the releases page, with the
+changelog section as its notes. It stops without publishing if the tag does
+not match `version.py` or the changelog has no section for it.
 
 ## Licence
 
