@@ -10,6 +10,11 @@ for the people installing the app.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-22
+
+palm-lab now runs in the background, starts with a setup guide that tunes it
+to your hand, and gives you more control over what runs and when.
+
 ### Added
 
 - palm-lab can keep running in the background with its window closed, so your
@@ -95,6 +100,7 @@ The first working version, run from a terminal.
 - The `palm-lab` command line: `run`, `capture`, `config` and `doctor`.
 - A Windows executable built with PyInstaller.
 
-[Unreleased]: https://github.com/GpapoutsisPap/palm-lab/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/GpapoutsisPap/palm-lab/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/GpapoutsisPap/palm-lab/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/GpapoutsisPap/palm-lab/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/GpapoutsisPap/palm-lab/releases/tag/v0.1.0
