@@ -14,6 +14,7 @@ from palm_lab.config import (
 )
 from palm_lab.custom_css import custom_css_path
 from palm_lab.custom_gestures import CustomGestureError, gestures_path, load_custom_gestures
+from palm_lab.hand_profile import HandProfileError, hand_profile_path, load_hand_profile
 from palm_lab.version import __version__
 
 MODEL_URL = (
@@ -108,13 +109,19 @@ def _cmd_config(_: argparse.Namespace) -> int:
     print(f"Bindings file:    {path}{'  (just created)' if created else ''}")
     print(f"Custom CSS:       {custom_css_path()}")
     try:
+        tuned = "tuned to your hand" if load_hand_profile() else "standard (not tuned)"
+    except HandProfileError as exc:
+        tuned = f"unreadable ({exc})"
+    print(f"Hand tuning:      {hand_profile_path()}  {tuned}")
+    try:
         bindings = load_bindings(path)
     except ActionError as exc:
         print(f"\nBindings file has a problem: {exc.user_message()}")
         return 1
     print(f"\n{len(bindings)} binding(s):")
     for binding in bindings:
-        print(f"  {binding.gesture:<12} {binding.name}")
+        off = "" if binding.enabled else "  (off)"
+        print(f"  {binding.gesture:<12} {binding.name}{off}")
         for action in binding.actions:
             print(f"    {action.type.value:<10} {action.target}")
 

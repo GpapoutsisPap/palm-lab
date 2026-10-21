@@ -25,6 +25,7 @@ from palm_lab.actions.models import (
     save_bindings,
 )
 from palm_lab.actions.runner import ActionResult, run_binding
+from palm_lab.combos import combo_parts
 from palm_lab.config import PROJECT_URL
 from palm_lab.custom_css import CustomCssError, load_custom_css, save_custom_css
 from palm_lab.custom_gestures import (
@@ -35,7 +36,15 @@ from palm_lab.custom_gestures import (
     save_custom_gesture,
 )
 from palm_lab.engine import EngineStatus, FiredEvent, Hands, TrackingEngine
+from palm_lab.features import HandMeasurement
 from palm_lab.gestures import BUILTIN_GESTURES, GestureConflictError
+from palm_lab.hand_profile import (
+    HandProfileError,
+    load_hand_profile,
+    reset_hand_profile,
+    save_hand_profile,
+    tune,
+)
 from palm_lab.settings import (
     COOLDOWN_RANGE,
     DWELL_RANGE,
@@ -71,6 +80,9 @@ def _binding_to_json(binding: Binding) -> JsonDict:
         "gesture": binding.gesture,
         "name": binding.name,
         "step_delay_seconds": binding.step_delay_seconds,
+        "enabled": binding.enabled,
+        # The two shapes of a two-hand setup, so the page needn't parse the key.
+        "hands": list(parts) if (parts := combo_parts(binding.gesture)) else None,
         "action": [{"type": a.type.value, "target": a.target} for a in binding.actions],
     }
 
@@ -162,6 +174,7 @@ class Api:
         on_close_choice: Callable[[str], None] = lambda choice: None,
         custom_css_file: Path | None = None,
         custom_css_allowed: bool = True,
+        hand_profile_file: Path | None = None,
         schedule: Scheduler = run_after,
         wall_clock: Callable[[], float] = time.time,
     ) -> None:
@@ -184,6 +197,10 @@ class Api:
         self._custom_css_allowed = custom_css_allowed
         self._schedule = schedule
         self._wall_clock = wall_clock
+        self._hand_profile_file = hand_profile_file
+        self._hand_tuned = False
+        # The setup guide measures an open hand, then a fist, then tunes.
+        self._hand_samples: dict[str, list[HandMeasurement]] = {}
         self._pause_lock = threading.Lock()
         self._paused_until: float | None = None  # wall-clock time tracking comes back
         self._cancel_resume: Callable[[], None] | None = None
@@ -213,6 +230,15 @@ class Api:
                 f"Your custom gestures file could not be read ({exc}); ignoring it."
             )
 
+        if hand_profile_file is not None:
+            try:
+                profile = load_hand_profile(hand_profile_file)
+            except HandProfileError as exc:
+                profile = None
+                self._problems.append(f"{exc} Using the standard settings for your hand.")
+            self._hand_tuned = profile is not None
+            engine.update_hand_profile(profile)
+
         engine.update_bindings(self._bindings)
         engine.update_settings(self._settings)
         engine.update_custom_gestures(self._custom_gestures)
@@ -241,7 +267,11 @@ class Api:
             "accent": list(self._accent()),
             "project_url": PROJECT_URL,
             "custom_css": self._custom_css_state(),
+            "hand": self._hand_state(),
         }
+
+    def _hand_state(self) -> JsonDict:
+        return {"available": self._hand_profile_file is not None, "tuned": self._hand_tuned}
 
     def _custom_css_state(self) -> JsonDict:
         if self._custom_css_file is None:
@@ -461,6 +491,75 @@ class Api:
         self._custom_gestures = updated
         self._engine.update_custom_gestures(updated)
         return {"ok": True, "custom_gestures": [_custom_gesture_to_json(g) for g in updated]}
+
+    # The setup guide: tuning to a hand, and checking gestures -----------------------
+
+    def start_hand_measure(self) -> JsonDict:
+        """Start measuring one held pose, starting the camera if it's off."""
+        self._clear_pause()
+        if not self._engine.running:
+            try:
+                self._engine.start()
+            except (RuntimeError, OSError) as exc:
+                return {"ok": False, "error": str(exc)}
+        self._engine.start_measuring()
+        return {"ok": True, "status": self.status()}
+
+    def hand_measure_status(self) -> JsonDict | None:
+        """Polled while the guide measures: progress, and hands in view."""
+        status = self._engine.measure_status()
+        if status is None:
+            return None
+        return {"progress": round(status.progress, 3), "hands": status.hands, "done": status.done}
+
+    def keep_hand_measure(self, pose: str) -> JsonDict:
+        """Keep a finished measurement as the "open" hand or the "fist"."""
+        if pose not in ("open", "fist"):
+            return {"ok": False, "error": f"Unknown pose {pose!r}."}
+        status = self._engine.measure_status()
+        if status is None or not status.done:
+            return {"ok": False, "error": "That pose hasn't finished measuring yet."}
+        self._hand_samples[pose] = self._engine.take_measurements()
+        return {"ok": True}
+
+    def cancel_hand_measure(self) -> JsonDict:
+        self._engine.take_measurements()
+        self._hand_samples.clear()
+        return {"ok": True}
+
+    def tune_hand(self) -> JsonDict:
+        """Tune to the kept open hand and fist, save it and use it straight away."""
+        if self._hand_profile_file is None:
+            return {"ok": False, "error": "Tuning isn't available here."}
+        try:
+            result = tune(self._hand_samples.get("open", []), self._hand_samples.get("fist", []))
+        except HandProfileError as exc:
+            return {"ok": False, "error": str(exc)}
+        finally:
+            self._hand_samples.clear()
+        try:
+            save_hand_profile(result.profile, self._hand_profile_file)
+        except OSError as exc:
+            return {"ok": False, "error": f"Could not save the tuning: {exc}"}
+        self._engine.update_hand_profile(result.profile)
+        self._hand_tuned = True
+        return {"ok": True, "kept_standard": list(result.kept_standard), "hand": self._hand_state()}
+
+    def reset_hand_tuning(self) -> JsonDict:
+        """Go back to the standard settings for reading fingers."""
+        if self._hand_profile_file is not None:
+            try:
+                reset_hand_profile(self._hand_profile_file)
+            except OSError as exc:
+                return {"ok": False, "error": f"Could not remove the tuning: {exc}"}
+        self._engine.update_hand_profile(None)
+        self._hand_tuned = False
+        return {"ok": True, "hand": self._hand_state()}
+
+    def set_guide_quiet(self, quiet: bool) -> JsonDict:
+        """While the guide checks gestures, read them without running anything."""
+        self._engine.set_quiet(bool(quiet))
+        return {"ok": True}
 
     # Custom CSS ---------------------------------------------------------------------
 

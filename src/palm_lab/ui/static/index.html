@@ -150,7 +150,10 @@
         <div class="gestures-main">
         <div class="group-title-row">
           <h2 class="group-title">Your gestures</h2>
-          <button class="btn" id="add-gesture" type="button"><span class="btn-icon-slot" data-icon="add"></span>Add gesture</button>
+          <span class="group-actions">
+            <button class="btn" id="add-pair" type="button"><span class="btn-icon-slot" data-icon="add"></span>Two-hand setup</button>
+            <button class="btn" id="add-gesture" type="button"><span class="btn-icon-slot" data-icon="add"></span>Add gesture</button>
+          </span>
         </div>
         <ul class="gesture-list" id="gesture-list" aria-busy="true">
           <li class="card gesture skeleton-row" aria-hidden="true"><div class="gesture-head"><span class="skeleton sk-glyph"></span><span class="sk-lines"><span class="skeleton sk-line"></span><span class="skeleton sk-line sk-short"></span></span><span class="skeleton sk-chip"></span></div></li>
@@ -352,6 +355,26 @@
           </div>
         </div>
 
+        <h2 class="group-title">Your hand</h2>
+        <div class="card-group">
+          <div class="card card-row">
+            <span class="card-icon" data-icon="nav_gestures"></span>
+            <div class="card-text">
+              <p class="card-title">Hand tuning</p>
+              <p class="card-desc" id="hand-tuning-desc">Standard settings for reading fingers.</p>
+            </div>
+            <button class="btn" id="reset-tuning" type="button">Reset to standard</button>
+          </div>
+          <div class="card card-row">
+            <span class="card-icon" data-icon="bolt"></span>
+            <div class="card-text">
+              <p class="card-title">Setup guide</p>
+              <p class="card-desc">Check the camera, measure your hand, test your gestures and make a shortcut, step by step.</p>
+            </div>
+            <button class="btn" id="open-guide" type="button">Run the guide</button>
+          </div>
+        </div>
+
         <h2 class="group-title">Advanced</h2>
         <div class="card card-row">
           <span class="card-icon" data-icon="code"></span>
@@ -414,6 +437,198 @@
         <button class="btn" id="wizard-cancel" type="button">Cancel</button>
         <button class="btn btn-accent" id="wizard-save" type="button" hidden>Save gesture</button>
       </div>
+    </div>
+  </div>
+
+  <!-- A two-hand setup is two gestures you already have, held up together. -->
+  <div class="modal-overlay" id="pair-overlay" hidden>
+    <div class="modal pair-dialog" id="pair-dialog" role="dialog" aria-modal="true" aria-labelledby="pair-title" aria-describedby="pair-desc">
+      <div class="modal-head">
+        <h2 class="modal-title" id="pair-title">Add a two-hand setup</h2>
+        <button class="btn btn-subtle btn-icon" id="pair-close" type="button" aria-label="Close"><span data-icon="close"></span></button>
+      </div>
+      <p class="modal-text" id="pair-desc">It runs only when both hands show these shapes at once, so one hand resting on your chin can&rsquo;t set it off. Either hand can make either shape. While both hands are in view, your one-hand gestures don&rsquo;t run.</p>
+      <div class="pair-preview" id="pair-glyph" aria-hidden="true"></div>
+      <div class="pair-fields">
+        <label class="pair-field">
+          <span>One hand</span>
+          <span class="select-wrap">
+            <select class="select" id="pair-first"></select>
+            <span class="select-chevron" data-icon="chevron"></span>
+          </span>
+        </label>
+        <span class="pair-plus" aria-hidden="true">+</span>
+        <label class="pair-field">
+          <span>Other hand</span>
+          <span class="select-wrap">
+            <select class="select" id="pair-second"></select>
+            <span class="select-chevron" data-icon="chevron"></span>
+          </span>
+        </label>
+      </div>
+      <p class="pair-error" id="pair-error" role="alert" hidden></p>
+      <div class="modal-actions">
+        <span class="spacer"></span>
+        <button class="btn" id="pair-cancel" type="button">Cancel</button>
+        <button class="btn btn-accent" id="pair-add" type="button">Add setup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- The setup guide: a short "experiment" that opens on first run, and from
+       Settings > Setup guide. Each step is a <section data-step>; app.js shows
+       one at a time and fills the test tubes as steps are done. -->
+  <div class="guide-overlay" id="guide-overlay" hidden>
+    <div class="guide" id="guide" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <header class="guide-head">
+        <div class="guide-rack" aria-hidden="true">
+          <span class="tube"></span><span class="tube"></span><span class="tube"></span><span class="tube"></span><span class="tube"></span><span class="tube"></span><span class="tube"></span>
+        </div>
+        <p class="guide-kicker" id="guide-kicker"></p>
+        <span class="spacer"></span>
+        <button class="btn btn-subtle" id="guide-skip" type="button">Skip setup</button>
+      </header>
+
+      <div class="guide-body">
+        <!-- 1. Briefing -->
+        <section class="guide-step" data-step="briefing">
+          <h2 class="guide-title" tabindex="-1">Welcome to the lab</h2>
+          <p class="guide-lead">palm-lab watches your webcam for hand gestures and runs the shortcut you gave each one. Hold up a peace sign, and your music starts.</p>
+          <ul class="lab-notes">
+            <li class="lab-note"><span class="lab-note-icon" data-icon="timer"></span><span><strong>Hold, don&rsquo;t wave.</strong> A gesture runs after you hold it still for a moment, so passing movements don&rsquo;t count.</span></li>
+            <li class="lab-note"><span class="lab-note-icon" data-icon="camera"></span><span><strong>It stays on your PC.</strong> The camera picture is read on this computer and is never saved or sent anywhere.</span></li>
+            <li class="lab-note"><span class="lab-note-icon" data-icon="power"></span><span><strong>You&rsquo;re in charge.</strong> Pause tracking, switch any gesture off, or require both hands for extra safety.</span></li>
+          </ul>
+          <p class="guide-note">This experiment takes about two minutes: check the camera, measure your hand, test the gestures, and make your first shortcut.</p>
+        </section>
+
+        <!-- 2. Camera -->
+        <section class="guide-step" data-step="camera" hidden>
+          <h2 class="guide-title" tabindex="-1">Calibrate the camera</h2>
+          <p class="guide-lead">Raise one hand so palm-lab can find it. The dots and lines are how it sees your hand.</p>
+          <div class="guide-split">
+            <div class="guide-camera-slot"></div>
+            <div class="guide-side">
+              <p class="guide-reading" id="guide-camera-reading" role="status" aria-live="polite">Opening camera&hellip;</p>
+              <ul class="guide-tips">
+                <li>Sit about an arm&rsquo;s length from the camera.</li>
+                <li>Have light on your hand, not behind it.</li>
+                <li>Wrong camera? Change it in Settings afterwards.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Measure the hand -->
+        <section class="guide-step" data-step="tune" hidden>
+          <h2 class="guide-title" tabindex="-1">Measure your hand</h2>
+          <p class="guide-lead">Every hand bends a little differently. Hold each pose still while palm-lab measures, and it will tune itself to you.</p>
+          <div class="guide-split">
+            <div class="guide-camera-slot"></div>
+            <div class="guide-side">
+              <div class="specimens specimens-two">
+                <div class="specimen" id="specimen-open" data-state="waiting">
+                  <span class="specimen-glyph" data-glyph="open_palm"></span>
+                  <span class="specimen-label">Open hand<span class="specimen-hint">fingers spread</span></span>
+                  <span class="specimen-tube" aria-hidden="true"><span class="specimen-fill"></span></span>
+                </div>
+                <div class="specimen" id="specimen-fist" data-state="waiting">
+                  <span class="specimen-glyph" data-glyph="fist"></span>
+                  <span class="specimen-label">Fist<span class="specimen-hint">fingers curled tight</span></span>
+                  <span class="specimen-tube" aria-hidden="true"><span class="specimen-fill"></span></span>
+                </div>
+              </div>
+              <p class="guide-reading" id="guide-tune-reading" role="status" aria-live="polite"></p>
+              <div class="guide-inline-actions">
+                <button class="btn btn-accent" id="guide-measure" type="button">Start measuring</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Test the gestures -->
+        <section class="guide-step" data-step="test" hidden>
+          <h2 class="guide-title" tabindex="-1">Test your gestures</h2>
+          <p class="guide-lead">Make each gesture and hold it until its tube fills. Nothing runs yet; this only checks that palm-lab reads your hand.</p>
+          <div class="guide-split">
+            <div class="guide-camera-slot"></div>
+            <div class="guide-side">
+              <div class="specimens" id="guide-test-specimens"></div>
+              <p class="guide-reading" id="guide-test-reading" role="status" aria-live="polite"></p>
+              <details class="guide-help">
+                <summary>One won&rsquo;t light up?</summary>
+                <ul class="guide-tips">
+                  <li>Turn your palm toward the camera.</li>
+                  <li>Keep the fingers that should be up clearly apart.</li>
+                  <li>For the thumbs up, point the thumb out to the side or up, away from your fingers.</li>
+                  <li>Still stuck? Go back and measure your hand again.</li>
+                </ul>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. Build the first shortcut, with the same puzzle editor as the Gestures page -->
+        <section class="guide-step" data-step="experiment" hidden>
+          <h2 class="guide-title" tabindex="-1">Your first experiment</h2>
+          <p class="guide-lead">Pick a gesture, then drag a piece into it to say what it should do. Click a piece to add it, or drag it into place.</p>
+          <fieldset class="guide-field">
+            <legend>When I show</legend>
+            <div class="choice-row" id="guide-gesture-choices" role="radiogroup" aria-label="Gesture"></div>
+          </fieldset>
+          <p class="guide-reading is-quiet" id="guide-experiment-note"></p>
+          <div class="card guide-editor" id="guide-editor"></div>
+        </section>
+
+        <!-- 6. Run it for real -->
+        <section class="guide-step" data-step="run" hidden>
+          <h2 class="guide-title" tabindex="-1">Run the experiment</h2>
+          <p class="guide-lead" id="guide-run-lead"></p>
+          <div class="guide-split">
+            <div class="guide-camera-slot"></div>
+            <div class="guide-side">
+              <div class="guide-run-ring" id="guide-run" data-phase="idle">
+                <span class="hold-ring" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" focusable="false"><circle class="hold-track" cx="24" cy="24" r="22"/><circle class="hold-fill" cx="24" cy="24" r="22" pathLength="100"/></svg>
+                  <span class="hold-glyph" id="guide-run-glyph"></span>
+                </span>
+              </div>
+              <p class="guide-reading" id="guide-run-reading" role="status" aria-live="polite"></p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. Lab report -->
+        <section class="guide-step" data-step="report" hidden>
+          <h2 class="guide-title" tabindex="-1">Lab report</h2>
+          <p class="guide-lead">The experiment is complete. Here&rsquo;s what palm-lab found.</p>
+          <ul class="report" id="guide-report"></ul>
+          <div class="card card-row guide-startup">
+            <span class="card-icon" data-icon="power"></span>
+            <div class="card-text">
+              <p class="card-title" id="guide-startup-label">Start with Windows</p>
+              <p class="card-desc">Have palm-lab ready by the clock whenever you sign in.</p>
+            </div>
+            <label class="toggle">
+              <span class="toggle-label" data-for="guide-startup">Off</span>
+              <input class="switch" id="guide-startup" type="checkbox" role="switch" data-kind="startup" aria-labelledby="guide-startup-label" disabled>
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <!-- One camera view, moved into whichever step needs it. -->
+      <div class="camera-frame guide-frame" id="guide-frame" data-state="starting">
+        <div class="skeleton skeleton-dark camera-skeleton"><span class="camera-skeleton-label">Opening camera&hellip;</span></div>
+        <img id="guide-preview-img" alt="Live camera view">
+        <svg class="bones" id="guide-bones" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+
+      <footer class="guide-actions">
+        <button class="btn" id="guide-back" type="button">Back</button>
+        <span class="spacer"></span>
+        <button class="btn btn-accent" id="guide-next" type="button">Next</button>
+      </footer>
     </div>
   </div>
 

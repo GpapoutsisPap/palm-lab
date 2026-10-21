@@ -10,7 +10,17 @@ from conftest import raw_hand, three_fingers_up
 from palm_lab.actions.models import Action, ActionType, Binding
 from palm_lab.actions.runner import ActionResult
 from palm_lab.custom_gestures import CustomGesture
-from palm_lab.engine import FrameSource, HandDetector, Hands, TrackingEngine, classify_hand
+from palm_lab.engine import (
+    MEASURE_FRAMES,
+    MEASURE_SETTLE_FRAMES,
+    FrameSource,
+    HandDetector,
+    Hands,
+    TrackingEngine,
+    classify_hand,
+    classify_hands,
+)
+from palm_lab.features import HandProfile
 from palm_lab.landmarks import Point
 from palm_lab.settings import Settings
 
@@ -71,6 +81,7 @@ def make_engine(
     *,
     bindings: tuple[Binding, ...] = (PAUSE,),
     settings: Settings | None = None,
+    hand_profile: HandProfile | None = None,
     custom_gestures: tuple[CustomGesture, ...] = (),
     source: FrameSource | None = None,
     detector: HandDetector | None = None,
@@ -90,6 +101,7 @@ def make_engine(
         render_preview=lambda frame, hands: b"jpeg:%d" % len(hands),
         bindings=bindings,
         settings=settings or Settings(dwell_seconds=0.5, cooldown_seconds=5.0),
+        hand_profile=hand_profile,
         custom_gestures=custom_gestures,
         dispatch=(jobs.append if jobs is not None else (lambda job: job())),
         run=run,
@@ -608,3 +620,190 @@ def test_the_hold_is_reported_while_tracking_and_hidden_while_capturing() -> Non
         assert engine.status().trigger.phase == "idle"
     finally:
         running.set()
+
+
+# Switching a gesture off ----------------------------------------------------
+
+PAUSE_OFF = Binding(gesture="peace", name="Pause music", actions=PAUSE.actions, enabled=False)
+
+
+def hold_peace(engine: TrackingEngine, clock: FakeClock, start: float = 100.0) -> None:
+    detector = ScriptedDetector([PEACE])
+    for step in range(10):
+        clock.now = start + step * 0.1
+        engine.process_frame(object(), detector)
+
+
+def test_a_switched_off_gesture_runs_nothing_and_records_nothing() -> None:
+    clock = FakeClock()
+    ran: list[Binding] = []
+    engine = make_engine(bindings=(PAUSE_OFF,), clock=clock, ran=ran)
+    hold_peace(engine, clock)
+    assert ran == []
+    assert engine.status().last_fired is None
+    assert engine.status().gesture == "peace"  # still recognised, just not run
+
+
+def test_switching_a_gesture_back_on_works_straight_away() -> None:
+    """Holding it while off must not have started a cooldown."""
+    clock = FakeClock()
+    ran: list[Binding] = []
+    engine = make_engine(bindings=(PAUSE_OFF,), clock=clock, ran=ran)
+    hold_peace(engine, clock)
+    engine.update_bindings([PAUSE])
+    engine.process_frame(object(), ScriptedDetector([]))  # lower the hand
+    hold_peace(engine, clock, start=clock.now + 0.1)
+    assert ran == [PAUSE]
+
+
+def test_a_switched_off_gesture_is_reported_as_off() -> None:
+    clock = FakeClock()
+    engine = make_engine(bindings=(PAUSE_OFF,), clock=clock)
+    running = threading.Event()
+    engine._thread = threading.Thread(target=running.wait, daemon=True)
+    engine._thread.start()
+    try:
+        engine.process_frame(object(), ScriptedDetector([PEACE]))
+        trigger = engine.status().trigger
+        assert (trigger.phase, trigger.gesture) == ("off", "peace")
+    finally:
+        running.set()
+
+
+# Two hands ---------------------------------------------------------------------
+
+BOTH = Binding(
+    gesture="fist + peace",
+    name="Both hands",
+    actions=(Action(type=ActionType.HOTKEY, target="win+d"),),
+)
+
+
+def test_two_hands_read_as_one_two_hand_gesture_in_either_order() -> None:
+    assert classify_hands([PEACE, FIST]) == "fist + peace"
+    assert classify_hands([FIST, PEACE]) == "fist + peace"
+
+
+def test_two_hands_need_both_shapes_recognised() -> None:
+    assert classify_hands([PEACE, THREE_UP]) is None  # three up isn't a built-in
+
+
+def test_no_hands_or_too_many_read_as_nothing() -> None:
+    assert classify_hands([]) is None
+    assert classify_hands([PEACE, PEACE, FIST]) is None
+
+
+def hold(engine: TrackingEngine, clock: FakeClock, frames: list[Hands], step: float = 0.1) -> None:
+    for hands in frames:
+        clock.now += step
+        engine.process_frame(object(), ScriptedDetector(hands))
+
+
+def test_a_two_hand_setup_runs_when_both_shapes_are_held() -> None:
+    clock = FakeClock()
+    ran: list[Binding] = []
+    engine = make_engine(bindings=(PAUSE, BOTH), clock=clock, ran=ran)
+    hold(engine, clock, [[FIST, PEACE]] * 10)
+    assert ran == [BOTH]
+    fired = engine.status().last_fired
+    assert fired is not None and fired.binding_name == "Both hands"
+
+
+def test_a_one_hand_gesture_does_not_run_while_the_other_hand_is_up() -> None:
+    """The peace sign alone is bound, but here it is half of a two-hand pose."""
+    clock = FakeClock()
+    ran: list[Binding] = []
+    engine = make_engine(bindings=(PAUSE,), clock=clock, ran=ran)
+    hold(engine, clock, [[PEACE, FIST]] * 10)
+    assert ran == []
+
+
+def test_a_one_hand_gesture_still_runs_on_its_own() -> None:
+    clock = FakeClock()
+    ran: list[Binding] = []
+    engine = make_engine(bindings=(PAUSE, BOTH), clock=clock, ran=ran)
+    hold(engine, clock, [[PEACE]] * 10)
+    assert ran == [PAUSE]
+
+
+def test_a_hand_dropping_out_for_a_frame_does_not_restart_the_hold() -> None:
+    """MediaPipe loses a hand now and then; the 0.5 s hold must survive it."""
+    clock = FakeClock()
+    ran: list[Binding] = []
+    engine = make_engine(bindings=(PAUSE, BOTH), clock=clock, ran=ran)
+    hold(engine, clock, [[FIST, PEACE], [FIST, PEACE], [FIST, PEACE], [PEACE]])
+    assert engine.status().gesture == "fist + peace"
+    hold(engine, clock, [[FIST, PEACE]] * 3)
+    assert ran == [BOTH]  # one unbroken 0.6 s hold, despite the dropout
+
+
+def test_lowering_one_hand_for_longer_becomes_the_one_hand_gesture() -> None:
+    clock = FakeClock()
+    ran: list[Binding] = []
+    engine = make_engine(bindings=(PAUSE, BOTH), clock=clock, ran=ran)
+    hold(engine, clock, [[FIST, PEACE]] * 2)
+    hold(engine, clock, [[PEACE]] * 4)
+    assert engine.status().gesture == "peace"
+    assert ran == []  # the peace sign's own hold only started after the grace period
+
+
+# Tuning to a hand -----------------------------------------------------------------
+
+
+def test_a_hand_profile_changes_how_fingers_are_read() -> None:
+    """With a cut-off no finger can reach, an open palm reads as a thumb on its own."""
+    engine = make_engine(hand_profile=HandProfile(finger_thresholds=(9.0, 9.0, 9.0, 9.0)))
+    engine.process_frame(object(), ScriptedDetector([raw_hand("open_palm")]))
+    assert engine.status().gesture == "thumbs_up"
+    engine.update_hand_profile(None)
+    engine.process_frame(object(), ScriptedDetector([raw_hand("open_palm")]))
+    assert engine.status().gesture == "open_palm"
+
+
+def test_quiet_reads_gestures_but_runs_nothing() -> None:
+    clock = FakeClock()
+    ran: list[Binding] = []
+    engine = make_engine(clock=clock, ran=ran)
+    engine.set_quiet(True)
+    hold_peace(engine, clock)
+    assert engine.status().gesture == "peace"
+    assert ran == []
+    engine.set_quiet(False)
+    hold_peace(engine, clock, start=clock.now + 0.1)
+    assert ran == [PAUSE]
+
+
+def test_measuring_skips_the_settling_frames_then_collects() -> None:
+    engine = make_engine()
+    engine.start_measuring()
+    detector = ScriptedDetector([PEACE])
+    for _ in range(MEASURE_SETTLE_FRAMES):
+        engine.process_frame(object(), detector)
+    status = engine.measure_status()
+    assert status is not None and status.progress == 0 and not status.done
+    for _ in range(MEASURE_FRAMES):
+        engine.process_frame(object(), detector)
+    status = engine.measure_status()
+    assert status is not None and status.done and status.progress == 1
+    samples = engine.take_measurements()
+    assert len(samples) == MEASURE_FRAMES
+    assert samples[0].finger_ratios[0] > 1  # the peace sign's index finger is up
+    assert engine.measure_status() is None
+
+
+def test_measuring_needs_exactly_one_hand() -> None:
+    engine = make_engine()
+    engine.start_measuring()
+    for _ in range(MEASURE_SETTLE_FRAMES + 5):
+        engine.process_frame(object(), ScriptedDetector([PEACE, FIST]))
+    status = engine.measure_status()
+    assert status is not None and status.hands == 2 and status.progress == 0
+
+
+def test_nothing_runs_while_measuring() -> None:
+    clock = FakeClock()
+    ran: list[Binding] = []
+    engine = make_engine(clock=clock, ran=ran)
+    engine.start_measuring()
+    hold_peace(engine, clock)
+    assert ran == []

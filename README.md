@@ -14,7 +14,15 @@ and runs the actions you snap together for each one, all on your own computer.
 
 ## Features
 
+- **A guided start:** a two-minute setup guide, run as a small lab
+  experiment, checks your camera, measures your hand, tests every gesture and
+  helps you make and run your first shortcut.
+- **Tuned to your hand:** palm-lab measures how far your fingers really open
+  and curl, and reads them by your own measurements.
 - **Four gestures built in:** peace sign, fist, open palm and thumbs up.
+- **Two-hand setups:** a shortcut that only runs when both hands show their
+  shapes together, so a hand resting on your chin can't set it off.
+- **Switch any gesture off** without losing what it does.
 - **Add your own:** hold a new hand shape up twice, name it, and it gets its
   own icon. palm-lab tells you straight away if you already use that shape.
 - **Actions that snap together:** open an app from your Start menu, open a

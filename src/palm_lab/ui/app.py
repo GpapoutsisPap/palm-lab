@@ -6,6 +6,7 @@ from pathlib import Path
 from palm_lab.config import bindings_path, ensure_bindings_file, icon_path, ui_static_dir
 from palm_lab.custom_css import custom_css_path
 from palm_lab.custom_gestures import gestures_path
+from palm_lab.hand_profile import hand_profile_path
 from palm_lab.settings import Settings, SettingsError, load_settings, settings_path
 from palm_lab.single_instance import Instance, instance_guard
 from palm_lab.ui.lifecycle import Lifecycle, WindowControls
@@ -96,7 +97,8 @@ def _run_window(*, debug: bool, background: bool, custom_css: bool, guard: Insta
     set_app_id()
     engine = TrackingEngine(
         open_camera=open_camera,
-        make_detector=MediaPipeDetector,
+        # Two hands, so two-hand setups can be recognised.
+        make_detector=lambda: MediaPipeDetector(num_hands=2),
         render_preview=render_preview,
     )
     api = Api(
@@ -111,6 +113,7 @@ def _run_window(*, debug: bool, background: bool, custom_css: bool, guard: Insta
         on_close_choice=lambda choice: lifecycle.choose(choice),
         custom_css_file=custom_css_path(),
         custom_css_allowed=custom_css,
+        hand_profile_file=hand_profile_path(),
     )
     theme = saved_settings().theme
     window = webview.create_window(

@@ -9,20 +9,39 @@ preview renderer are passed in, which keeps the engine testable with fakes.
 import threading
 import time
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import Protocol
 
 from palm_lab.actions.models import Binding
 from palm_lab.actions.runner import ActionResult, run_binding
 from palm_lab.capture import CaptureStatus, GestureCapture
+from palm_lab.combos import combo_key, combo_parts
 from palm_lab.custom_gestures import CustomGesture, all_rules
-from palm_lab.features import HandFeatures, extract
+from palm_lab.features import (
+    STANDARD_PROFILE,
+    HandFeatures,
+    HandMeasurement,
+    HandProfile,
+    extract,
+    measure,
+)
 from palm_lab.gestures import FingerTuple, classify
 from palm_lab.landmarks import Point, normalise
 from palm_lab.settings import Settings
 from palm_lab.state import GestureTrigger, TriggerState
 
 Hands = list[list[Point]]
+
+# MediaPipe sometimes loses one of two hands for a frame or two. For this long
+# after seeing a two-hand gesture, one of its halves on its own still counts
+# as the pair, so the hold isn't restarted by a flicker.
+COMBO_GRACE_SECONDS = 0.3
+
+# Measuring a hand for tuning: frames skipped while the hand settles into the
+# pose, then frames kept. At a typical 25 fps that is about a quarter of a
+# second, then a second.
+MEASURE_SETTLE_FRAMES = 6
+MEASURE_FRAMES = 24
 
 
 class FrameSource(Protocol):
@@ -52,21 +71,85 @@ def run_in_background(job: Callable[[], None]) -> None:
 
 
 def classify_hand(
-    points: list[Point], rules: Mapping[FingerTuple, str] | None = None
+    points: list[Point],
+    rules: Mapping[FingerTuple, str] | None = None,
+    profile: HandProfile = STANDARD_PROFILE,
 ) -> str | None:
     """Gesture name for one hand, or None if unrecognised or degenerate."""
     try:
-        return classify(extract(normalise(points)), rules)
+        return classify(extract(normalise(points), profile), rules)
     except ValueError:
         return None
 
 
-def hand_features(points: list[Point]) -> HandFeatures | None:
+def classify_hands(
+    hands: Hands,
+    rules: Mapping[FingerTuple, str] | None = None,
+    profile: HandProfile = STANDARD_PROFILE,
+) -> str | None:
+    """The gesture for everything in view.
+
+    One hand gives its own gesture. Two hands give the two-hand key for both
+    shapes together, and only that: a one-hand gesture never runs while the
+    other hand is also in view. If either hand's shape isn't recognised, or
+    more than two hands are found, there is no gesture.
+    """
+    if len(hands) == 1:
+        return classify_hand(hands[0], rules, profile)
+    if len(hands) == 2:
+        first, second = (classify_hand(hand, rules, profile) for hand in hands)
+        if first is None or second is None:
+            return None
+        return combo_key(first, second)
+    return None
+
+
+def hand_features(
+    points: list[Point], profile: HandProfile = STANDARD_PROFILE
+) -> HandFeatures | None:
     """The raw five-finger reading for one hand, or None if degenerate."""
     try:
-        return extract(normalise(points))
+        return extract(normalise(points), profile)
     except ValueError:
         return None
+
+
+@dataclass(frozen=True)
+class MeasureStatus:
+    """How far measuring a hand pose has got, for the setup guide."""
+
+    progress: float  # 0..1
+    hands: int  # hands in view on the latest frame: measuring needs exactly one
+    done: bool
+
+
+@dataclass
+class _Measuring:
+    """Collects one hand's measurements, frame by frame, for tuning."""
+
+    settled: int = 0
+    samples: list[HandMeasurement] = field(default_factory=list)
+    hands: int = 0
+
+    @property
+    def done(self) -> bool:
+        return len(self.samples) >= MEASURE_FRAMES
+
+    def update(self, hands: Hands) -> None:
+        self.hands = len(hands)
+        if self.done:
+            return
+        if len(hands) != 1:
+            self.settled = 0  # the hand left: let it settle again when it's back
+            return
+        try:
+            reading = measure(normalise(hands[0]))
+        except ValueError:
+            return
+        if self.settled < MEASURE_SETTLE_FRAMES:
+            self.settled += 1
+            return
+        self.samples.append(reading)
 
 
 @dataclass(frozen=True)
@@ -112,6 +195,7 @@ class TrackingEngine:
         render_preview: PreviewRenderer,
         bindings: Iterable[Binding] = (),
         settings: Settings | None = None,
+        hand_profile: HandProfile | None = None,
         custom_gestures: Iterable[CustomGesture] = (),
         dispatch: Dispatcher = run_in_background,
         run: BindingRunner = run_binding,
@@ -134,8 +218,13 @@ class TrackingEngine:
         self._bindings = {b.gesture: b for b in bindings}
         self._trigger = self._new_trigger(self._settings)
         self._rules = all_rules(list(custom_gestures))
+        self._profile = hand_profile or STANDARD_PROFILE
+        # The setup guide's hand checks: gestures are read but nothing runs.
+        self._quiet = False
+        self._measuring: _Measuring | None = None
 
         self._gesture: str | None = None
+        self._combo_seen: tuple[str, float] | None = None  # key, when last seen
         self._hands = 0
         self._fps = 0.0
         self._last_frame_at: float | None = None
@@ -214,14 +303,16 @@ class TrackingEngine:
                 self._preview_hands = []
                 self._capture = None
                 self._capture_status = None
+                self._measuring = None
 
     def process_frame(self, frame: object, detector: HandDetector) -> None:
         """Handle one frame. Public so tests can drive it without a thread."""
         hands = detector.detect(frame)
         with self._lock:
             rules = self._rules
+            profile = self._profile
             preview_enabled = self._preview_enabled
-        gesture = classify_hand(hands[0], rules) if hands else None
+        reading = classify_hands(hands, rules, profile)
         # Encoding a picture every frame is wasted work while the window is hidden.
         preview = self._render_preview(frame, hands) if preview_enabled else None
         now = self._clock()
@@ -231,6 +322,7 @@ class TrackingEngine:
                 instant = 1.0 / (now - self._last_frame_at)
                 self._fps = instant if self._fps == 0 else 0.9 * self._fps + 0.1 * instant
             self._last_frame_at = now
+            gesture = self._bridge_combo_flicker(reading, len(hands), now)
             self._gesture = gesture
             self._hands = len(hands)
             self._preview = preview
@@ -245,7 +337,7 @@ class TrackingEngine:
                 "taken",
             )
             if capture is not None and not finished:
-                features = hand_features(hands[0]) if hands else None
+                features = hand_features(hands[0], profile) if hands else None
                 status = capture.update(features, now)
                 # As soon as the first hold records a shape, say if it's one
                 # that already belongs to a gesture, rather than asking for a
@@ -260,11 +352,20 @@ class TrackingEngine:
                     )
                 self._capture_status = status
 
-            # Recording a new gesture: don't also run whatever the shape
-            # being held happens to already be bound to.
-            if capture is not None:
+            if self._measuring is not None:
+                self._measuring.update(hands)
+
+            # Recording a new gesture, measuring a hand or checking gestures
+            # in the setup guide: don't also run whatever the shape being
+            # held happens to already be bound to.
+            if capture is not None or self._measuring is not None or self._quiet:
                 return
 
+            # A gesture switched off in the window counts as no gesture at
+            # all: it doesn't run, and doesn't start a cooldown either, so
+            # switching it back on works straight away.
+            if self._switched_off(gesture):
+                gesture = None
             fired = self._trigger.update(gesture, now)
             if fired is None:
                 return
@@ -295,6 +396,24 @@ class TrackingEngine:
                 self._preview = None
                 self._preview_hands = []
 
+    def _bridge_combo_flicker(self, reading: str | None, hands: int, now: float) -> str | None:
+        """Keep a two-hand gesture going through a brief loss of one hand."""
+        if reading is not None and combo_parts(reading) is not None:
+            self._combo_seen = (reading, now)
+            return reading
+        if self._combo_seen is not None and hands == 1:
+            key, seen_at = self._combo_seen
+            parts = combo_parts(key)
+            if parts and reading in parts and now - seen_at <= COMBO_GRACE_SECONDS:
+                return key
+        self._combo_seen = None
+        return reading
+
+    def _switched_off(self, gesture: str | None) -> bool:
+        """True for a gesture whose binding exists but is turned off."""
+        binding = self._bindings.get(gesture) if gesture is not None else None
+        return binding is not None and not binding.enabled
+
     def update_bindings(self, bindings: Iterable[Binding]) -> None:
         with self._lock:
             self._bindings = {b.gesture: b for b in bindings}
@@ -317,11 +436,14 @@ class TrackingEngine:
     def status(self) -> EngineStatus:
         with self._lock:
             running = self.running
-            capturing = self._capture is not None
+            capturing = self._capture is not None or self._measuring is not None or self._quiet
             # While recording a new gesture nothing fires, so there is no hold to show.
-            trigger = (
-                self._trigger.state(self._clock()) if running and not capturing else TriggerState()
-            )
+            if not running or capturing:
+                trigger = TriggerState()
+            elif self._switched_off(self._gesture):
+                trigger = TriggerState(phase="off", gesture=self._gesture)
+            else:
+                trigger = self._trigger.state(self._clock())
             return EngineStatus(
                 running=running,
                 gesture=self._gesture,
@@ -353,6 +475,42 @@ class TrackingEngine:
             # Otherwise a dwell that was already in progress when capture
             # started would look instantly complete the moment it ends.
             self._trigger.reset()
+
+    # Tuning to a hand (the setup guide) -------------------------------------
+
+    def update_hand_profile(self, profile: HandProfile | None) -> None:
+        """Read hands with these cut-offs from the next frame on (None: standard)."""
+        with self._lock:
+            self._profile = profile or STANDARD_PROFILE
+
+    def set_quiet(self, quiet: bool) -> None:
+        """While quiet, gestures are recognised and reported but never run."""
+        with self._lock:
+            self._quiet = quiet
+            self._trigger.reset()
+
+    def start_measuring(self) -> None:
+        """Start (or restart) collecting measurements of one held hand pose."""
+        with self._lock:
+            self._measuring = _Measuring()
+            self._trigger.reset()
+
+    def measure_status(self) -> MeasureStatus | None:
+        with self._lock:
+            measuring = self._measuring
+            if measuring is None:
+                return None
+            return MeasureStatus(
+                progress=min(len(measuring.samples) / MEASURE_FRAMES, 1.0),
+                hands=measuring.hands,
+                done=measuring.done,
+            )
+
+    def take_measurements(self) -> list[HandMeasurement]:
+        """End measuring and hand over what was collected."""
+        with self._lock:
+            measuring, self._measuring = self._measuring, None
+        return list(measuring.samples) if measuring else []
 
     def cancel_gesture_capture(self) -> None:
         with self._lock:

@@ -36,6 +36,30 @@ for the people installing the app.
 - On a wide window the Gestures page uses two columns: tracking, a larger
   camera preview and a "Recently ran" list on the left, your gestures on the
   right. Narrower windows keep the single column.
+- Each set-up gesture has an on/off switch in its row. Switched off, the
+  gesture keeps its actions but doesn't run them, and the Gestures page says
+  so when you hold it. `palm-lab config` marks switched-off gestures too.
+- Two-hand setups: pick two of your gestures, such as a fist and a peace
+  sign, and the setup runs only when both hands show them at once, whichever
+  hand makes which. A hand resting on your chin can't set one off. While both
+  hands are in view, one-hand gestures don't run. In `bindings.toml` a pair is
+  written `gesture = ["fist", "peace"]`.
+- A setup guide, styled as a short lab experiment, that opens the first time
+  palm-lab starts and from Settings > Your hand > Setup guide. It checks the
+  camera, measures your hand, tests the four built-in gestures, has you build
+  a first shortcut with the same drag-and-drop pieces as the Gestures page and
+  run it for real, then offers Start with Windows.
+- palm-lab tunes itself to your hand: the guide measures your open hand and
+  your fist, and each finger counts as up by your own measurements instead of
+  a one-size-fits-all rule. Settings > Your hand > Reset to standard undoes it.
+
+### Changed
+
+- A narrow gesture row shows fewer action chips instead of cutting one in
+  half.
+- palm-lab now looks for two hands in the camera instead of one.
+- A custom gesture's name can't contain "+", because "+" joins the two
+  shapes of a two-hand setup.
 
 ## [0.2.0] - 2026-09-29
 

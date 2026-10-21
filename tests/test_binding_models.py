@@ -292,3 +292,72 @@ def test_saving_writes_a_loadable_file(tmp_path) -> None:  # type: ignore[no-unt
     save_bindings(bindings, path)
     assert load_bindings(path) == bindings
     assert list(path.parent.iterdir()) == [path]
+
+
+def test_bindings_are_on_unless_the_file_says_otherwise() -> None:
+    """Files written before the on/off switch existed keep working."""
+    (binding,) = parse_bindings(MINIMAL)
+    assert binding.enabled is True
+    assert "enabled" not in format_bindings([binding])
+
+
+def test_a_switched_off_binding_round_trips() -> None:
+    """Turning a gesture off keeps its actions; only the flag changes."""
+    (binding,) = parse_bindings(MINIMAL.replace('name = "Test"', 'name = "Test"\nenabled = false'))
+    assert binding.enabled is False
+    assert binding.actions[0].target == "spotify"
+    text = format_bindings([binding])
+    assert "enabled = false" in text
+    assert parse_bindings(text) == (binding,)
+
+
+def test_enabled_must_be_true_or_false() -> None:
+    """A string like "no" would otherwise count as switched on."""
+    text = MINIMAL.replace('name = "Test"', 'name = "Test"\nenabled = "no"')
+    with pytest.raises(InvalidBindingError, match="'enabled' must be true or false"):
+        parse_bindings(text)
+
+
+TWO_HANDS = """
+[[binding]]
+gesture = ["peace", "fist"]
+name = "Both"
+  [[binding.action]]
+  type = "launch"
+  target = "spotify"
+"""
+
+
+def test_a_two_hand_binding_lists_both_gestures() -> None:
+    """Either order in the file means the same setup."""
+    (binding,) = parse_bindings(TWO_HANDS)
+    assert binding.gesture == "fist + peace"
+
+
+def test_a_two_hand_binding_round_trips() -> None:
+    (binding,) = parse_bindings(TWO_HANDS)
+    text = format_bindings([binding])
+    assert 'gesture = ["fist", "peace"]' in text
+    assert parse_bindings(text) == (binding,)
+
+
+def test_the_same_pair_cannot_be_bound_twice_in_either_order() -> None:
+    second = TWO_HANDS.replace('["peace", "fist"]', '["fist", "peace"]')
+    with pytest.raises(InvalidBindingError, match="already bound by binding 1"):
+        parse_bindings(TWO_HANDS + second)
+
+
+@pytest.mark.parametrize(
+    "gesture",
+    ['["peace"]', '["peace", "fist", "open_palm"]', '["peace", ""]', '["peace", 3]'],
+    ids=["one", "three", "blank", "number"],
+)
+def test_a_two_hand_gesture_needs_exactly_two_names(gesture: str) -> None:
+    with pytest.raises(InvalidBindingError, match="exactly two gesture names"):
+        parse_bindings(TWO_HANDS.replace('["peace", "fist"]', gesture))
+
+
+def test_a_plus_in_a_gesture_name_points_at_the_list_form() -> None:
+    """A hand-written "fist + peace" string would be ambiguous; say how to write it."""
+    with pytest.raises(InvalidBindingError, match=r"write a two-hand setup as a list"):
+        parse_bindings(TWO_HANDS.replace('["peace", "fist"]', '"fist + peace"'))

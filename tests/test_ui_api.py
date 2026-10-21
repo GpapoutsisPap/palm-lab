@@ -12,7 +12,7 @@ from conftest import raw_hand, three_fingers_up
 from palm_lab.actions.models import Binding, load_bindings
 from palm_lab.actions.runner import ActionResult
 from palm_lab.custom_gestures import load_custom_gestures
-from palm_lab.engine import Hands, TrackingEngine
+from palm_lab.engine import MEASURE_FRAMES, MEASURE_SETTLE_FRAMES, Hands, TrackingEngine
 from palm_lab.landmarks import Point
 from palm_lab.settings import Settings, load_settings
 from palm_lab.shortcuts import ShortcutError
@@ -61,6 +61,17 @@ class Source:
         self.released = True
 
 
+class FixedHands:
+    def __init__(self, hands: Hands) -> None:
+        self.hands = hands
+
+    def detect(self, frame: object) -> Hands:
+        return self.hands
+
+    def close(self) -> None:
+        pass
+
+
 class NoHands:
     def detect(self, frame: object) -> Hands:
         return []
@@ -76,6 +87,7 @@ def build(
     settings_text: str | None = None,
     cameras: tuple[int, ...] = (0, 1),
     working_cameras: tuple[int, ...] = (0, 1),
+    hand_profile_file: Path | None = None,
 ) -> tuple[Api, TrackingEngine, Path, Path, list[Binding]]:
     bindings_file = tmp_path / "bindings.toml"
     settings_file = tmp_path / "settings.toml"
@@ -110,6 +122,7 @@ def build(
         gestures_file=gestures_file,
         probe_cameras=lambda: list(cameras),
         run=run,
+        hand_profile_file=hand_profile_file,
     )
     return api, engine, bindings_file, settings_file, ran
 
@@ -160,6 +173,13 @@ def test_only_the_intended_methods_are_exposed_to_javascript() -> None:
         "capture_status",
         "save_captured_gesture",
         "remove_custom_gesture",
+        "start_hand_measure",
+        "hand_measure_status",
+        "keep_hand_measure",
+        "cancel_hand_measure",
+        "tune_hand",
+        "reset_hand_tuning",
+        "set_guide_quiet",
     }
 
 
@@ -225,6 +245,45 @@ def test_saving_bindings_writes_the_file_and_applies_them(tmp_path: Path) -> Non
     (saved,) = load_bindings(bindings_file)
     assert saved.gesture == "fist"
     assert api.get_state()["bindings"][0]["name"] == "Browser"
+
+
+def test_a_binding_can_be_switched_off_from_the_window(tmp_path: Path) -> None:
+    """The page's on/off switch is saved, applied and sent back."""
+    api, _, bindings_file, _, _ = build(tmp_path, bindings_text=None)
+    payload = {
+        "binding": [
+            {
+                "gesture": "fist",
+                "name": "Browser",
+                "enabled": False,
+                "action": [{"type": "open_url", "target": "https://example.com"}],
+            }
+        ]
+    }
+    assert api.save_bindings(payload)["ok"]
+    (saved,) = load_bindings(bindings_file)
+    assert saved.enabled is False
+    assert api.get_state()["bindings"][0]["enabled"] is False
+
+
+def test_a_two_hand_setup_is_saved_from_the_window(tmp_path: Path) -> None:
+    """The page sends the pair as a list and gets both shapes back."""
+    api, _, bindings_file, _, _ = build(tmp_path, bindings_text=None)
+    payload = {
+        "binding": [
+            {
+                "gesture": ["peace", "fist"],
+                "name": "Both",
+                "action": [{"type": "hotkey", "target": "win+d"}],
+            }
+        ]
+    }
+    assert api.save_bindings(payload)["ok"]
+    (saved,) = load_bindings(bindings_file)
+    assert saved.gesture == "fist + peace"
+    (sent,) = api.get_state()["bindings"]
+    assert sent["gesture"] == "fist + peace"
+    assert sent["hands"] == ["fist", "peace"]
 
 
 def test_invalid_bindings_are_refused_and_the_file_is_untouched(tmp_path: Path) -> None:
@@ -848,3 +907,90 @@ def test_status_and_preview_describe_the_hold(tmp_path: Path) -> None:
         assert preview["hold"]["phase"] == "idle"
     finally:
         engine.stop()
+
+
+# The setup guide ------------------------------------------------------------------
+
+
+def measure_pose(api: Api, engine: TrackingEngine, gesture: str, pose: str) -> None:
+    """Hold one recorded hand in front of the engine until it has measured it."""
+    engine.start_measuring()
+    hand = raw_hand(gesture)
+    for _ in range(MEASURE_SETTLE_FRAMES + MEASURE_FRAMES):
+        engine.process_frame(object(), FixedHands([hand]))
+    assert api.hand_measure_status() == {"progress": 1.0, "hands": 1, "done": True}
+    assert api.keep_hand_measure(pose)["ok"]
+
+
+def test_the_guide_starts_until_it_is_finished(tmp_path: Path) -> None:
+    api, *_ = build(tmp_path)
+    assert api.get_state()["settings"]["guide_done"] is False
+    done = {**api.get_state()["settings"], "guide_done": True}
+    assert api.save_settings(done)["ok"]
+    assert api.get_state()["settings"]["guide_done"] is True
+
+
+def test_tuning_measures_an_open_hand_and_a_fist_then_saves(tmp_path: Path) -> None:
+    hand_file = tmp_path / "hand.toml"
+    api, engine, *_ = build(tmp_path, hand_profile_file=hand_file)
+    assert api.get_state()["hand"] == {"available": True, "tuned": False}
+    measure_pose(api, engine, "open_palm", "open")
+    measure_pose(api, engine, "fist", "fist")
+    result = api.tune_hand()
+    assert result["ok"], result
+    assert result["kept_standard"] == []
+    assert hand_file.exists()
+    assert api.get_state()["hand"]["tuned"] is True
+
+
+def test_two_open_hands_are_refused_and_nothing_is_saved(tmp_path: Path) -> None:
+    hand_file = tmp_path / "hand.toml"
+    api, engine, *_ = build(tmp_path, hand_profile_file=hand_file)
+    measure_pose(api, engine, "open_palm", "open")
+    measure_pose(api, engine, "open_palm", "fist")
+    result = api.tune_hand()
+    assert not result["ok"]
+    assert "almost the same" in result["error"]
+    assert not hand_file.exists()
+
+
+def test_a_pose_cannot_be_kept_before_it_is_measured(tmp_path: Path) -> None:
+    api, engine, *_ = build(tmp_path, hand_profile_file=tmp_path / "hand.toml")
+    engine.start_measuring()
+    assert not api.keep_hand_measure("open")["ok"]
+    assert not api.keep_hand_measure("sideways")["ok"]
+
+
+def test_reset_goes_back_to_standard(tmp_path: Path) -> None:
+    hand_file = tmp_path / "hand.toml"
+    hand_file.write_text("index = 0.9\nmiddle = 0.9\nring = 0.9\npinky = 0.9\n", encoding="utf-8")
+    api, *_ = build(tmp_path, hand_profile_file=hand_file)
+    assert api.get_state()["hand"]["tuned"] is True
+    assert api.reset_hand_tuning() == {"ok": True, "hand": {"available": True, "tuned": False}}
+    assert not hand_file.exists()
+
+
+def test_a_broken_tuning_file_is_reported_and_standard_used(tmp_path: Path) -> None:
+    hand_file = tmp_path / "hand.toml"
+    hand_file.write_text("index = ", encoding="utf-8")
+    api, *_ = build(tmp_path, hand_profile_file=hand_file)
+    state = api.get_state()
+    assert state["hand"]["tuned"] is False
+    assert any("hand tuning file" in problem for problem in state["problems"])
+
+
+def test_starting_to_measure_turns_the_camera_on(tmp_path: Path) -> None:
+    api, engine, *_ = build(tmp_path, hand_profile_file=tmp_path / "hand.toml")
+    result = api.start_hand_measure()
+    assert result["ok"] and engine.running
+    assert api.hand_measure_status() is not None
+    assert api.cancel_hand_measure() == {"ok": True}
+    assert api.hand_measure_status() is None
+
+
+def test_quiet_is_passed_to_the_engine(tmp_path: Path) -> None:
+    api, engine, *_ = build(tmp_path)
+    api.set_guide_quiet(True)
+    assert engine._quiet is True
+    api.set_guide_quiet(False)
+    assert engine._quiet is False

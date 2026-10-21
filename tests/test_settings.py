@@ -131,3 +131,17 @@ def test_custom_css_is_used_by_default_and_can_be_turned_off(tmp_path: Path) -> 
     path = tmp_path / "settings.toml"
     save_settings(Settings(custom_css=False), path)
     assert load_settings(path).custom_css is False
+
+
+def test_the_setup_guide_shows_until_it_is_done(tmp_path: Path) -> None:
+    """A settings file from before the guide existed opens it once, too."""
+    path = tmp_path / "settings.toml"
+    path.write_text('theme = "dark"\n', encoding="utf-8")
+    assert load_settings(path).guide_done is False
+    save_settings(Settings(guide_done=True), path)
+    assert load_settings(path).guide_done is True
+
+
+def test_guide_done_must_be_true_or_false() -> None:
+    with pytest.raises(SettingsError, match="'guide_done' must be true or false"):
+        settings_from_data({"guide_done": "yes"})

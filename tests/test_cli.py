@@ -256,3 +256,17 @@ def test_missing_handler_prints_help(
     monkeypatch.delitem(cli.HANDLERS, "config")
     assert cli.main(["config"]) == 2
     assert "usage:" in capsys.readouterr().out
+
+
+def test_config_marks_switched_off_bindings(
+    config_home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A gesture switched off in the window shows as off, not as working."""
+    config_home.mkdir(parents=True)
+    (config_home / "bindings.toml").write_text(
+        '[[binding]]\ngesture = "fist"\nname = "Quiet"\nenabled = false\n'
+        '[[binding.action]]\ntype = "hotkey"\ntarget = "volume_mute"\n',
+        encoding="utf-8",
+    )
+    assert cli.main(["config"]) == 0
+    assert "Quiet  (off)" in capsys.readouterr().out

@@ -26,6 +26,7 @@ KNOWN_SETTINGS = {
     "close_action",
     "theme",
     "custom_css",
+    "guide_done",
 }
 
 
@@ -44,6 +45,7 @@ class Settings:
     close_action: str = "ask"
     theme: str = "system"
     custom_css: bool = True  # apply custom.css; the file itself is kept either way
+    guide_done: bool = False  # the setup guide was finished or skipped; it opens until then
 
     def as_dict(self) -> dict[str, float | int | bool | str]:
         return asdict(self)
@@ -98,6 +100,10 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
     if not isinstance(custom_css, bool):
         raise SettingsError("'custom_css' must be true or false")
 
+    guide_done = data.get("guide_done", False)
+    if not isinstance(guide_done, bool):
+        raise SettingsError("'guide_done' must be true or false")
+
     return Settings(
         camera_index=camera,
         dwell_seconds=dwell,
@@ -106,6 +112,7 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
         close_action=close_action,
         theme=theme,
         custom_css=custom_css,
+        guide_done=guide_done,
     )
 
 
@@ -133,6 +140,7 @@ def save_settings(settings: Settings, path: Path | None = None) -> Path:
         f'close_action = "{settings.close_action}"\n'
         f'theme = "{settings.theme}"\n'
         f"custom_css = {'true' if settings.custom_css else 'false'}\n"
+        f"guide_done = {'true' if settings.guide_done else 'false'}\n"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")

@@ -884,7 +884,7 @@ button.gesture-head:focus-visible {
   width: 28px;
   height: 28px;
   color: var(--text-1);
-  transition: color 150ms ease;
+  transition: color 150ms ease, opacity 150ms ease;
 }
 
 .gesture-glyph .glyph {
@@ -912,11 +912,16 @@ button.gesture-head:focus-visible {
   white-space: nowrap;
 }
 
+/* Chips that don't fit wrap onto a hidden second line, so a narrow row
+   shows fewer whole chips rather than one cut through the middle. */
 .gesture-summary {
   display: flex;
   flex: 1;
+  flex-wrap: wrap;
+  align-content: flex-start;
   justify-content: flex-end;
   gap: 2px;
+  height: 24px;
   min-width: 0;
   padding-right: 6px;
   overflow: hidden;
@@ -959,6 +964,49 @@ button.gesture-head:focus-visible {
 
 .is-open > .gesture-head .chevron {
   transform: rotate(180deg);
+}
+
+/* Each set-up row has an on/off switch. It is a sibling of the head button
+   (a control can't live inside a button), laid over the space the head
+   keeps free for it, just left of the chevron. */
+.gesture-switch-slot {
+  display: none;
+  flex: none;
+  width: 40px;
+}
+
+.gesture-switch {
+  position: absolute;
+  top: 24px; /* centred in the 68px head */
+  right: 60px; /* clear of the 32px chevron, its 12px padding and the gap */
+  z-index: 1;
+  display: none;
+}
+
+.gesture.has-switch .gesture-switch-slot,
+.gesture.has-switch .gesture-switch {
+  display: block;
+}
+
+/* Switched off: everything stays editable, but reads as resting. */
+.gesture-label {
+  transition: opacity 150ms ease;
+}
+
+.gesture.is-off .gesture-glyph,
+.gesture.is-off .gesture-label,
+.gesture.is-off .gesture-summary {
+  opacity: 0.45;
+}
+
+.gesture.is-off.is-open .gesture-summary {
+  opacity: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gesture:has(> .gesture-switch:hover) > .gesture-head {
+    --row-bg: var(--card-hover);
+  }
 }
 
 /* The summary is a small script: each action is a little piece, locked
@@ -1013,6 +1061,12 @@ button.gesture-head:focus-visible {
 .chip-text {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* A chip alone on a line that's still too wide shortens its text instead. */
+.gesture-summary .chip {
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .chip.is-empty {
@@ -1603,7 +1657,8 @@ button.gesture-head:focus-visible {
 }
 
 .hold[data-phase="idle"] .hold-glyph,
-.hold[data-phase="unbound"] .hold-glyph {
+.hold[data-phase="unbound"] .hold-glyph,
+.hold[data-phase="off"] .hold-glyph {
   opacity: 0.45;
 }
 
@@ -2475,5 +2530,581 @@ button.gesture-head:focus-visible {
 
   .palette-piece:active {
     transform: none;
+  }
+}
+
+/* Two-hand setups ------------------------------------------------------------
+
+   A two-hand gesture is drawn as both hands side by side, the second mirrored
+   and tucked slightly behind the first. Each place that draws a glyph keeps
+   its own size for one hand; a pair is simply a little under twice as wide. */
+
+.glyph-pair {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+.glyph-pair > .glyph + .glyph {
+  margin-left: -18%;
+  transform: scaleX(-1);
+}
+
+/* In a row the pair stays centred on the usual 28px column, spilling a few
+   pixels into the padding and gap, so every row's name still lines up. */
+.gesture-glyph > .glyph-pair {
+  width: 40px;
+  height: 100%;
+  margin-left: -6px;
+}
+
+.gesture-glyph > .glyph-pair > .glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.hold-glyph .glyph-pair .glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.group-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.pair-dialog {
+  width: min(460px, 100%);
+}
+
+.pair-preview {
+  --glyph-bg: var(--flyout);
+  display: flex;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.pair-preview .glyph {
+  width: 56px;
+  height: 56px;
+}
+
+.pair-fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.pair-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.pair-field .select-wrap,
+.pair-field .select {
+  width: 100%;
+  min-width: 0;
+}
+
+.pair-plus {
+  flex: none;
+  padding-bottom: 6px;
+  color: var(--text-2);
+  font-size: 16px;
+}
+
+.pair-error {
+  color: var(--critical);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.pair-error[hidden] {
+  display: none;
+}
+
+/* Setup guide --------------------------------------------------------------------
+
+   A full-window "experiment". Lab touches stay small and functional: a rack
+   of test tubes in the header fills one per step, and each hand pose or
+   gesture under test is a "specimen" with its own tube that fills while it
+   is measured or held. */
+
+.guide-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  background: var(--mica);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.guide-overlay.is-in {
+  opacity: 1;
+}
+
+.guide {
+  display: flex;
+  width: min(880px, 100%);
+  flex-direction: column;
+  gap: 20px;
+  min-height: 0;
+  transform: translateY(8px);
+  transition: transform 250ms var(--ease-out);
+}
+
+.guide-overlay.is-in .guide {
+  transform: none;
+}
+
+.guide-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.guide-head .spacer,
+.guide-actions .spacer {
+  flex: 1;
+}
+
+.guide-rack {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 26px;
+  padding: 0 4px 3px;
+  border-bottom: 2px solid var(--control-stroke-strong);
+}
+
+.tube {
+  position: relative;
+  overflow: hidden;
+  width: 9px;
+  height: 22px;
+  border: 1.5px solid var(--control-stroke-strong);
+  border-top: 0;
+  border-radius: 0 0 5px 5px;
+}
+
+.tube::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 400ms var(--ease-out);
+}
+
+.tube[data-state="current"]::after {
+  transform: scaleY(0.4);
+}
+
+.tube[data-state="done"]::after {
+  transform: scaleY(0.85);
+}
+
+.guide-kicker {
+  color: var(--text-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.guide-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.guide-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guide-title {
+  font: 600 28px/36px var(--font-display);
+  outline: none;
+}
+
+.guide-lead {
+  max-width: 62ch;
+  color: var(--text-1);
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.guide-note {
+  color: var(--text-2);
+}
+
+.lab-notes,
+.guide-tips,
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lab-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.lab-note-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-text);
+}
+
+.guide-tips {
+  gap: 4px;
+  padding-left: 18px;
+  color: var(--text-2);
+  list-style: disc;
+}
+
+.guide-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .guide-split {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-frame {
+    max-width: 420px;
+  }
+}
+
+.guide-camera-slot:empty {
+  display: none;
+}
+
+.guide-frame {
+  width: 100%;
+}
+
+.guide-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.guide-reading {
+  min-height: 20px;
+  font-weight: 600;
+}
+
+.guide-reading:empty {
+  display: none;
+}
+
+.guide-reading[data-tone="success"] {
+  color: var(--success);
+}
+
+.guide-reading[data-tone="warn"] {
+  color: var(--caution);
+}
+
+.guide-reading[data-tone="error"] {
+  color: var(--critical);
+}
+
+.guide-reading.is-quiet {
+  font-weight: 400;
+}
+
+.guide-inline-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.guide-help summary {
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+.guide-help[open] summary {
+  margin-bottom: 8px;
+}
+
+/* Specimens: one hand pose or gesture each, with a tube that fills. */
+
+.specimens {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.specimen {
+  --fill: 0;
+  --glyph-bg: var(--card);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--card);
+  transition: border-color 150ms ease;
+}
+
+.specimen-glyph {
+  flex: none;
+  color: var(--text-2);
+  transition: color 150ms ease;
+}
+
+.specimen-glyph .glyph {
+  width: 28px;
+  height: 28px;
+}
+
+.specimen-glyph .glyph-pair .glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.specimen-label {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.specimen-hint {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.specimen-tube {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  width: 12px;
+  height: 30px;
+  border: 1.5px solid var(--control-stroke-strong);
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+}
+
+.specimen-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform: scaleY(var(--fill));
+  transform-origin: bottom;
+  transition: transform 90ms linear, background-color 150ms ease;
+}
+
+.specimen[data-state="measuring"] {
+  border-color: var(--accent);
+}
+
+.specimen[data-state="measuring"] .specimen-glyph,
+.specimen[data-state="done"] .specimen-glyph {
+  color: var(--accent);
+}
+
+.specimen[data-state="done"] {
+  border-color: color-mix(in srgb, var(--success) 50%, var(--stroke));
+}
+
+.specimen[data-state="done"] .specimen-fill {
+  background: var(--success);
+}
+
+/* Choosing the first shortcut. */
+
+.guide-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.guide-field legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice {
+  --glyph-bg: var(--control);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 14px 6px 10px;
+  border: 1px solid var(--control-stroke);
+  border-radius: var(--radius);
+  background: var(--control);
+  color: var(--text-1);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .choice:hover {
+    --glyph-bg: var(--control-hover);
+    background: var(--control-hover);
+  }
+}
+
+.choice[aria-checked="true"] {
+  --glyph-bg: color-mix(in srgb, var(--accent) 10%, var(--control));
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--control));
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.choice-glyph .glyph {
+  width: 26px;
+  height: 26px;
+}
+
+.choice-label {
+  display: flex;
+  flex-direction: column;
+}
+
+.choice-hint {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+
+/* Step 5 draws the Gestures page's own editor, as a card of its own. */
+.guide-editor {
+  overflow: hidden;
+}
+
+.guide-editor .editor {
+  border-top: 0;
+  border-radius: var(--radius);
+}
+
+.choice:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* The trial run reuses the hold ring, larger. */
+
+.guide-run-ring {
+  --ring: var(--accent);
+  --hold: 0;
+  display: flex;
+}
+
+.guide-run-ring .hold-ring {
+  width: 96px;
+  height: 96px;
+}
+
+.guide-run-ring .hold-glyph .glyph {
+  width: 44px;
+  height: 44px;
+}
+
+.guide-run-ring .hold-glyph .glyph-pair .glyph {
+  width: 34px;
+  height: 34px;
+}
+
+.guide-run-ring[data-phase="idle"] .hold-glyph {
+  opacity: 0.45;
+}
+
+.guide-run-ring[data-phase="fired"] {
+  --ring: var(--success);
+}
+
+/* The lab report. */
+
+.report-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.report-icon {
+  display: grid;
+  color: var(--text-3);
+}
+
+.report-item[data-ok="true"] .report-icon {
+  color: var(--success);
+}
+
+.report-detail {
+  color: var(--text-2);
+}
+
+.guide-startup {
+  padding: 12px 16px;
+}
+
+.guide-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide,
+  .tube::after,
+  .specimen-fill {
+    transition: none;
   }
 }

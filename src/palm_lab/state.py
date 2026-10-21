@@ -13,7 +13,8 @@ class TriggerState:
     phase is "idle" (nothing recognised), "holding" (counting towards
     firing), "fired" (this hold ran its gesture), "cooldown" (the gesture ran
     recently, so holding it now will not run it again yet), or "rearm" (this
-    hold is used up; lower the hand and show the gesture again).
+    hold is used up; lower the hand and show the gesture again). The engine
+    adds "off" for a gesture whose binding is switched off in the window.
     """
 
     phase: str = "idle"

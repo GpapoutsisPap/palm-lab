@@ -9,6 +9,7 @@ from pathlib import Path
 
 from palm_lab.actions.errors import InvalidBindingError
 from palm_lab.actions.hotkeys import parse_hotkey
+from palm_lab.combos import COMBO_MARK, combo_key, combo_parts
 
 DEFAULT_STEP_DELAY_SECONDS = 0.4
 
@@ -31,12 +32,18 @@ class Action:
 
 @dataclass(frozen=True)
 class Binding:
-    """Everything one gesture triggers, in order."""
+    """Everything one gesture triggers, in order.
+
+    gesture is a one-hand gesture's name, or for a two-hand setup the key
+    from combos.combo_key(), such as "fist + peace".
+    """
 
     gesture: str
     name: str
     actions: tuple[Action, ...]
     step_delay_seconds: float = DEFAULT_STEP_DELAY_SECONDS
+    enabled: bool = True
+    """False keeps the binding saved but stops the gesture from running it."""
 
 
 def parse_bindings(text: str) -> tuple[Binding, ...]:
@@ -72,9 +79,7 @@ def bindings_from_data(data: Mapping[str, object]) -> tuple[Binding, ...]:
         if not isinstance(raw, dict):
             raise InvalidBindingError(f"Binding {index}: must be a table")
 
-        gesture = raw.get("gesture")
-        if not isinstance(gesture, str) or not gesture:
-            raise InvalidBindingError(f"Binding {index}: 'gesture' must be a non-empty string")
+        gesture = _gesture_key(raw.get("gesture"), index)
         if gesture in seen_gestures:
             raise InvalidBindingError(
                 f"Binding {index}: gesture {gesture!r} is already bound "
@@ -125,16 +130,50 @@ def bindings_from_data(data: Mapping[str, object]) -> tuple[Binding, ...]:
         if delay < 0:
             raise InvalidBindingError(f"Binding {index}: 'step_delay_seconds' cannot be negative")
 
+        enabled = raw.get("enabled", True)
+        if not isinstance(enabled, bool):
+            raise InvalidBindingError(f"Binding {index}: 'enabled' must be true or false")
+
         bindings.append(
             Binding(
                 gesture=gesture,
                 name=name,
                 actions=tuple(actions),
                 step_delay_seconds=float(delay),
+                enabled=enabled,
             )
         )
 
     return tuple(bindings)
+
+
+def _gesture_key(raw: object, index: int) -> str:
+    """A binding's gesture: one name, or a list of two for both hands."""
+    where = f"Binding {index}"
+    if isinstance(raw, list):
+        if len(raw) != 2 or not all(isinstance(name, str) and name for name in raw):
+            raise InvalidBindingError(
+                f"{where}: a two-hand 'gesture' must list exactly two gesture names"
+            )
+        names = [str(name) for name in raw]
+    elif isinstance(raw, str) and raw:
+        names = [raw]
+    else:
+        raise InvalidBindingError(f"{where}: 'gesture' must be a non-empty string")
+    for name in names:
+        if COMBO_MARK in name:
+            raise InvalidBindingError(
+                f"{where}: gesture {name!r} can't contain {COMBO_MARK!r}; "
+                'write a two-hand setup as a list, like gesture = ["fist", "peace"]'
+            )
+    return combo_key(names[0], names[1]) if len(names) == 2 else names[0]
+
+
+def _format_gesture(key: str) -> str:
+    parts = combo_parts(key)
+    if parts is None:
+        return _toml_string(key)
+    return f"[{_toml_string(parts[0])}, {_toml_string(parts[1])}]"
 
 
 def load_bindings(path: Path) -> tuple[Binding, ...]:
@@ -163,10 +202,12 @@ def format_bindings(bindings: Iterable[Binding]) -> str:
     lines = [GENERATED_HEADER]
     for binding in bindings:
         lines.append("[[binding]]")
-        lines.append(f"gesture = {_toml_string(binding.gesture)}")
+        lines.append(f"gesture = {_format_gesture(binding.gesture)}")
         lines.append(f"name = {_toml_string(binding.name)}")
         if binding.step_delay_seconds != DEFAULT_STEP_DELAY_SECONDS:
             lines.append(f"step_delay_seconds = {binding.step_delay_seconds!r}")
+        if not binding.enabled:
+            lines.append("enabled = false")
         for action in binding.actions:
             lines.append("")
             lines.append("  [[binding.action]]")

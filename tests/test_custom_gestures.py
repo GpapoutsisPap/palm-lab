@@ -111,3 +111,10 @@ def test_a_gesture_missing_fingers_raises(path: Path) -> None:
     path.write_text('[[gesture]]\nname = "Oops"\n', encoding="utf-8")
     with pytest.raises(CustomGestureError):
         load_custom_gestures(path)
+
+
+def test_a_name_with_a_plus_is_rejected(path: Path) -> None:
+    """ "+" joins the two shapes of a two-hand setup, so names can't use it."""
+    with pytest.raises(CustomGestureError, match=r"can't contain '\+'"):
+        save_custom_gesture("Rock+roll", ROCK_ON, path)
+    assert load_custom_gestures(path) == []
