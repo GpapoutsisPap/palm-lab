@@ -61,6 +61,8 @@ from palm_lab.shortcuts import ShortcutError, Shortcuts
 from palm_lab.state import TriggerState
 from palm_lab.templates import CATEGORIES as TEMPLATE_CATEGORIES
 from palm_lab.templates import TEMPLATES
+from palm_lab.updates import STATE_FILENAME as UPDATES_FILENAME
+from palm_lab.updates import UpdateChecker, UpdateCheckError, UpdateStatus
 from palm_lab.version import __version__
 from palm_lab.windows import accent_palette, open_folder
 
@@ -154,6 +156,23 @@ def _pose_to_json(status: EngineStatus) -> JsonDict | None:
     return {"gesture": status.held_shape, "problem": status.pose_problem}
 
 
+def _updates_to_json(status: UpdateStatus) -> JsonDict:
+    release = status.available
+    return {
+        "enabled": status.enabled,
+        "current": status.current,
+        "checked_at": status.checked_at,
+        "available": {
+            "version": release.version,
+            "has_installer": release.installer_url is not None,
+        }
+        if release
+        else None,
+        "dismissed": status.dismissed,
+        "error": status.error,
+    }
+
+
 def _status_to_json(status: EngineStatus) -> JsonDict:
     return {
         "running": status.running,
@@ -193,6 +212,7 @@ class Api:
         hand_profile_file: Path | None = None,
         schedule: Scheduler = run_after,
         wall_clock: Callable[[], float] = time.time,
+        updates: UpdateChecker | None = None,
     ) -> None:
         self._engine = engine
         self._bindings_file = bindings_file
@@ -255,6 +275,12 @@ class Api:
             self._hand_tuned = profile is not None
             engine.update_hand_profile(profile)
 
+        # The update check follows the setting as it is now, not as it was at start.
+        self._updates = updates or UpdateChecker(
+            enabled=lambda: self._settings.check_updates,
+            state_file=settings_file.parent / UPDATES_FILENAME,
+        )
+
         engine.update_bindings(self._bindings)
         engine.update_settings(self._settings)
         engine.update_custom_gestures(self._custom_gestures)
@@ -287,6 +313,7 @@ class Api:
             "version": __version__,
             "accent": list(self._accent()),
             "project_url": PROJECT_URL,
+            "updates": self.update_status(),
             "custom_css": self._custom_css_state(),
             "hand": self._hand_state(),
         }
@@ -651,6 +678,38 @@ class Api:
             self._open_path(folder)
         except OSError as exc:
             return {"ok": False, "error": f"Could not open {folder}: {exc}"}
+        return {"ok": True}
+
+    # Updates -------------------------------------------------------------------
+
+    def update_status(self) -> JsonDict:
+        """Whether a newer palm-lab is out, as last checked (see palm_lab.updates)."""
+        return _updates_to_json(self._updates.status())
+
+    def check_for_updates(self) -> JsonDict:
+        """Ask GitHub now, from the Check now button. Takes up to ten seconds."""
+        try:
+            self._updates.check()
+        except UpdateCheckError as exc:
+            return {
+                "ok": False,
+                "error": f"Couldn’t check for updates: {exc}.",
+                "updates": self.update_status(),
+            }
+        return {"ok": True, "updates": self.update_status()}
+
+    def dismiss_update(self, version: str) -> JsonDict:
+        """Hide the update bar until a newer version than this one is out."""
+        self._updates.dismiss(str(version))
+        return {"ok": True, "updates": self.update_status()}
+
+    def open_update(self, what: str) -> JsonDict:
+        """Open the new release's notes, or download its installer, in the browser."""
+        release = self._updates.status().available
+        if release is None:
+            return {"ok": False, "error": "There is no newer version to open."}
+        installer = release.installer_url
+        self._open_url(installer if what == "download" and installer else release.page_url)
         return {"ok": True}
 
     def open_project_page(self) -> JsonDict:

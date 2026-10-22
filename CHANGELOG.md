@@ -42,6 +42,12 @@ for the people installing the app.
   as before. The live view and the setup guide say how to hold a hand that
   isn't counted.
 
+- An update check: once a day palm-lab asks GitHub whether a newer version is
+  out, and a bar on the Gestures page offers its notes and installer (and the
+  icon by the clock says so once). Settings > About shows when it last
+  checked, has Check now, and turns it off. Only palm-lab's version number is
+  sent.
+
 ### Changed
 
 - Activity now catches every run, including runs made while the window was

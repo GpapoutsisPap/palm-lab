@@ -52,7 +52,8 @@ and runs the actions you snap together for each one, all on your own computer.
 - **For programmers:** gestures live in a plain TOML file, and everything the
   window does is also available from the command line.
 - **Private:** frames never leave your PC. Hand tracking runs locally with
-  Google's MediaPipe.
+  Google's MediaPipe. The only thing palm-lab sends anywhere is the daily
+  update check (see below), which you can turn off.
 
 ## Install
 
@@ -62,6 +63,19 @@ and run it. No administrator rights are needed. The app is not code-signed yet, 
 Windows SmartScreen may ask you to confirm the first time.
 
 A webcam is needed. A phone works too, through an app such as DroidCam.
+
+### Updates
+
+Once a day palm-lab asks GitHub whether a newer version is out. When one is,
+a bar on the Gestures page says so, with **What's new** and **Download**:
+run the new installer over the old one and it upgrades in place, keeping
+your gestures and settings. Nothing is downloaded or installed by itself.
+
+The check is one HTTPS request to `api.github.com` for the latest release,
+carrying only palm-lab's version number (in the User-Agent, as GitHub asks).
+GitHub sees it like any page visit, including your IP address. Turn it off
+in Settings > About > Check for updates; **Check now** asks straight away.
+You can also follow new releases on GitHub with **Watch > Custom > Releases**.
 
 ## Build from source
 

@@ -30,6 +30,13 @@ const TEXT = {
   trackingDescPaused: (time) => `Paused until ${time}. Your gestures won\u2019t run until then.`,
   holdRaise: "Hold up a gesture to run it",
   holdMake: "Make one of your gestures",
+  /* Updates (palm_lab.updates). */
+  updateBar: (version) => `palm-lab ${version} is out. Download and run the installer; your gestures and settings stay as they are.`,
+  updateLatest: (version, when) => `You have the latest version, ${version}. Checked ${when}.`,
+  updateNever: (version) => `You have version ${version}. Not checked yet.`,
+  updateAvailable: (version) => `palm-lab ${version} is out.`,
+  updateOff: (version) => `You have version ${version}. Checking is off.`,
+  updateChecking: "Checking\u2026",
   /* A hand with a gesture's fingers out, but not held like one (palm_lab.pose). */
   poseTitle: (label) => `${label} not counted`,
   pose: {
@@ -761,6 +768,7 @@ async function init() {
   fillDatalists();
   renderSettings();
   showProblems(data.problems);
+  showUpdates(data.updates);
   $("welcome").hidden = data.bindings.length > 0;
 
   await splashDone;
@@ -806,6 +814,44 @@ function fillDatalists() {
     OPTION_LABELS[type] = Object.fromEntries(options.map(([value, label]) => [value.toLowerCase(), label]));
     $(id).replaceChildren(...options.map(([value, label]) => el("option", { value, label })));
   }
+}
+
+/* Updates ------------------------------------------------------------------------------
+
+   Python asks GitHub once a day (palm_lab.updates); the page only shows the
+   answer: a bar on the Gestures page until it's closed for that version, and a
+   line under Settings > Check for updates. */
+
+function showUpdates(updates) {
+  if (!updates) return;
+  app.updates = updates;
+  const release = updates.available;
+  $("update-bar").hidden = !release || updates.dismissed;
+  if (release) $("update-bar-text").textContent = TEXT.updateBar(release.version);
+  $("update-download").hidden = !(release && release.has_installer);
+  let line;
+  if (!updates.enabled) line = TEXT.updateOff(updates.current);
+  else if (release) line = TEXT.updateAvailable(release.version);
+  else if (updates.checked_at) line = TEXT.updateLatest(updates.current, ago(updates.checked_at));
+  else line = TEXT.updateNever(updates.current);
+  $("updates-state").textContent = line;
+  $("updates-check").disabled = !updates.enabled;
+}
+
+async function checkForUpdates() {
+  const button = $("updates-check");
+  button.disabled = true;
+  $("updates-state").textContent = TEXT.updateChecking;
+  const result = await api().check_for_updates();
+  button.disabled = false;
+  showUpdates(result.updates);
+  if (!result.ok) toast(result.error, "error");
+}
+
+async function dismissUpdate() {
+  const release = app.updates && app.updates.available;
+  $("update-bar").hidden = true;
+  if (release) showUpdates((await api().dismiss_update(release.version)).updates);
 }
 
 function showProblems(problems) {
@@ -1917,6 +1963,7 @@ function renderSettings() {
     showSliderValue(input);
   }
   setSwitch($("sounds"), settings.sounds !== false);
+  setSwitch($("check-updates"), settings.check_updates !== false);
   $("close-action").value = settings.close_action || "ask";
   $("run-popup").value = settings.run_popup || "all";
   $("strictness").value = settings.strictness || "normal";
@@ -1950,6 +1997,7 @@ async function saveSettings() {
     dwell_seconds: Number($("dwell").value),
     cooldown_seconds: Number($("cooldown").value),
     sounds: $("sounds").checked,
+    check_updates: $("check-updates").checked,
     close_action: $("close-action").value,
     run_popup: $("run-popup").value,
     strictness: $("strictness").value,
@@ -3199,6 +3247,16 @@ function wireControls() {
   }
   $("open-folder").addEventListener("click", () => api().open_config_folder());
   $("open-project").addEventListener("click", () => api().open_project_page());
+  $("update-notes").addEventListener("click", () => api().open_update("notes"));
+  $("update-download").addEventListener("click", () => api().open_update("download"));
+  $("update-dismiss").addEventListener("click", dismissUpdate);
+  $("updates-check").addEventListener("click", checkForUpdates);
+  $("check-updates").addEventListener("change", async () => {
+    await saveSettings();
+    showUpdates(await api().update_status());
+  });
+  // The background check runs in Python once a day; look for its answer now and then.
+  setInterval(async () => showUpdates(await api().update_status()), 10 * 60 * 1000);
 
   $("add-gesture").addEventListener("click", openWizard);
   $("add-pair").addEventListener("click", openPairDialog);

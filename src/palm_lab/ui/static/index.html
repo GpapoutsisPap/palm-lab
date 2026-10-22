@@ -66,6 +66,16 @@
           <button class="btn btn-subtle btn-icon" id="close-problems" type="button" aria-label="Dismiss"><span data-icon="close"></span></button>
         </div>
 
+        <div class="infobar is-info" id="update-bar" role="status" hidden>
+          <span class="infobar-icon" data-icon="info"></span>
+          <p class="infobar-text" id="update-bar-text"></p>
+          <div class="infobar-actions">
+            <button class="btn" id="update-notes" type="button">What&rsquo;s new<span class="btn-icon-slot btn-icon-end" data-icon="open"></span></button>
+            <button class="btn btn-accent" id="update-download" type="button">Download</button>
+          </div>
+          <button class="btn btn-subtle btn-icon" id="update-dismiss" type="button" aria-label="Not now"><span data-icon="close"></span></button>
+        </div>
+
         <div class="infobar is-info" id="welcome" hidden>
           <span class="infobar-icon" data-icon="info"></span>
           <p class="infobar-text"><strong>Get started.</strong> Open a gesture below and drag actions into it. Then turn on gesture tracking.</p>
@@ -442,6 +452,21 @@
             <p class="card-desc" id="about-version">Open source under the MIT licence.</p>
           </div>
           <button class="btn" id="open-project" type="button">View on GitHub<span class="btn-icon-slot btn-icon-end" data-icon="open"></span></button>
+        </div>
+        <div class="card card-row">
+          <span class="card-icon" data-icon="refresh"></span>
+          <div class="card-text">
+            <p class="card-title" id="updates-label">Check for updates</p>
+            <p class="card-desc" id="updates-help">Once a day palm-lab asks GitHub whether a newer version is out. Only palm-lab&rsquo;s version number is sent, nothing about you or your PC.</p>
+            <p class="card-desc" id="updates-state" role="status" aria-live="polite"></p>
+          </div>
+          <div class="card-control">
+            <button class="btn" id="updates-check" type="button">Check now</button>
+            <label class="toggle">
+              <span class="toggle-label" data-for="check-updates">On</span>
+              <input class="switch" id="check-updates" type="checkbox" role="switch" aria-labelledby="updates-label" aria-describedby="updates-help updates-state">
+            </label>
+          </div>
         </div>
       </section>
     </main>

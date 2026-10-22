@@ -2667,6 +2667,28 @@ button.gesture-head:focus-visible {
   line-height: 20px;
 }
 
+/* A bar with buttons (the update bar): icon, text, buttons, close. On a
+   narrow window the buttons move under the text, so it keeps its width. */
+.infobar:has(.infobar-actions) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.infobar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0;
+}
+
+@media (max-width: 900px) {
+  .infobar-actions {
+    grid-row: 2;
+    grid-column: 2;
+    margin: 2px 0 0;
+  }
+}
+
 .infobar .btn-icon {
   height: 28px;
   width: 28px;

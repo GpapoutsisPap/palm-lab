@@ -35,6 +35,7 @@ KNOWN_SETTINGS = {
     "run_popup",
     "palette",
     "strictness",
+    "check_updates",
 }
 
 
@@ -57,6 +58,7 @@ class Settings:
     run_popup: str = "all"
     palette: str = DEFAULT_PALETTE  # a colour palette from palm_lab.palettes
     strictness: str = DEFAULT_STRICTNESS  # how a hand must be held to count (palm_lab.pose)
+    check_updates: bool = True  # ask GitHub once a day for a newer version (palm_lab.updates)
 
     def as_dict(self) -> dict[str, float | int | bool | str]:
         return asdict(self)
@@ -127,6 +129,10 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
     if not isinstance(strictness, str) or strictness not in STRICTNESS_LEVELS:
         raise SettingsError(f"'strictness' must be one of: {', '.join(STRICTNESS_LEVELS)}")
 
+    check_updates = data.get("check_updates", True)
+    if not isinstance(check_updates, bool):
+        raise SettingsError("'check_updates' must be true or false")
+
     return Settings(
         camera_index=camera,
         dwell_seconds=dwell,
@@ -139,6 +145,7 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
         run_popup=run_popup,
         palette=palette,
         strictness=strictness,
+        check_updates=check_updates,
     )
 
 
@@ -170,6 +177,7 @@ def save_settings(settings: Settings, path: Path | None = None) -> Path:
         f'run_popup = "{settings.run_popup}"\n'
         f'palette = "{settings.palette}"\n'
         f'strictness = "{settings.strictness}"\n'
+        f"check_updates = {'true' if settings.check_updates else 'false'}\n"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
