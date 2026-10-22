@@ -33,8 +33,13 @@ and runs the actions you snap together for each one, all on your own computer.
 - **Know what ran:** a small pop-up by the clock confirms each gesture (or
   says what failed) while the window is closed, and every gesture shows when
   it last ran.
+- **Fewer accidents:** a gesture only counts when the hand is held up and
+  facing the camera, so a hand resting on your chin with its fingers out
+  doesn't run anything. Settings > Strictness makes this stricter, or turns
+  it off.
 - **Live view:** see what the camera sees, the hand it found, how far through
   a hold you are, and what ran, or why nothing did.
+  "Open palm not counted: point your fingers up" says how to hold it.
 - **Pause:** stop gestures for 15 minutes to a few hours, with the camera off,
   from the window or the icon by the clock.
 - **Make it yours:** light or dark theme, colour palettes (Sunset, Neon,
@@ -133,6 +138,7 @@ off, or start palm-lab with `palm-lab ui --no-custom-css`.
 | `palm-lab shortcut [--start-menu] [--startup] [--remove]` | Add or remove the desktop, Start menu and Start with Windows shortcuts |
 | `palm-lab run` | Watch the camera in a plain preview window |
 | `palm-lab capture GESTURE` | Save landmark samples for testing |
+| `palm-lab popup [--theme light\|dark]` | Show the pop-up by the clock with a few made-up runs, to see how it looks |
 
 In an installed copy, use `palm-lab-cli.exe` for these.
 

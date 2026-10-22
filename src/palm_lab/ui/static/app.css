@@ -35,6 +35,13 @@
   --text-1: #1B1B1B;
   --text-2: #5C5C5C;
   --text-3: #8A8A8A;
+  --title: var(--text-1);
+
+  /* Palette extras (see Colour palettes below); Windows has none of them. */
+  --backdrop-end: var(--mica);
+  --glow: transparent;
+  --glow-strength: 16%;
+  --pattern: none;
 
   --control: #FDFDFD;
   --control-hover: #F7F7F7;
@@ -120,6 +127,7 @@
   --text-1: #FFFFFF;
   --text-2: #CFCFCF;
   --text-3: #9D9D9D;
+  --glow-strength: 20%;
 
   --control: #2D2D2D;
   --control-hover: #323232;
@@ -160,301 +168,387 @@
 
 /* Colour palettes ------------------------------------------------------------
 
-   Settings > Appearance > Colours. Each palette tints palm-lab's neutral
-   surfaces towards one hue and swaps the Windows accent colour for its own;
-   "Windows" (the defaults above) keeps the Windows accent. The action pieces
-   keep their colours in every palette, so each kind stays recognisable.
+   Settings > Appearance > Colours. Each palette is its own scene: its own
+   surfaces and text (not tinted greys), an accent, a colour for page titles,
+   a gradient behind the sidebar (--mica fading to --backdrop-end) and a soft
+   --glow in the top corner of the page; Neon adds a faint grid (--pattern).
+   "Windows" (the defaults above) keeps the Windows accent colour and none of
+   the extras. The action pieces keep their colours in every palette, so each
+   kind stays recognisable.
 
    The selectors match any element with data-palette, not just <html>, so a
    swatch in Settings previews its palette with the real colours. Every block
    is wrapped in :where(), which has no specificity: a later block wins, and a
    plain :root rule in custom CSS still beats them all.
 
-   Surfaces were worked out by mixing each neutral grey with the palette's
-   tint (3-12% in light, 5-16% in dark); every text and accent pairing was
-   checked against WCAG (tests/test_palettes.py checks them again). */
+   A few colours per palette were chosen by hand and the rest (hovers,
+   borders, controls) mixed from them. Every text and accent pairing,
+   including text over the gradient and the glow, is checked against WCAG
+   by tests/test_palettes.py. */
 
-
-/* Sunset */
 :where([data-palette="sunset"]) {
-  --mica: #F3E9E1;
-  --layer: #F9F2EE;
-  --layer-stroke: #E7DAD0;
-  --card: #FFFBF8;
-  --card-hover: #F8F1ED;
-  --card-2: #F7EFE9;
-  --stroke: #E7DAD0;
-  --divider: #ECE1DA;
-  --flyout: #FCF8F5;
-  --flyout-stroke: #E0D2C9;
-  --control: #FDF9F6;
-  --control-hover: #F7F0EC;
-  --control-pressed: #F3EBE6;
-  --control-stroke: #E5D8CE;
-  --control-stroke-strong: #CEBEB3;
-  --skeleton: #EFE4DD;
+  --mica: #FCE4D2;
+  --backdrop-end: #F8C9C0;
+  --layer: #FFF4EA;
+  --layer-stroke: #ECE0D7;
+  --card: #FFFCF8;
+  --card-hover: #FEF5ED;
+  --card-2: #FEF1E7;
+  --stroke: #EAE5E1;
+  --divider: #F0ECE8;
+  --flyout: #FFFCF8;
+  --flyout-stroke: #E1DCD8;
+  --text-1: #2B1A12;
+  --text-2: #694536;
+  --text-3: #977464;
+  --title: #9A3412;
+  --control: #FFFCF8;
+  --control-hover: #FEF5ED;
+  --control-pressed: #FEF0E5;
+  --control-stroke: #E8E3DF;
+  --control-stroke-strong: #CAC4BE;
+  --field-underline: #977464;
+  --focus: #2B1A12;
   --accent: #C2410C;
   --accent-text: #9A3412;
   --on-accent: #FFFFFF;
-  --info-bg: #FAF0EC;
+  --info-bg: #FAEDE5;
+  --skeleton: #FDEADC;
+  --glow: #FB923C;
 }
-
-/* Neon */
 :where([data-palette="neon"]) {
-  --mica: #E2EFE7;
-  --layer: #EEF6F1;
-  --layer-stroke: #D2E2D8;
-  --card: #F8FDFA;
-  --card-hover: #EDF5F0;
-  --card-2: #EAF4EE;
-  --stroke: #D2E2D8;
-  --divider: #DBE8E0;
-  --flyout: #F5FAF7;
-  --flyout-stroke: #CADBD0;
-  --control: #F6FBF8;
-  --control-hover: #ECF4EF;
-  --control-pressed: #E6F0EA;
-  --control-stroke: #D0E0D6;
-  --control-stroke-strong: #B4C8BB;
-  --skeleton: #DEEBE2;
+  --mica: #DAF5CF;
+  --backdrop-end: #C3EDD8;
+  --layer: #F0FCEA;
+  --layer-stroke: #DCE8D6;
+  --card: #FAFFF7;
+  --card-hover: #F0FCEB;
+  --card-2: #ECFAE5;
+  --stroke: #E2E9E0;
+  --divider: #EAEFE7;
+  --flyout: #FAFFF7;
+  --flyout-stroke: #D9E0D6;
+  --text-1: #0F210E;
+  --text-2: #3A5737;
+  --text-3: #6A8766;
+  --title: #166534;
+  --control: #FAFFF7;
+  --control-hover: #F0FCEB;
+  --control-pressed: #EAFAE3;
+  --control-stroke: #E0E7DD;
+  --control-stroke-strong: #BFC8BD;
+  --field-underline: #6A8766;
+  --focus: #0F210E;
   --accent: #15803D;
   --accent-text: #166534;
   --on-accent: #FFFFFF;
-  --info-bg: #ECF5EF;
+  --info-bg: #E8F5E8;
+  --skeleton: #E3F8DA;
+  --glow: #4ADE80;
+  --pattern: repeating-linear-gradient(0deg, rgba(21, 128, 61, 0.07) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(90deg, rgba(21, 128, 61, 0.07) 0 1px, transparent 1px 32px);
 }
-
-/* Ocean */
 :where([data-palette="ocean"]) {
-  --mica: #E0EEF1;
-  --layer: #EDF6F7;
-  --layer-stroke: #CFE0E3;
-  --card: #F8FDFE;
-  --card-hover: #ECF5F6;
-  --card-2: #E9F3F5;
-  --stroke: #CFE0E3;
-  --divider: #D9E7E9;
-  --flyout: #F5FAFB;
-  --flyout-stroke: #C8D9DC;
-  --control: #F6FBFC;
-  --control-hover: #EBF4F5;
-  --control-pressed: #E5EFF1;
-  --control-stroke: #CDDEE2;
-  --control-stroke-strong: #B1C6C9;
-  --skeleton: #DBEAEC;
+  --mica: #D2EDF5;
+  --backdrop-end: #BADCEE;
+  --layer: #ECF8FB;
+  --layer-stroke: #D8E5E9;
+  --card: #FAFEFF;
+  --card-hover: #EEF9FC;
+  --card-2: #E8F6FA;
+  --stroke: #E2E8EA;
+  --divider: #E9EFF1;
+  --flyout: #FAFEFF;
+  --flyout-stroke: #D9E0E2;
+  --text-1: #0B2530;
+  --text-2: #375661;
+  --text-3: #67858F;
+  --title: #0E5A70;
+  --control: #FAFEFF;
+  --control-hover: #EEF9FC;
+  --control-pressed: #E6F6FA;
+  --control-stroke: #E0E6E8;
+  --control-stroke-strong: #BEC8CB;
+  --field-underline: #67858F;
+  --focus: #0B2530;
   --accent: #0E7490;
   --accent-text: #155E75;
   --on-accent: #FFFFFF;
-  --info-bg: #ECF4F6;
+  --info-bg: #E7F3F6;
+  --skeleton: #DCF1F7;
+  --glow: #22D3EE;
 }
-
-/* Grape */
 :where([data-palette="grape"]) {
-  --mica: #EBE7F3;
-  --layer: #F3F1F9;
-  --layer-stroke: #DCD7E7;
-  --card: #FCFAFF;
-  --card-hover: #F3F0F8;
-  --card-2: #F1EEF7;
-  --stroke: #DCD7E7;
-  --divider: #E3E0EC;
-  --flyout: #F9F7FC;
-  --flyout-stroke: #D5D0E0;
-  --control: #FAF8FD;
-  --control-hover: #F2EFF7;
-  --control-pressed: #EDEAF3;
-  --control-stroke: #DAD6E5;
-  --control-stroke-strong: #C1BBCE;
-  --skeleton: #E6E2EF;
+  --mica: #E6DBFB;
+  --backdrop-end: #D6C3F6;
+  --layer: #F5F0FE;
+  --layer-stroke: #E2DCEC;
+  --card: #FDFBFF;
+  --card-hover: #F6F1FE;
+  --card-2: #F3EDFD;
+  --stroke: #E7E4EB;
+  --divider: #EDEBF1;
+  --flyout: #FDFBFF;
+  --flyout-stroke: #DEDBE2;
+  --text-1: #1E1433;
+  --text-2: #52477A;
+  --text-3: #8075A1;
+  --title: #5B21B6;
+  --control: #FDFBFF;
+  --control-hover: #F6F1FE;
+  --control-pressed: #F2EBFD;
+  --control-stroke: #E4E2E9;
+  --control-stroke-strong: #C5C1CC;
+  --field-underline: #8075A1;
+  --focus: #1E1433;
   --accent: #7C3AED;
   --accent-text: #5B21B6;
   --on-accent: #FFFFFF;
-  --info-bg: #F5EFFE;
+  --info-bg: #F3ECFE;
+  --skeleton: #ECE3FC;
+  --glow: #A78BFA;
 }
-
-/* Rose */
 :where([data-palette="rose"]) {
-  --mica: #F2E5EC;
-  --layer: #F8F0F4;
-  --layer-stroke: #E6D5DD;
-  --card: #FEFAFC;
-  --card-hover: #F7EFF3;
-  --card-2: #F6ECF1;
-  --stroke: #E6D5DD;
-  --divider: #EBDEE4;
-  --flyout: #FCF7F9;
-  --flyout-stroke: #DECED6;
-  --control: #FCF8FA;
-  --control-hover: #F6EEF2;
-  --control-pressed: #F3E9EE;
-  --control-stroke: #E4D4DC;
-  --control-stroke-strong: #CCB9C2;
-  --skeleton: #EEE1E7;
+  --mica: #FADDE9;
+  --backdrop-end: #F5C4D8;
+  --layer: #FFF1F6;
+  --layer-stroke: #ECDDE3;
+  --card: #FFFBFD;
+  --card-hover: #FEF2F7;
+  --card-2: #FDEEF4;
+  --stroke: #EAE4E7;
+  --divider: #F0EBEE;
+  --flyout: #FFFBFD;
+  --flyout-stroke: #E2DADE;
+  --text-1: #2E1020;
+  --text-2: #6B3F55;
+  --text-3: #9C7085;
+  --title: #9D174D;
+  --control: #FFFBFD;
+  --control-hover: #FEF2F7;
+  --control-pressed: #FCECF3;
+  --control-stroke: #E8E1E5;
+  --control-stroke-strong: #CBC0C6;
+  --field-underline: #9C7085;
+  --focus: #2E1020;
   --accent: #BE185D;
   --accent-text: #9D174D;
   --on-accent: #FFFFFF;
-  --info-bg: #FAEDF2;
+  --info-bg: #FAE9F0;
+  --skeleton: #FCE5EE;
+  --glow: #F472B6;
 }
-
-/* Graphite */
 :where([data-palette="graphite"]) {
-  --mica: #E8E9EB;
-  --layer: #F2F2F3;
-  --layer-stroke: #D8DADC;
-  --card: #FAFBFC;
-  --card-hover: #F1F1F3;
-  --card-2: #EEEFF1;
-  --stroke: #D8DADC;
-  --divider: #E0E1E3;
-  --flyout: #F7F8F9;
-  --flyout-stroke: #D1D2D5;
-  --control: #F8F9FA;
-  --control-hover: #F0F0F2;
-  --control-pressed: #EAEBED;
-  --control-stroke: #D6D8DA;
-  --control-stroke-strong: #BCBEC1;
-  --skeleton: #E3E4E6;
+  --mica: #DADFE6;
+  --backdrop-end: #C8CFD9;
+  --layer: #EEF1F4;
+  --layer-stroke: #DADDE2;
+  --card: #FBFCFD;
+  --card-hover: #F1F3F6;
+  --card-2: #ECEFF3;
+  --stroke: #E3E5E8;
+  --divider: #EAECEE;
+  --flyout: #FBFCFD;
+  --flyout-stroke: #DADCDF;
+  --text-1: #0F172A;
+  --text-2: #46536A;
+  --text-3: #737F92;
+  --title: #0F172A;
+  --control: #FBFCFD;
+  --control-hover: #F1F3F6;
+  --control-pressed: #EAEEF2;
+  --control-stroke: #E1E3E6;
+  --control-stroke-strong: #C0C3C8;
+  --field-underline: #737F92;
+  --focus: #0F172A;
   --accent: #334155;
   --accent-text: #1E293B;
   --on-accent: #FFFFFF;
-  --info-bg: #EFF0F1;
+  --info-bg: #EBEDF0;
+  --skeleton: #E2E6EC;
+  --glow: #94A3B8;
 }
-
 :where([data-theme="dark"][data-palette="sunset"], [data-theme="dark"] [data-palette="sunset"]) {
-  --mica: #2F261F;
-  --layer: #362C26;
-  --layer-stroke: #28211D;
-  --card: #39302A;
-  --card-hover: #41362F;
-  --card-2: #352B25;
-  --stroke: #28211D;
-  --divider: #2A231F;
-  --flyout: #3A312A;
-  --flyout-stroke: #4D4036;
-  --control: #3B322B;
-  --control-hover: #423730;
-  --control-pressed: #362C26;
-  --control-stroke: #493B32;
-  --control-stroke-strong: #5B4B3F;
-  --skeleton: #413731;
+  --mica: #1E1220;
+  --backdrop-end: #3A1A1C;
+  --layer: #241520;
+  --layer-stroke: #160E18;
+  --card: #301C29;
+  --card-hover: #382532;
+  --card-2: #271724;
+  --stroke: #180E1A;
+  --divider: #1A0F1B;
+  --flyout: #34212D;
+  --flyout-stroke: #45333E;
+  --text-1: #FFF4EC;
+  --text-2: #E6CBBE;
+  --text-3: #B2958B;
+  --title: #FDBA74;
+  --control: #34212D;
+  --control-hover: #3A2734;
+  --control-pressed: #271724;
+  --control-stroke: #412E3A;
+  --control-stroke-strong: #51404B;
+  --field-underline: #B2958B;
+  --focus: #FFF4EC;
   --accent: #FB923C;
   --accent-text: #FDBA74;
   --on-accent: #000000;
-  --info-bg: #403631;
+  --info-bg: #482A2B;
+  --skeleton: #3C2A36;
+  --glow: #F97316;
 }
-
 :where([data-theme="dark"][data-palette="neon"], [data-theme="dark"] [data-palette="neon"]) {
-  --mica: #202F26;
-  --layer: #27352C;
-  --layer-stroke: #1D2821;
-  --card: #2A3930;
-  --card-hover: #2F4036;
-  --card-2: #26342B;
-  --stroke: #1D2821;
-  --divider: #1F2A23;
-  --flyout: #2B3A31;
-  --flyout-stroke: #374C3F;
-  --control: #2C3B31;
-  --control-hover: #304137;
-  --control-pressed: #27352C;
-  --control-stroke: #33483A;
-  --control-stroke-strong: #405949;
-  --skeleton: #314037;
+  --mica: #070D09;
+  --backdrop-end: #0B1E12;
+  --layer: #0B140E;
+  --layer-stroke: #050A07;
+  --card: #111E15;
+  --card-hover: #1B271E;
+  --card-2: #0C160F;
+  --stroke: #060A07;
+  --divider: #060B08;
+  --flyout: #16221A;
+  --flyout-stroke: #29342C;
+  --text-1: #EFFFF0;
+  --text-2: #B9D8BE;
+  --text-3: #83A28A;
+  --title: #39FF14;
+  --control: #16221A;
+  --control-hover: #1D2921;
+  --control-pressed: #0C160F;
+  --control-stroke: #243028;
+  --control-stroke-strong: #37423A;
+  --field-underline: #83A28A;
+  --focus: #EFFFF0;
   --accent: #39FF14;
   --accent-text: #A6FF8F;
   --on-accent: #000000;
-  --info-bg: #28442D;
+  --info-bg: #163915;
+  --skeleton: #1F2C23;
+  --glow: #22C55E;
+  --pattern: repeating-linear-gradient(0deg, rgba(57, 255, 20, 0.05) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(90deg, rgba(57, 255, 20, 0.05) 0 1px, transparent 1px 32px);
 }
-
 :where([data-theme="dark"][data-palette="ocean"], [data-theme="dark"] [data-palette="ocean"]) {
-  --mica: #1E2A2D;
-  --layer: #253133;
-  --layer-stroke: #1C2526;
-  --card: #283537;
-  --card-hover: #2E3C3E;
-  --card-2: #243032;
-  --stroke: #1C2526;
-  --divider: #1E2728;
-  --flyout: #293638;
-  --flyout-stroke: #354649;
-  --control: #2A3739;
-  --control-hover: #2E3D3F;
-  --control-pressed: #253133;
-  --control-stroke: #304245;
-  --control-stroke-strong: #3D5356;
-  --skeleton: #303C3E;
+  --mica: #071A26;
+  --backdrop-end: #06303F;
+  --layer: #0B2232;
+  --layer-stroke: #05141C;
+  --card: #102C3F;
+  --card-hover: #1A3447;
+  --card-2: #0C2332;
+  --stroke: #06151E;
+  --divider: #061620;
+  --flyout: #153043;
+  --flyout-stroke: #284152;
+  --text-1: #EAF8FF;
+  --text-2: #B5D3DF;
+  --text-3: #81A4B3;
+  --title: #67E8F9;
+  --control: #153043;
+  --control-hover: #1C3749;
+  --control-pressed: #0C2332;
+  --control-stroke: #233D4E;
+  --control-stroke-strong: #364E5E;
+  --field-underline: #81A4B3;
+  --focus: #EAF8FF;
   --accent: #22D3EE;
   --accent-text: #A5F3FC;
   --on-accent: #000000;
-  --info-bg: #263E47;
+  --info-bg: #124054;
+  --skeleton: #1E394B;
+  --glow: #06B6D4;
 }
-
 :where([data-theme="dark"][data-palette="grape"], [data-theme="dark"] [data-palette="grape"]) {
-  --mica: #27242F;
-  --layer: #2E2B35;
-  --layer-stroke: #222028;
-  --card: #322E39;
-  --card-hover: #383441;
-  --card-2: #2D2A35;
-  --stroke: #222028;
-  --divider: #24222A;
-  --flyout: #332F3A;
-  --flyout-stroke: #423D4D;
-  --control: #34303B;
-  --control-hover: #393542;
-  --control-pressed: #2E2B35;
-  --control-stroke: #3E3948;
-  --control-stroke-strong: #4D485A;
-  --skeleton: #393641;
+  --mica: #160F24;
+  --backdrop-end: #2A133E;
+  --layer: #1C142D;
+  --layer-stroke: #100B1B;
+  --card: #251B3A;
+  --card-hover: #2E2442;
+  --card-2: #1E152F;
+  --stroke: #120C1D;
+  --divider: #130D1F;
+  --flyout: #29203E;
+  --flyout-stroke: #3B324E;
+  --text-1: #F5F0FF;
+  --text-2: #CFC4EA;
+  --text-3: #9D92BB;
+  --title: #C4B5FD;
+  --control: #29203E;
+  --control-hover: #302644;
+  --control-pressed: #1E152F;
+  --control-stroke: #362D4A;
+  --control-stroke-strong: #483F5A;
+  --field-underline: #9D92BB;
+  --focus: #F5F0FF;
   --accent: #A78BFA;
   --accent-text: #DDD6FE;
   --on-accent: #000000;
-  --info-bg: #353648;
+  --info-bg: #352851;
+  --skeleton: #322946;
+  --glow: #8B5CF6;
 }
-
 :where([data-theme="dark"][data-palette="rose"], [data-theme="dark"] [data-palette="rose"]) {
-  --mica: #2E2328;
-  --layer: #35292F;
-  --layer-stroke: #271F23;
-  --card: #392D33;
-  --card-hover: #403339;
-  --card-2: #34282E;
-  --stroke: #271F23;
-  --divider: #292125;
-  --flyout: #392E34;
-  --flyout-stroke: #4C3B44;
-  --control: #3A2F35;
-  --control-hover: #41343A;
-  --control-pressed: #35292F;
-  --control-stroke: #47373F;
-  --control-stroke-strong: #59454F;
-  --skeleton: #40343A;
+  --mica: #200C16;
+  --backdrop-end: #3A1022;
+  --layer: #27111C;
+  --layer-stroke: #180910;
+  --card: #331725;
+  --card-hover: #3B202E;
+  --card-2: #2A121E;
+  --stroke: #1A0A12;
+  --divider: #1B0A13;
+  --flyout: #371C29;
+  --flyout-stroke: #472E3B;
+  --text-1: #FFF0F6;
+  --text-2: #EBC3D5;
+  --text-3: #BA8FA2;
+  --title: #F9A8D4;
+  --control: #371C29;
+  --control-hover: #3D2330;
+  --control-pressed: #2A121E;
+  --control-stroke: #432A36;
+  --control-stroke-strong: #543C48;
+  --field-underline: #BA8FA2;
+  --focus: #FFF0F6;
   --accent: #F472B6;
   --accent-text: #FBCFE8;
   --on-accent: #000000;
-  --info-bg: #3F3340;
+  --info-bg: #4A2236;
+  --skeleton: #3F2532;
+  --glow: #EC4899;
 }
-
 :where([data-theme="dark"][data-palette="graphite"], [data-theme="dark"] [data-palette="graphite"]) {
-  --mica: #242526;
-  --layer: #2A2B2D;
-  --layer-stroke: #202021;
-  --card: #2E2F30;
-  --card-hover: #343537;
-  --card-2: #292A2C;
-  --stroke: #202021;
-  --divider: #222223;
-  --flyout: #2F3031;
-  --flyout-stroke: #3D3F40;
-  --control: #303132;
-  --control-hover: #353638;
-  --control-pressed: #2A2B2D;
-  --control-stroke: #393A3C;
-  --control-stroke-strong: #484A4C;
-  --skeleton: #363738;
+  --mica: #111316;
+  --backdrop-end: #1D2229;
+  --layer: #171A1E;
+  --layer-stroke: #0D0E10;
+  --card: #1F2329;
+  --card-hover: #282C32;
+  --card-2: #181B20;
+  --stroke: #0E0F12;
+  --divider: #0E1013;
+  --flyout: #23272D;
+  --flyout-stroke: #35393E;
+  --text-1: #F8FAFC;
+  --text-2: #CBD5E1;
+  --text-3: #94A3B8;
+  --title: #F8FAFC;
+  --control: #23272D;
+  --control-hover: #2A2E34;
+  --control-pressed: #181B20;
+  --control-stroke: #31353A;
+  --control-stroke-strong: #43464B;
+  --field-underline: #94A3B8;
+  --focus: #F8FAFC;
   --accent: #CBD5E1;
   --accent-text: #E2E8F0;
   --on-accent: #000000;
-  --info-bg: #3A3F45;
+  --info-bg: #34383F;
+  --skeleton: #2C3036;
+  --glow: #64748B;
 }
 
 /* Base -------------------------------------------------------------------- */
@@ -477,7 +571,9 @@ body {
 
 body {
   overflow: hidden;
-  background: var(--mica);
+  background-color: var(--mica);
+  /* Starts as --mica, so it runs on from the title bar without a seam. */
+  background-image: linear-gradient(180deg, var(--mica) 20%, var(--backdrop-end));
   color: var(--text-1);
   font: 14px/20px var(--font);
   cursor: default;
@@ -558,7 +654,10 @@ input,
 .content {
   min-width: 0;
   overflow-y: auto;
-  background: var(--layer);
+  background-color: var(--layer);
+  /* Stays put while the page scrolls, as the scroller's own background. */
+  background-image: var(--pattern),
+    radial-gradient(640px circle at 100% 0, color-mix(in srgb, var(--glow) var(--glow-strength), transparent), transparent);
   border-top: 1px solid var(--layer-stroke);
   border-left: 1px solid var(--layer-stroke);
   border-top-left-radius: var(--radius-overlay);
@@ -578,6 +677,7 @@ input,
 }
 
 .page-title {
+  color: var(--title);
   font: 600 28px/36px var(--font-display);
 }
 
@@ -3604,7 +3704,8 @@ button.gesture-head:focus-visible {
   padding: 0 0 8px 10px;
   border: 1px solid var(--control-stroke-strong);
   border-radius: calc(var(--radius) + 2px);
-  background: var(--mica);
+  background-color: var(--mica);
+  background-image: linear-gradient(180deg, var(--mica) 10%, var(--backdrop-end));
   box-shadow: inset 0 0 0 0 var(--accent);
   transition: box-shadow 150ms ease;
 }

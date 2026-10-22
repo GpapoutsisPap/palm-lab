@@ -2,6 +2,8 @@
 
 import argparse
 import sys
+import time
+from collections.abc import Callable
 
 from palm_lab.actions.errors import ActionError
 from palm_lab.actions.models import load_bindings
@@ -54,6 +56,13 @@ def build_parser() -> argparse.ArgumentParser:
     capture.add_argument("gesture", help="label to save captures under")
     capture.add_argument("--camera", type=int, default=0, help="camera index (default: 0)")
 
+    popup = subparsers.add_parser(
+        "popup", help="show the pop-up by the clock with a few made-up runs (Windows)"
+    )
+    popup.add_argument(
+        "--theme", choices=["light", "dark"], help="draw it light or dark (default: as palm-lab is)"
+    )
+
     subparsers.add_parser("config", help="show the config location and bindings")
     subparsers.add_parser("doctor", help="check that everything needed is in place")
 
@@ -70,7 +79,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     # A bare `palm-lab`, which is what double-clicking the .exe runs, opens the
     # window. This must come after add_subparsers, which resets dest="command".
-    parser.set_defaults(command="ui", debug=False, background=False, no_custom_css=False, camera=0)
+    parser.set_defaults(
+        command="ui", debug=False, background=False, no_custom_css=False, camera=0, theme=None
+    )
     return parser
 
 
@@ -241,12 +252,49 @@ def _cmd_shortcut(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_popup(args: argparse.Namespace, sleep: Callable[[float], None] = time.sleep) -> int:
+    """Show the card a few times, as gesture runs would, to see how it looks."""
+    from palm_lab.overlay import Overlay
+    from palm_lab.run_popup import RunPopup, sample_runs
+    from palm_lab.settings import SettingsError, load_settings
+    from palm_lab.windows import apps_use_light_theme
+
+    theme = args.theme
+    if theme is None:
+        try:
+            theme = load_settings().theme
+        except (SettingsError, OSError):
+            theme = "system"
+    dark = theme == "dark" or (theme == "system" and apps_use_light_theme() == 0)
+
+    overlay = Overlay(dark=lambda: dark)
+    overlay.start()
+    if not overlay.available:
+        print("The pop-up is a Windows window, so there's nothing to show here.", file=sys.stderr)
+        return 1
+    popup = RunPopup(
+        show=overlay.show,
+        mode=lambda: "all",
+        window_in_front=lambda: False,  # this is a demo: always show
+        user_busy=lambda: False,
+        notify=lambda title, detail: None,
+    )
+    print(f"Showing the pop-up by the clock ({'dark' if dark else 'light'}):")
+    for what, event, pause in sample_runs():
+        print(f"  - {what}")
+        popup.on_run(event)
+        sleep(pause)
+    overlay.stop()
+    return 0
+
+
 HANDLERS = {
     "ui": _cmd_ui,
     "run": _cmd_run,
     "capture": _cmd_capture,
     "config": _cmd_config,
     "doctor": _cmd_doctor,
+    "popup": _cmd_popup,
     "shortcut": _cmd_shortcut,
 }
 

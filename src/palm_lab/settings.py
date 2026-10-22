@@ -1,4 +1,4 @@
-"""User-adjustable settings: camera, gesture timing, sound, theme and closing."""
+"""User-adjustable settings: camera, gesture timing and strictness, sound, theme and closing."""
 
 import tomllib
 from collections.abc import Mapping
@@ -7,6 +7,7 @@ from pathlib import Path
 
 from palm_lab.config import config_dir
 from palm_lab.palettes import DEFAULT_PALETTE, PALETTES
+from palm_lab.pose import DEFAULT_STRICTNESS, STRICTNESS_LEVELS
 from palm_lab.state import DEFAULT_COOLDOWN_SECONDS, DEFAULT_DWELL_SECONDS
 
 SETTINGS_FILENAME = "settings.toml"
@@ -33,6 +34,7 @@ KNOWN_SETTINGS = {
     "guide_done",
     "run_popup",
     "palette",
+    "strictness",
 }
 
 
@@ -54,6 +56,7 @@ class Settings:
     guide_done: bool = False  # the setup guide was finished or skipped; it opens until then
     run_popup: str = "all"
     palette: str = DEFAULT_PALETTE  # a colour palette from palm_lab.palettes
+    strictness: str = DEFAULT_STRICTNESS  # how a hand must be held to count (palm_lab.pose)
 
     def as_dict(self) -> dict[str, float | int | bool | str]:
         return asdict(self)
@@ -120,6 +123,10 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
     if not isinstance(palette, str) or palette not in PALETTES:
         raise SettingsError(f"'palette' must be one of: {', '.join(PALETTES)}")
 
+    strictness = data.get("strictness", DEFAULT_STRICTNESS)
+    if not isinstance(strictness, str) or strictness not in STRICTNESS_LEVELS:
+        raise SettingsError(f"'strictness' must be one of: {', '.join(STRICTNESS_LEVELS)}")
+
     return Settings(
         camera_index=camera,
         dwell_seconds=dwell,
@@ -131,6 +138,7 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
         guide_done=guide_done,
         run_popup=run_popup,
         palette=palette,
+        strictness=strictness,
     )
 
 
@@ -161,6 +169,7 @@ def save_settings(settings: Settings, path: Path | None = None) -> Path:
         f"guide_done = {'true' if settings.guide_done else 'false'}\n"
         f'run_popup = "{settings.run_popup}"\n'
         f'palette = "{settings.palette}"\n'
+        f'strictness = "{settings.strictness}"\n'
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")

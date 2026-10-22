@@ -923,6 +923,17 @@ def test_status_and_preview_describe_the_hold(tmp_path: Path) -> None:
         engine.stop()
 
 
+def test_status_says_when_a_hand_isnt_held_like_its_gesture(tmp_path: Path) -> None:
+    from test_pose import lean_to
+
+    api, engine, *_ = build(tmp_path)
+    assert api.status()["pose"] is None
+    engine.process_frame(object(), FixedHands([lean_to(raw_hand("open_palm"), 110)]))
+    assert api.status()["pose"] == {"gesture": "open_palm", "problem": "upright"}
+    engine.process_frame(object(), FixedHands([raw_hand("open_palm")]))
+    assert api.status()["pose"] is None
+
+
 # The setup guide ------------------------------------------------------------------
 
 

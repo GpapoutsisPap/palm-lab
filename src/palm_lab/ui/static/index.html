@@ -205,6 +205,25 @@
           </div>
         </div>
 
+        <h2 class="group-title">Recognition</h2>
+        <div class="card card-row">
+          <span class="card-icon" data-icon="nav_gestures"></span>
+          <div class="card-text">
+            <p class="card-title" id="strictness-label">Strictness</p>
+            <p class="card-desc" id="strictness-help">How a hand must be held before its gesture counts. Normal and Strict ignore a hand resting on your chin or pointing sideways, even with the right fingers out.</p>
+          </div>
+          <div class="card-control">
+            <span class="select-wrap">
+              <select class="select" id="strictness" aria-labelledby="strictness-label" aria-describedby="strictness-help">
+                <option value="relaxed">Relaxed: the fingers are enough</option>
+                <option value="normal">Normal: held up, facing the camera</option>
+                <option value="strict">Strict: held straight up, facing the camera</option>
+              </select>
+              <span class="select-chevron" data-icon="chevron"></span>
+            </span>
+          </div>
+        </div>
+
         <h2 class="group-title">Timing</h2>
         <div class="card-group">
           <div class="card card-row">

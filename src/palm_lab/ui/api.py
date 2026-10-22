@@ -147,6 +147,13 @@ def _hold_to_json(trigger: TriggerState) -> JsonDict:
     }
 
 
+def _pose_to_json(status: EngineStatus) -> JsonDict | None:
+    """A hand making a gesture's shape but not held like one, for the live view's hint."""
+    if status.pose_problem is None:
+        return None
+    return {"gesture": status.held_shape, "problem": status.pose_problem}
+
+
 def _status_to_json(status: EngineStatus) -> JsonDict:
     return {
         "running": status.running,
@@ -156,6 +163,7 @@ def _status_to_json(status: EngineStatus) -> JsonDict:
         "error": status.error,
         "last_fired": _fired_to_json(status.last_fired),
         "hold": _hold_to_json(status.trigger),
+        "pose": _pose_to_json(status),
         # When this changes, the page fetches activity() to catch up.
         "history_version": status.history_version,
     }
@@ -451,11 +459,13 @@ class Api:
         frame = self._engine.snapshot()
         if frame is None:
             return None
+        status = self._engine.status()
         return {
             "image": "data:image/jpeg;base64," + base64.b64encode(frame.image).decode("ascii"),
             "hands": _hands_to_json(frame.hands),
             # Sent with every frame, so the hold ring moves as smoothly as the video.
-            "hold": _hold_to_json(self._engine.status().trigger),
+            "hold": _hold_to_json(status.trigger),
+            "pose": _pose_to_json(status),
         }
 
     # Custom gestures -----------------------------------------------------------

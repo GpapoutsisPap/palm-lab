@@ -754,8 +754,15 @@ def test_lowering_one_hand_for_longer_becomes_the_one_hand_gesture() -> None:
 
 
 def test_a_hand_profile_changes_how_fingers_are_read() -> None:
-    """With a cut-off no finger can reach, an open palm reads as a thumb on its own."""
-    engine = make_engine(hand_profile=HandProfile(finger_thresholds=(9.0, 9.0, 9.0, 9.0)))
+    """With a cut-off no finger can reach, an open palm reads as a thumb on its own.
+
+    Relaxed, because that "thumbs up" is really an open palm's sideways thumb,
+    which the pose check (rightly) wouldn't count.
+    """
+    engine = make_engine(
+        hand_profile=HandProfile(finger_thresholds=(9.0, 9.0, 9.0, 9.0)),
+        settings=Settings(strictness="relaxed"),
+    )
     engine.process_frame(object(), ScriptedDetector([raw_hand("open_palm")]))
     assert engine.status().gesture == "thumbs_up"
     engine.update_hand_profile(None)
@@ -882,3 +889,25 @@ def test_a_failing_listener_does_not_break_runs() -> None:
     hold_peace(engine, clock)
     fired = engine.status().last_fired
     assert fired is not None and fired.finished
+
+
+def test_a_hand_held_the_wrong_way_doesnt_count_and_says_why() -> None:
+    """The open palm from the recordings, turned to point down like a hand resting on a chin."""
+    from test_pose import lean_to
+
+    engine = make_engine()
+    engine.process_frame(object(), ScriptedDetector([lean_to(raw_hand("open_palm"), 110)]))
+    status = engine.status()
+    assert status.gesture is None
+    assert (status.held_shape, status.pose_problem) == ("open_palm", "upright")
+    engine.process_frame(object(), ScriptedDetector([raw_hand("open_palm")]))
+    status = engine.status()
+    assert (status.gesture, status.held_shape, status.pose_problem) == ("open_palm", None, None)
+
+
+def test_relaxed_counts_the_fingers_alone() -> None:
+    from test_pose import lean_to
+
+    engine = make_engine(settings=Settings(strictness="relaxed"))
+    engine.process_frame(object(), ScriptedDetector([lean_to(raw_hand("open_palm"), 110)]))
+    assert engine.status().gesture == "open_palm"
