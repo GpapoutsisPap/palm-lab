@@ -180,6 +180,7 @@ def test_only_the_intended_methods_are_exposed_to_javascript() -> None:
         "tune_hand",
         "reset_hand_tuning",
         "set_guide_quiet",
+        "activity",
     }
 
 
@@ -189,7 +190,20 @@ def test_startup_state_is_complete_and_json_safe(tmp_path: Path) -> None:
     json.dumps(state)
     assert state["gestures"] == ["peace", "fist", "open_palm", "thumbs_up"]
     assert state["custom_gestures"] == []
-    assert state["action_types"] == ["launch", "open_url", "hotkey"]
+    assert state["action_types"] == [
+        "launch",
+        "open_url",
+        "hotkey",
+        "type_text",
+        "wait",
+        "volume",
+        "open_path",
+        "settings",
+        "system",
+    ]
+    assert ["mic_mute", "Mute microphone"] in state["action_options"]["volume"]
+    assert ["bluetooth", "Bluetooth & devices"] in state["action_options"]["settings"]
+    assert state["palettes"][:3] == [["windows", "Windows"], ["sunset", "Sunset"], ["neon", "Neon"]]
     assert "spotify" in state["known_apps"]
     assert "media_play_pause" in state["hotkey_presets"]
     assert state["bindings"][0]["action"] == [{"type": "hotkey", "target": "media_play_pause"}]
@@ -994,3 +1008,18 @@ def test_quiet_is_passed_to_the_engine(tmp_path: Path) -> None:
     assert engine._quiet is True
     api.set_guide_quiet(False)
     assert engine._quiet is False
+
+
+# Run history -------------------------------------------------------------------------
+
+
+def test_running_from_the_window_shows_in_activity(tmp_path: Path) -> None:
+    api, *_ = build(tmp_path)
+    assert api.activity() == {"version": 0, "events": []}
+    api.test_binding("peace")
+    result = api.activity()
+    (event,) = result["events"]
+    assert event["gesture"] == "peace" and event["manual"] is True and event["finished"] is True
+    assert event["id"] == 1
+    assert result["version"] == api.status()["history_version"] > 0
+    json.dumps(result)

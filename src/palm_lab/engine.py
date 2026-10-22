@@ -6,8 +6,10 @@ imports OpenCV or MediaPipe itself. The camera, the hand detector and the
 preview renderer are passed in, which keeps the engine testable with fakes.
 """
 
+import contextlib
 import threading
 import time
+from collections import deque
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from typing import Protocol
@@ -42,6 +44,12 @@ COMBO_GRACE_SECONDS = 0.3
 # second, then a second.
 MEASURE_SETTLE_FRAMES = 6
 MEASURE_FRAMES = 24
+
+# How many recent runs the engine remembers, for the Activity page and each
+# gesture's "Last ran". The page catches up from this list rather than from
+# the single latest event, so nothing is missed while the window is hidden and
+# its timers are slowed down.
+HISTORY_LIMIT = 50
 
 
 class FrameSource(Protocol):
@@ -161,6 +169,15 @@ class FiredEvent:
     at: float
     results: tuple[ActionResult, ...] = ()
     finished: bool = False
+    id: int = 0  # numbered in order, from 1, by the engine that recorded it
+    manual: bool = False  # run from the window's Run button, not by holding the gesture
+
+    @property
+    def failed(self) -> bool:
+        return any(not result.ok for result in self.results)
+
+
+RunListener = Callable[[FiredEvent], None]
 
 
 @dataclass(frozen=True)
@@ -174,6 +191,7 @@ class EngineStatus:
     error: str | None
     last_fired: FiredEvent | None
     trigger: TriggerState = TriggerState()
+    history_version: int = 0  # changes whenever a run is added or finishes
 
 
 @dataclass(frozen=True)
@@ -232,6 +250,10 @@ class TrackingEngine:
         self._preview_hands: Hands = []
         self._error: str | None = None
         self._last_fired: FiredEvent | None = None
+        self._history: deque[FiredEvent] = deque(maxlen=HISTORY_LIMIT)
+        self._history_version = 0
+        self._next_event_id = 1
+        self._run_listeners: list[RunListener] = []
         self._capture: GestureCapture | None = None
         self._capture_status: CaptureStatus | None = None
         self._preview_enabled = True
@@ -370,23 +392,73 @@ class TrackingEngine:
             if fired is None:
                 return
             binding = self._bindings.get(fired)
-            event = FiredEvent(
-                gesture=fired,
-                binding_name=binding.name if binding else None,
-                at=self._wall_clock(),
-                finished=binding is None,
+            event = self._record(
+                FiredEvent(
+                    gesture=fired,
+                    binding_name=binding.name if binding else None,
+                    at=self._wall_clock(),
+                    finished=binding is None,
+                )
             )
             self._last_fired = event
 
         if binding is not None:
             self._dispatch(lambda: self._run_and_record(binding, event))
 
+    def _record(self, event: FiredEvent) -> FiredEvent:
+        """Number a new event and add it to the history. Call with the lock held."""
+        event = replace(event, id=self._next_event_id)
+        self._next_event_id += 1
+        self._history.append(event)
+        self._history_version += 1
+        return event
+
+    def _finish(self, event: FiredEvent, results: tuple[ActionResult, ...]) -> FiredEvent:
+        """Mark an event's run as done, in the history too. Call with the lock held."""
+        done = replace(event, results=results, finished=True)
+        for index, kept in enumerate(self._history):
+            if kept.id == event.id:
+                self._history[index] = done
+                break
+        self._history_version += 1
+        # A newer gesture may have fired meanwhile; don't overwrite it.
+        if self._last_fired is not None and self._last_fired.id == event.id:
+            self._last_fired = done
+        return done
+
     def _run_and_record(self, binding: Binding, event: FiredEvent) -> None:
         results = tuple(self._run(binding))
         with self._lock:
-            # A newer gesture may have fired meanwhile; don't overwrite it.
-            if self._last_fired is event:
-                self._last_fired = replace(event, results=results, finished=True)
+            done = self._finish(event, results)
+            listeners = list(self._run_listeners)
+        for listener in listeners:
+            # A listener is something like the pop-up by the clock: cosmetic,
+            # so its failure must never stop the camera loop's runs.
+            with contextlib.suppress(Exception):
+                listener(done)
+
+    def record_manual_run(self, binding: Binding, results: Iterable[ActionResult]) -> FiredEvent:
+        """Add a run started from the window (the Run button) to the history."""
+        with self._lock:
+            event = self._record(
+                FiredEvent(
+                    gesture=binding.gesture,
+                    binding_name=binding.name,
+                    at=self._wall_clock(),
+                    manual=True,
+                )
+            )
+            return self._finish(event, tuple(results))
+
+    def history(self) -> tuple[int, tuple[FiredEvent, ...]]:
+        """The recent runs, oldest first, and the version they belong to."""
+        with self._lock:
+            return self._history_version, tuple(self._history)
+
+    def add_run_listener(self, listener: RunListener) -> None:
+        """Call listener(event) each time a gesture's shortcut finishes running."""
+        with self._lock:
+            self._run_listeners.append(listener)
 
     def set_preview_enabled(self, enabled: bool) -> None:
         """Turn preview pictures off while no window is showing them."""
@@ -452,6 +524,7 @@ class TrackingEngine:
                 error=self._error,
                 last_fired=self._last_fired,
                 trigger=trigger,
+                history_version=self._history_version,
             )
 
     def preview(self) -> bytes | None:

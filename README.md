@@ -25,15 +25,21 @@ and runs the actions you snap together for each one, all on your own computer.
 - **Switch any gesture off** without losing what it does.
 - **Add your own:** hold a new hand shape up twice, name it, and it gets its
   own icon. palm-lab tells you straight away if you already use that shape.
-- **Actions that snap together:** open an app from your Start menu, open a
-  website, or press keys (media keys, volume, any combination). Drag action
-  pieces into a gesture, reorder them, and test them without the camera.
+- **Actions that snap together:** open an app, a website, a folder or a
+  Windows setting; press keys; type text in any language; set the volume or
+  mute your microphone; wait; lock the PC or take a screenshot. Drag pieces
+  into a gesture, reorder them, run them without the camera, or start from a
+  template.
+- **Know what ran:** a small pop-up by the clock confirms each gesture (or
+  says what failed) while the window is closed, and every gesture shows when
+  it last ran.
 - **Live view:** see what the camera sees, the hand it found, how far through
   a hold you are, and what ran, or why nothing did.
 - **Pause:** stop gestures for 15 minutes to a few hours, with the camera off,
   from the window or the icon by the clock.
-- **Make it yours:** light or dark theme, and your own CSS to restyle
-  anything, typed right in Settings.
+- **Make it yours:** light or dark theme, colour palettes (Sunset, Neon,
+  Ocean, Grape, Rose, Graphite), and your own CSS to restyle anything, typed
+  right in Settings.
 - **Always ready:** close the window and palm-lab can keep running by the
   clock, and it can start with Windows so your gestures work from sign-in.
 - **Feels at home on Windows 11:** light and dark themes, your accent colour,
@@ -81,7 +87,8 @@ Changes show as you type and are saved to `custom.css` in palm-lab's settings
 folder (`palm-lab config` prints where), which you can also edit in any
 editor. Sharing a theme is sharing that file.
 
-Most looks come from changing a few variables:
+Most looks come from changing a few variables. They win over the colour
+palette chosen in Settings too:
 
 ```css
 :root {

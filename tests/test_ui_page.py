@@ -69,8 +69,9 @@ def test_window_background_follows_the_windows_theme() -> None:
 def test_window_backgrounds_match_the_page() -> None:
     """The window frame and the page background must be the same colours."""
     css = (config.ui_static_dir() / "app.css").read_text(encoding="utf-8")
-    light, dark = re.findall(r"--mica: (#[0-9A-Fa-f]{6});", css)
+    light, dark, *palettes = re.findall(r"--mica: (#[0-9A-Fa-f]{6});", css)
     assert (light, dark) == (LIGHT_BACKGROUND, DARK_BACKGROUND)
+    assert palettes  # each colour palette's are checked in test_palettes.py
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])

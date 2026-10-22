@@ -250,6 +250,16 @@
               </span>
             </div>
           </div>
+          <div class="card palette-card">
+            <div class="card-row">
+              <span class="card-icon" data-icon="theme"></span>
+              <div class="card-text">
+                <p class="card-title" id="palette-label">Colours</p>
+                <p class="card-desc" id="palette-desc">A palette for backgrounds and highlights, in light and dark. Windows uses your Windows accent colour.</p>
+              </div>
+            </div>
+            <div class="palette-choices" id="palette-choices" role="radiogroup" aria-labelledby="palette-label" aria-describedby="palette-desc"></div>
+          </div>
           <div class="card" id="custom-css-card">
             <div class="card-row">
               <span class="card-icon" data-icon="paint"></span>
@@ -281,6 +291,25 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <h2 class="group-title">When a gesture runs</h2>
+        <div class="card card-row">
+          <span class="card-icon" data-icon="bolt"></span>
+          <div class="card-text">
+            <p class="card-title" id="run-popup-label">Pop-up by the clock</p>
+            <p class="card-desc">A small card that says what ran, or what went wrong, when palm-lab&rsquo;s window isn&rsquo;t in front. It never takes focus, and stays away during games and presentations.</p>
+          </div>
+          <div class="card-control">
+            <span class="select-wrap">
+              <select class="select" id="run-popup" aria-labelledby="run-popup-label">
+                <option value="all">For every run</option>
+                <option value="failures">Only when something fails</option>
+                <option value="off">Off</option>
+              </select>
+              <span class="select-chevron" data-icon="chevron"></span>
+            </span>
           </div>
         </div>
 
@@ -437,6 +466,18 @@
         <button class="btn" id="wizard-cancel" type="button">Cancel</button>
         <button class="btn btn-accent" id="wizard-save" type="button" hidden>Save gesture</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Starter templates: ready-made pieces to begin a gesture from. -->
+  <div class="modal-overlay" id="template-overlay" hidden>
+    <div class="modal template-dialog" id="template-dialog" role="dialog" aria-modal="true" aria-labelledby="template-title" aria-describedby="template-desc">
+      <div class="modal-head">
+        <h2 class="modal-title" id="template-title">Start from a template</h2>
+        <button class="btn btn-subtle btn-icon" id="template-close" type="button" aria-label="Close"><span data-icon="close"></span></button>
+      </div>
+      <p class="modal-text" id="template-desc"></p>
+      <div class="template-list" id="template-list"></div>
     </div>
   </div>
 
@@ -653,6 +694,11 @@
 
   <datalist id="known-apps"></datalist>
   <datalist id="hotkey-presets"></datalist>
+  <datalist id="wait-presets"></datalist>
+  <datalist id="volume-options"></datalist>
+  <datalist id="path-options"></datalist>
+  <datalist id="settings-options"></datalist>
+  <datalist id="system-options"></datalist>
 
   <script src="app.js"></script>
 </body>

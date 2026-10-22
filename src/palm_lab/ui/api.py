@@ -25,6 +25,7 @@ from palm_lab.actions.models import (
     save_bindings,
 )
 from palm_lab.actions.runner import ActionResult, run_binding
+from palm_lab.actions.targets import OPTIONS
 from palm_lab.combos import combo_parts
 from palm_lab.config import PROJECT_URL
 from palm_lab.custom_css import CustomCssError, load_custom_css, save_custom_css
@@ -45,6 +46,7 @@ from palm_lab.hand_profile import (
     save_hand_profile,
     tune,
 )
+from palm_lab.palettes import PALETTES
 from palm_lab.settings import (
     COOLDOWN_RANGE,
     DWELL_RANGE,
@@ -57,6 +59,8 @@ from palm_lab.settings import (
 )
 from palm_lab.shortcuts import ShortcutError, Shortcuts
 from palm_lab.state import TriggerState
+from palm_lab.templates import CATEGORIES as TEMPLATE_CATEGORIES
+from palm_lab.templates import TEMPLATES
 from palm_lab.version import __version__
 from palm_lab.windows import accent_palette, open_folder
 
@@ -100,10 +104,12 @@ def _fired_to_json(event: FiredEvent | None) -> JsonDict | None:
     if event is None:
         return None
     return {
+        "id": event.id,
         "gesture": event.gesture,
         "name": event.binding_name,
         "at": event.at,
         "finished": event.finished,
+        "manual": event.manual,
         "results": [_result_to_json(r) for r in event.results],
     }
 
@@ -150,6 +156,8 @@ def _status_to_json(status: EngineStatus) -> JsonDict:
         "error": status.error,
         "last_fired": _fired_to_json(status.last_fired),
         "hold": _hold_to_json(status.trigger),
+        # When this changes, the page fetches activity() to catch up.
+        "history_version": status.history_version,
     }
 
 
@@ -253,6 +261,11 @@ class Api:
             "action_types": [t.value for t in ActionType],
             "known_apps": self._app_suggestions(),
             "hotkey_presets": list(HOTKEY_PRESETS),
+            # Suggestions for the newer pieces: [value, label] pairs per type.
+            "action_options": {kind: [list(o) for o in opts] for kind, opts in OPTIONS.items()},
+            "templates": TEMPLATES,
+            "palettes": [[key, palette.label] for key, palette in PALETTES.items()],
+            "template_categories": list(TEMPLATE_CATEGORIES),
             "bindings": [_binding_to_json(b) for b in self._bindings],
             "settings": self._settings.as_dict(),
             "limits": {
@@ -329,7 +342,13 @@ class Api:
         if binding is None:
             return {"ok": False, "error": f"Nothing is bound to {gesture!r} yet."}
         results = self._run(binding)
+        self._engine.record_manual_run(binding, results)
         return {"ok": all(r.ok for r in results), "results": [_result_to_json(r) for r in results]}
+
+    def activity(self) -> JsonDict:
+        """The recent runs, oldest first, for the Activity page and "Last ran"."""
+        version, events = self._engine.history()
+        return {"version": version, "events": [_fired_to_json(e) for e in events]}
 
     # Settings ----------------------------------------------------------------
 

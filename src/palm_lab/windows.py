@@ -109,6 +109,18 @@ def set_app_id(app_id: str = APP_ID) -> None:
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
 
 
+def foreground_window() -> int | None:
+    """The handle of the window the user is working in, or None."""
+    if sys.platform != "win32":
+        return None
+    import ctypes
+
+    user32 = ctypes.WinDLL("user32")
+    user32.GetForegroundWindow.restype = ctypes.c_void_p
+    handle = user32.GetForegroundWindow()
+    return int(handle) if handle else None
+
+
 def show_error(title: str, message: str) -> None:
     """A plain Windows error dialog, for when there is no window or console."""
     if sys.platform != "win32":

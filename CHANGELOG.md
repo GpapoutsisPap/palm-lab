@@ -10,6 +10,34 @@ for the people installing the app.
 
 ## [Unreleased]
 
+### Added
+
+- A pop-up by the clock when a gesture runs with palm-lab's window hidden:
+  "Ran Morning setup", or what went wrong. It never takes focus, lets clicks
+  through, and stays away during games, presentations and Do Not Disturb.
+  Settings > When a gesture runs turns it off, or limits it to failures.
+- A Run button on every gesture row, and "Last ran 5 minutes ago" (or
+  "Failed ...") under its name, with the exact time on hover.
+- Six new action pieces: Type text (any language), Wait, Volume (set a level,
+  or mute and unmute the speakers or microphone), Open folder (Downloads,
+  Documents and more, wherever they really are), Open setting (a Windows
+  Settings page), and Windows (lock, show the desktop, screenshot). The
+  editor's pieces are now grouped.
+- Starter templates: ten ready-made shortcuts, such as Step away and Quick
+  note, to fill a gesture from and then make your own.
+- Colour palettes in Settings > Appearance > Colours: Sunset, Neon, Ocean,
+  Grape, Rose and Graphite, each in light and dark, alongside the Windows
+  accent colour. Every one is checked for readable contrast, and the puzzle
+  pieces keep their colours in all of them.
+
+### Changed
+
+- Activity now catches every run, including runs made while the window was
+  hidden. Runs started from the window are marked as such.
+- A Wait piece is its own pause, so the usual gap isn't added around it.
+- On a narrow window, gesture rows drop the action chips so the name and
+  "Last ran" fit.
+
 ## [0.3.0] - 2026-10-22
 
 palm-lab now runs in the background, starts with a setup guide that tunes it

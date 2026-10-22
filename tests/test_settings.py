@@ -145,3 +145,27 @@ def test_the_setup_guide_shows_until_it_is_done(tmp_path: Path) -> None:
 def test_guide_done_must_be_true_or_false() -> None:
     with pytest.raises(SettingsError, match="'guide_done' must be true or false"):
         settings_from_data({"guide_done": "yes"})
+
+
+def test_the_run_pop_up_shows_by_default_and_round_trips(tmp_path: Path) -> None:
+    path = tmp_path / "settings.toml"
+    assert Settings().run_popup == "all"
+    save_settings(Settings(run_popup="failures"), path)
+    assert load_settings(path).run_popup == "failures"
+
+
+def test_the_run_pop_up_setting_is_checked() -> None:
+    with pytest.raises(SettingsError, match="'run_popup' must be one of: all, failures, off"):
+        settings_from_data({"run_popup": "sometimes"})
+
+
+def test_the_palette_defaults_to_windows_and_round_trips(tmp_path: Path) -> None:
+    path = tmp_path / "settings.toml"
+    assert Settings().palette == "windows"
+    save_settings(Settings(palette="neon"), path)
+    assert load_settings(path).palette == "neon"
+
+
+def test_an_unknown_palette_is_refused() -> None:
+    with pytest.raises(SettingsError, match="'palette' must be one of: windows, sunset"):
+        settings_from_data({"palette": "vaporwave"})

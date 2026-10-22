@@ -58,6 +58,19 @@ const TEXT = {
   palette: "Actions",
   addTo: (action) => `${action}: click to add, or drag into place`,
   test: "Test",
+  runRow: (name) => `Run ${name} now`,
+  ranByButton: "Run from the window",
+  lastRan: (when) => `Last ran ${when}`,
+  lastFailed: (when) => `Failed ${when}`,
+  lastFailedFlag: "The last run failed. Activity has the details.",
+  ranToday: (n) => `${n} today`,
+  justNow: "just now",
+  // Whole words: screen readers read "5m" as "5 metres".
+  minutesAgo: (n) => `${n} minute${n === 1 ? "" : "s"} ago`,
+  hoursAgo: (n) => `${n} hour${n === 1 ? "" : "s"} ago`,
+  yesterday: "yesterday",
+  daysAgo: (n) => `${n} days ago`,
+  onDate: (date) => `on ${date}`,
   testing: "Testing\u2026",
   testRan: (name) => `Ran \u201C${name}\u201D`,
   moveUp: "Move up",
@@ -103,6 +116,10 @@ const TEXT = {
   wizardNameRequired: "Give this gesture a name before saving.",
   removeGesture: "Remove gesture",
   removePair: "Remove setup",
+  templates: "Templates",
+  templateIntro: (gesture) => `Pick one to fill ${gesture} with its pieces, then change them to suit you.`,
+  templateReplaces: (gesture, n) => `Pick one to replace the ${n} piece${n === 1 ? "" : "s"} in ${gesture}. You can change everything afterwards.`,
+  templateAdded: (name) => `Added \u201C${name}\u201D. Change the pieces to make it yours.`,
   pairAdded: (label) => `Added \u201C${label}\u201D`,
   pairRemoved: (label) => `Removed \u201C${label}\u201D`,
   pairExists: "You already have this two-hand setup.",
@@ -123,7 +140,25 @@ const ACTIONS = {
   launch: { label: "Open app", icon: "app", placeholder: "Steam, Spotify, notepad\u2026", list: "known-apps", input: "text" },
   open_url: { label: "Open website", icon: "globe", placeholder: "https://youtube.com", list: null, input: "url" },
   hotkey: { label: "Press keys", icon: "keyboard", placeholder: "media_play_pause or ctrl+alt+t", list: "hotkey-presets", input: "text" },
+  type_text: { label: "Type text", icon: "text", placeholder: "Hello! Any language works", list: null, input: "text" },
+  wait: { label: "Wait", icon: "timer", placeholder: "Seconds, like 1.5", list: "wait-presets", input: "text" },
+  volume: { label: "Volume", icon: "speaker", placeholder: "50, mute or mic_mute", list: "volume-options", input: "text" },
+  open_path: { label: "Open folder", icon: "folder", placeholder: "Downloads, or a folder\u2019s path", list: "path-options", input: "text" },
+  settings: { label: "Open setting", icon: "nav_settings", placeholder: "sound, bluetooth\u2026", list: "settings-options", input: "text" },
+  system: { label: "Windows", icon: "power", placeholder: "lock, show_desktop or screenshot", list: "system-options", input: "text" },
 };
+
+/* The palette's groups, in the order they're shown. */
+const ACTION_GROUPS = [
+  ["Apps & places", ["launch", "open_url", "open_path", "settings"]],
+  ["Keyboard", ["hotkey", "type_text"]],
+  ["Sound & Windows", ["volume", "system"]],
+  ["Timing", ["wait"]],
+];
+const WAIT_PRESETS = ["0.5", "1", "2", "5"];
+
+/* Friendly names for the suggested targets, filled from Python's lists. */
+const OPTION_LABELS = {};
 
 const HOTKEY_LABELS = {
   media_play_pause: "Play / pause",
@@ -178,6 +213,7 @@ const ICONS = {
   puzzle: [16, ["M7 3a2 2 0 0 1 4 0h1.5c.83 0 1.5.67 1.5 1.5V7h-1a1 1 0 0 0 0 2h1v2.5c0 .83-.67 1.5-1.5 1.5H11a2 2 0 0 1-4 0H5.5A1.5 1.5 0 0 1 4 11.5V10a2 2 0 0 1 0-4V4.5C4 3.67 4.67 3 5.5 3zm2-1a1 1 0 0 0-1 1v1H5.5a.5.5 0 0 0-.5.5V7H4a1 1 0 0 0 0 2h1v2.5c0 .28.22.5.5.5H8v1a1 1 0 0 0 2 0v-1h2.5a.5.5 0 0 0 .5-.5V10a2 2 0 0 1 0-4V4.5a.5.5 0 0 0-.5-.5H10V3a1 1 0 0 0-1-1"]],
   app: [16, ["M4.5 2A2.5 2.5 0 0 0 2 4.5v7A2.5 2.5 0 0 0 4.5 14h7a2.5 2.5 0 0 0 2.5-2.5v-7A2.5 2.5 0 0 0 11.5 2zM13 5H3v-.5C3 3.67 3.67 3 4.5 3h7c.83 0 1.5.67 1.5 1.5zM3 6h10v5.5c0 .83-.67 1.5-1.5 1.5h-7A1.5 1.5 0 0 1 3 11.5z"]],
   globe: [16, ["M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12M8 3c.37 0 .88.36 1.31 1.32q.14.3.26.68H6.43q.12-.37.26-.68C7.12 3.36 7.63 3 8 3m-2.22.9q-.23.5-.4 1.1H4a5 5 0 0 1 2.04-1.6q-.14.24-.26.5M5.16 6a12 12 0 0 0 0 4H3.42a5 5 0 0 1 0-4zm.22 5a8 8 0 0 0 .66 1.6A5 5 0 0 1 4 11zm1.05 0h3.14a6 6 0 0 1-.26.68C8.88 12.64 8.37 13 8 13s-.88-.36-1.31-1.32a6 6 0 0 1-.26-.68m3.4-1H6.17a11 11 0 0 1 0-4h3.64a11 11 0 0 1 0 4m.79 1H12a5 5 0 0 1-2.04 1.6q.15-.24.26-.5.23-.5.4-1.1m1.96-1h-1.74a12 12 0 0 0 0-4h1.74a5 5 0 0 1 0 4M9.96 3.4c.81.35 1.52.9 2.04 1.6h-1.38a8 8 0 0 0-.66-1.6"]],
+  text: [16, ["M3 3.5c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1H8.5v8.5a.5.5 0 0 1-1 0V4h-4a.5.5 0 0 1-.5-.5"]],
   keyboard: [16, ["M3 10.5c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M3.25 7a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M10 6.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M6.25 7a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M13 6.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M5.25 9a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M9 8.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m2.25.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M1 4.75C1 3.78 1.78 3 2.75 3h10.5c.97 0 1.75.78 1.75 1.75v6.5c0 .97-.78 1.75-1.75 1.75H2.75C1.78 13 1 12.22 1 11.25zM2.75 4a.75.75 0 0 0-.75.75v6.5c0 .41.34.75.75.75h10.5c.41 0 .75-.34.75-.75v-6.5a.75.75 0 0 0-.75-.75z"]],
   pause: [16, ["M3.75 2C2.78 2 2 2.78 2 3.75v8.5c0 .97.78 1.75 1.75 1.75h1.5C6.22 14 7 13.22 7 12.25v-8.5C7 2.78 6.22 2 5.25 2zM3 3.75c0-.41.34-.75.75-.75h1.5c.41 0 .75.34.75.75v8.5c0 .41-.34.75-.75.75h-1.5a.75.75 0 0 1-.75-.75zM10.75 2C9.78 2 9 2.78 9 3.75v8.5c0 .97.78 1.75 1.75 1.75h1.5c.97 0 1.75-.78 1.75-1.75v-8.5C14 2.78 13.22 2 12.25 2zM10 3.75c0-.41.34-.75.75-.75h1.5c.41 0 .75.34.75.75v8.5c0 .41-.34.75-.75.75h-1.5a.75.75 0 0 1-.75-.75z"]],
   play: [16, ["M5.75 3.06A.5.5 0 0 0 5 3.5v9c0 .38.41.62.75.44l8-4.5a.5.5 0 0 0 0-.88zM4 3.5a1.5 1.5 0 0 1 2.24-1.3l8 4.5a1.5 1.5 0 0 1 0 2.6l-8 4.5A1.5 1.5 0 0 1 4 12.5z"]],
@@ -212,7 +248,10 @@ const app = {
   drag: null,          // {kind: "new", type} or {kind: "move", gesture, id, type}
   saveTimer: null,
   saveRequest: 0,
-  lastEvent: null,     // {at, finished} of the newest fired gesture
+  historyVersion: 0,   // the engine's run history last caught up with
+  syncingActivity: false,
+  seenEvents: new Map(), // run id -> whether it had finished when last seen
+  lastRuns: new Map(),   // gesture -> {at, failed, times: [...]} for "Last ran"
   unread: 0,
   previewing: false,
   hasFrame: false,
@@ -374,6 +413,12 @@ function shortTarget(action) {
     }
   }
   if (action.type === "hotkey") return HOTKEY_LABELS[target.toLowerCase()] || target;
+  if (action.type === "wait") return `${target.replace(/\s*s$/i, "")} s`;
+  if (action.type === "type_text") return `\u201C${target.length > 18 ? `${target.slice(0, 17)}\u2026` : target}\u201D`;
+  if (action.type === "volume" && /^\d+%?$/.test(target)) return `${target.replace("%", "")}%`;
+  const named = (OPTION_LABELS[action.type] || {})[target.toLowerCase()];
+  if (named) return named;
+  if (action.type === "settings") return target.replace(/^ms-settings:/i, "");
   const base = target.split(/[\\/]/).pop();
   return base.replace(/\.(exe|lnk|url)$/i, "") || target;
 }
@@ -581,6 +626,64 @@ function applyTheme(setting = themeSetting()) {
   document.documentElement.dataset.theme = dark ? "dark" : "light";
 }
 
+/* Colour palettes: <html data-palette="sunset">. The colours are all in
+   app.css, which also lets each swatch in Settings preview its own palette. */
+function applyPalette(palette) {
+  document.documentElement.dataset.palette = palette || "windows";
+}
+
+function renderPalettes() {
+  const current = (app.data && app.data.settings.palette) || "windows";
+  const choices = (app.data && app.data.palettes) || [];
+  $("palette-choices").replaceChildren(...choices.map(([id, label]) => {
+    const chosen = id === current;
+    return el("button", {
+      class: "swatch", type: "button", role: "radio",
+      "aria-checked": String(chosen), tabIndex: chosen ? 0 : -1,
+      dataset: { palette: id }, title: label,
+      onclick: () => choosePalette(id),
+      onkeydown: (event) => movePalette(event, id),
+    }, [
+      el("span", { class: "swatch-preview", "aria-hidden": "true" }, [
+        el("span", { class: "swatch-card" }, [
+          el("span", { class: "swatch-dot" }),
+          el("span", { class: "swatch-line" }),
+        ]),
+      ]),
+      el("span", { class: "swatch-name", textContent: label }),
+    ]);
+  }));
+}
+
+/* A radio group: arrow keys move the choice, as Windows' own pickers do. */
+function movePalette(event, id) {
+  const ids = app.data.palettes.map(([value]) => value);
+  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+  if (!step) return;
+  event.preventDefault();
+  const next = ids[(ids.indexOf(id) + step + ids.length) % ids.length];
+  choosePalette(next);
+  document.querySelector(`.swatch[data-palette="${next}"]`).focus();
+}
+
+/* Moves the tick without rebuilding the buttons, so the focus stays put. */
+function markPalette(id) {
+  document.querySelectorAll(".swatch").forEach((swatch) => {
+    const chosen = swatch.dataset.palette === id;
+    swatch.setAttribute("aria-checked", String(chosen));
+    swatch.tabIndex = chosen ? 0 : -1;
+  });
+}
+
+async function choosePalette(id) {
+  if (!app.data || app.data.settings.palette === id) return;
+  app.data.settings.palette = id;
+  applyPalette(id);
+  markPalette(id);
+  await saveSettings();
+  api().theme_changed(); // the title bar follows the palette too
+}
+
 /* Navigation ------------------------------------------------------------------------ */
 
 function showPage(name) {
@@ -637,6 +740,7 @@ async function init() {
   app.data = data;
   applyAccent(data.accent);
   applyTheme();
+  applyPalette(data.settings.palette);
   loadCustomCss(data.custom_css);
   registerCustomGestures(data.custom_gestures);
   const gestureIds = [...data.gestures, ...data.custom_gestures.map((g) => g.name)];
@@ -656,6 +760,8 @@ async function init() {
   $("tracking-switch").disabled = false;
   applyStatus(data.status);
   setInterval(pollStatus, STATUS_INTERVAL_MS);
+  setInterval(refreshLastRan, LAST_RAN_REFRESH_MS);
+  document.addEventListener("visibilitychange", refreshLastRan);
   showHandTuning();
   // First run (or never finished): start with the setup guide.
   if (!data.settings.guide_done) openGuide();
@@ -685,6 +791,13 @@ function fillDatalists() {
   $("hotkey-presets").replaceChildren(
     ...app.data.hotkey_presets.map((key) => el("option", { value: key, label: HOTKEY_LABELS[key] || key })),
   );
+  $("wait-presets").replaceChildren(...WAIT_PRESETS.map((value) => el("option", { value, label: `${value} s` })));
+  const lists = { volume: "volume-options", open_path: "path-options", settings: "settings-options", system: "system-options" };
+  for (const [type, id] of Object.entries(lists)) {
+    const options = (app.data.action_options || {})[type] || [];
+    OPTION_LABELS[type] = Object.fromEntries(options.map(([value, label]) => [value.toLowerCase(), label]));
+    $(id).replaceChildren(...options.map(([value, label]) => el("option", { value, label })));
+  }
 }
 
 function showProblems(problems) {
@@ -729,6 +842,7 @@ function renderRow(row) {
     ]),
     el("span", { class: "gesture-summary", "aria-hidden": "true" }),
     iconEl("warning", "gesture-flag"),
+    el("span", { class: "gesture-run-slot", "aria-hidden": "true" }),
     el("span", { class: "gesture-switch-slot", "aria-hidden": "true" }),
     iconEl("chevron", "chevron"),
   ]);
@@ -738,8 +852,12 @@ function renderRow(row) {
   ]);
   setCollapse(body, open);
 
-  // The on/off switch sits beside the head button, not inside it: a control
-  // nested in a button can't be reached or announced properly.
+  // Run and the on/off switch sit beside the head button, not inside it: a
+  // control nested in a button can't be reached or announced properly.
+  const run = el("button", {
+    class: "btn btn-subtle btn-icon gesture-run", type: "button", html: icon("play"),
+    onclick: () => runRow(row, run),
+  });
   const toggle = el("input", {
     class: "switch gesture-switch", type: "checkbox", role: "switch",
     checked: row.enabled, "aria-label": TEXT.rowSwitch(info.label),
@@ -752,7 +870,7 @@ function renderRow(row) {
     ondragover: (event) => rowDragOver(event, row, node),
     ondragleave: (event) => rowDragLeave(event, node),
     ondrop: (event) => rowDrop(event, row, node),
-  }, [head, toggle, body, el("span", { class: "gesture-hold", "aria-hidden": "true" })]);
+  }, [head, run, toggle, body, el("span", { class: "gesture-hold", "aria-hidden": "true" })]);
   if (app.seen === row.gesture) node.classList.add("is-seen");
   updateHead(row, node);
   return node;
@@ -768,9 +886,20 @@ function updateHead(row, node = rowNode(row.gesture)) {
   // the next action put into it starts switched on.
   if (count === 0) row.enabled = true;
   let sub = TEXT.notSet;
-  if (count) sub = name ? `${name} \u00B7 ${TEXT.actionCount(count)}` : TEXT.actionCount(count);
+  const ran = count ? lastRanText(row.gesture) : "";
+  if (count) sub = [name, ran || TEXT.actionCount(count)].filter(Boolean).join(" \u00B7 ");
   if (count && !row.enabled) sub = `${TEXT.rowOff} \u00B7 ${sub}`;
   node.querySelector(".gesture-sub").textContent = sub;
+  const last = app.lastRuns.get(row.gesture);
+  node.querySelector(".gesture-sub").title = count && last ? new Date(last.at * 1000).toLocaleString() : "";
+  const failed = Boolean(count && last && last.failed);
+  node.classList.toggle("has-failed", failed);
+  node.querySelector(".gesture-flag").title = failed ? TEXT.lastFailedFlag : "";
+
+  const label = name || gestureInfo(row.gesture).label;
+  const run = node.querySelector(".gesture-run");
+  run.setAttribute("aria-label", TEXT.runRow(label));
+  run.title = TEXT.runRow(label);
 
   const toggle = node.querySelector(".gesture-switch");
   toggle.checked = row.enabled;
@@ -813,8 +942,12 @@ function renderEditor(row) {
       }),
     ]),
     el("span", { class: "spacer" }),
+    (app.data.templates || []).length ? el("button", {
+      class: "btn btn-subtle template-button", type: "button",
+      onclick: () => openTemplates(row),
+    }, [el("span", { class: "btn-icon-slot", html: icon("puzzle") }), el("span", { textContent: TEXT.templates })]) : null,
     info.custom ? el("button", {
-      class: "btn btn-subtle", type: "button",
+      class: "btn btn-subtle remove-gesture", type: "button",
       onclick: () => removeCustomGesture(row),
     }, [el("span", { class: "btn-icon-slot", html: icon("close") }), el("span", { textContent: TEXT.removeGesture })]) : null,
     info.combo ? el("button", {
@@ -824,15 +957,20 @@ function renderEditor(row) {
     testButton,
   ]);
 
+  const piece = (type) => el("button", {
+    class: "palette-piece piece has-socket", type: "button", draggable: true, dataset: { type },
+    title: TEXT.addTo(ACTIONS[type].label),
+    onclick: () => insertAction(row, row.actions.length, type),
+    ondragstart: (event) => startDrag(event, { kind: "new", type }),
+    ondragend: endDrag,
+  }, [iconEl(ACTIONS[type].icon), el("span", { textContent: ACTIONS[type].label })]);
+  const known = new Set(app.data.action_types.filter((type) => ACTIONS[type]));
   const palette = el("div", { class: "palette" }, [
     el("p", { class: "palette-title" }, [iconEl("puzzle"), TEXT.palette]),
-    ...app.data.action_types.map((type) => el("button", {
-      class: "palette-piece piece has-socket", type: "button", draggable: true, dataset: { type },
-      title: TEXT.addTo(ACTIONS[type].label),
-      onclick: () => insertAction(row, row.actions.length, type),
-      ondragstart: (event) => startDrag(event, { kind: "new", type }),
-      ondragend: endDrag,
-    }, [iconEl(ACTIONS[type].icon), el("span", { textContent: ACTIONS[type].label })])),
+    ...ACTION_GROUPS.flatMap(([name, types]) => {
+      const pieces = types.filter((type) => known.has(type));
+      return pieces.length ? [el("p", { class: "palette-group" }, [name]), ...pieces.map(piece)] : [];
+    }),
   ]);
 
   const hat = el("div", { class: "hat piece" }, [
@@ -1239,14 +1377,14 @@ function showBindingError(used, message) {
   return true;
 }
 
-async function testRow(row, button) {
-  const label = button.querySelector(".test-label");
-  const slot = button.querySelector(".btn-icon-slot");
-  button.disabled = true;
-  slot.innerHTML = icon("spinner");
-  label.textContent = TEXT.testing;
+/* Run a row's shortcut now, without the camera: the editor's Test button
+   and the Run button on each row. The run is added to Activity like any other. */
+async function runShortcut(row) {
   try {
-    if (!(await saveNow())) return;
+    if (!(await saveNow())) {
+      if (row.actions.some((a) => !a.target.trim())) toast(TEXT.incomplete, "error");
+      return;
+    }
     const result = await api().test_binding(row.gesture);
     if (!result.results) {
       toast(result.error, "error");
@@ -1261,10 +1399,33 @@ async function testRow(row, button) {
     }
   } catch (err) {
     toast(String(err), "error");
+  }
+  syncActivity();
+}
+
+async function testRow(row, button) {
+  const label = button.querySelector(".test-label");
+  const slot = button.querySelector(".btn-icon-slot");
+  button.disabled = true;
+  slot.innerHTML = icon("spinner");
+  label.textContent = TEXT.testing;
+  try {
+    await runShortcut(row);
   } finally {
     button.disabled = row.actions.length === 0;
     slot.innerHTML = icon("bolt");
     label.textContent = TEXT.test;
+  }
+}
+
+async function runRow(row, button) {
+  button.disabled = true;
+  button.innerHTML = icon("spinner");
+  try {
+    await runShortcut(row);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = icon("play");
   }
 }
 
@@ -1361,7 +1522,7 @@ function applyStatus(status) {
   showSeen(status);
 
   if (status.error && previous && previous.running && !status.running) toast(status.error, "error");
-  recordActivity(status.last_fired);
+  if (status.history_version !== app.historyVersion) syncActivity();
   if (status.running && !app.previewing) startPreview();
 }
 
@@ -1544,16 +1705,32 @@ function drawHands(hands) {
 
 /* Activity --------------------------------------------------------------------------------------------- */
 
+/* Catch up with the engine's run history: every run since the last look,
+   including any that happened while the window was hidden. */
+async function syncActivity() {
+  if (app.syncingActivity) return;
+  app.syncingActivity = true;
+  try {
+    const data = await api().activity();
+    app.historyVersion = data.version;
+    for (const event of data.events) recordActivity(event);
+  } catch (err) {
+    // The next status poll notices the version is still behind and tries again.
+  } finally {
+    app.syncingActivity = false;
+  }
+}
+
 function recordActivity(event) {
   if (!event) return;
-  const previous = app.lastEvent;
-  if (previous && previous.at === event.at && previous.finished === event.finished) return;
-  const isNew = !previous || previous.at !== event.at;
-  const justFinished = event.finished && (isNew || !previous.finished);
-  app.lastEvent = { at: event.at, finished: event.finished };
+  const seen = app.seenEvents.get(event.id);
+  if (seen === event.finished) return;
+  const isNew = seen === undefined;
+  const justFinished = event.finished && seen !== true;
+  app.seenEvents.set(event.id, event.finished);
 
   const list = $("activity");
-  const id = `event-${String(event.at).replace(/\W/g, "-")}`;
+  const id = `event-${event.id}`;
   const item = renderEvent(event, id);
   const existing = document.getElementById(id);
   if (existing) {
@@ -1570,9 +1747,11 @@ function recordActivity(event) {
   if (isNew) {
     if (app.page !== "activity") app.unread += 1;
     updateBadge();
-    pulse(rowNode(event.gesture), "var(--accent)");
+    if (!event.manual) pulse(rowNode(event.gesture), "var(--accent)");
   }
-  if (justFinished) {
+  if (justFinished) noteRun(event);
+  // A run from the window already said how it went, in its own toast.
+  if (justFinished && !event.manual) {
     const failures = event.results.filter((r) => !r.ok);
     if (failures.length) {
       toast(`${event.name || gestureInfo(event.gesture).label}: ${failures.map((r) => r.message).join(" ")}`, "error");
@@ -1585,7 +1764,7 @@ const RECENT_LIMIT = 3;
 
 function updateRecent(event) {
   if (!event.name) return; // a gesture with nothing set up ran nothing
-  app.recent = [event, ...app.recent.filter((e) => e.at !== event.at)].slice(0, RECENT_LIMIT);
+  app.recent = [event, ...app.recent.filter((e) => e.id !== event.id)].slice(0, RECENT_LIMIT);
   renderRecent();
 }
 
@@ -1615,6 +1794,62 @@ function updateBadge() {
   badge.textContent = String(app.unread);
 }
 
+/* "Last ran" on each gesture row ------------------------------------------------- */
+
+const LAST_RAN_REFRESH_MS = 30000;
+const RUN_TIMES_KEPT = 100;
+
+function noteRun(event) {
+  if (!event.name) return; // a gesture with nothing set up ran nothing
+  const entry = app.lastRuns.get(event.gesture) || { at: 0, failed: false, times: [] };
+  if (event.at >= entry.at) {
+    entry.at = event.at;
+    entry.failed = event.results.some((r) => !r.ok);
+  }
+  entry.times = [...entry.times, event.at].slice(-RUN_TIMES_KEPT);
+  app.lastRuns.set(event.gesture, entry);
+  const row = rowOf(event.gesture);
+  if (row) updateHead(row);
+}
+
+/* Relative times as GitHub's Primer design system writes them: "just now"
+   under a minute, "... ago" up to a month, then the date. The exact time
+   goes in a tooltip. */
+function ago(seconds, now = Date.now()) {
+  const diff = Math.max(0, now / 1000 - seconds);
+  if (diff < 60) return TEXT.justNow;
+  if (diff < 3600) return TEXT.minutesAgo(Math.floor(diff / 60));
+  const then = new Date(seconds * 1000);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  if (then >= today) return TEXT.hoursAgo(Math.floor(diff / 3600));
+  const days = Math.round((today - new Date(then).setHours(0, 0, 0, 0)) / 86400000);
+  if (days === 1) return TEXT.yesterday;
+  if (days < 30) return TEXT.daysAgo(days);
+  const sameYear = then.getFullYear() === today.getFullYear();
+  return TEXT.onDate(then.toLocaleDateString([], { day: "numeric", month: "short", ...(sameYear ? {} : { year: "numeric" }) }));
+}
+
+function lastRanText(gesture, now = Date.now()) {
+  const entry = app.lastRuns.get(gesture);
+  if (!entry) return "";
+  const when = ago(entry.at, now);
+  const midnight = new Date(now);
+  midnight.setHours(0, 0, 0, 0);
+  const today = entry.times.filter((at) => at * 1000 >= midnight.getTime()).length;
+  const text = entry.failed ? TEXT.lastFailed(when) : TEXT.lastRan(when);
+  return today > 1 ? `${text} \u00B7 ${TEXT.ranToday(today)}` : text;
+}
+
+/* Keep "5 min ago" true while the window stays open. */
+function refreshLastRan() {
+  if (document.hidden) return;
+  for (const gesture of app.lastRuns.keys()) {
+    const row = rowOf(gesture);
+    if (row) updateHead(row);
+  }
+}
+
 function showLastRun(event) {
   const name = event.name || gestureInfo(event.gesture).label;
   const failed = event.finished && event.results.some((r) => !r.ok);
@@ -1642,7 +1877,7 @@ function renderEvent(event, id) {
     el("span", { class: "event-glyph", html: gestureGlyph(event.gesture) }),
     el("div", { class: "event-body" }, [
       el("p", { class: "card-title", textContent: event.name || info.label }),
-      el("p", { class: "card-desc", textContent: info.label }),
+      el("p", { class: "card-desc", textContent: event.manual ? `${info.label} \u00B7 ${TEXT.ranByButton}` : info.label }),
       el("ul", { class: "event-results" }, results),
     ]),
     el("span", { class: "event-time", textContent: clock(event.at) }),
@@ -1653,6 +1888,7 @@ function renderEvent(event, id) {
 
 function renderSettings() {
   const { settings, limits } = app.data;
+  renderPalettes();
   const select = $("camera-select");
   select.replaceChildren();
   for (let i = limits.camera_index[0]; i <= limits.camera_index[1]; i += 1) {
@@ -1669,6 +1905,7 @@ function renderSettings() {
   }
   setSwitch($("sounds"), settings.sounds !== false);
   $("close-action").value = settings.close_action || "ask";
+  $("run-popup").value = settings.run_popup || "all";
   $("theme").value = settings.theme || "system";
   $("bindings-file").textContent = app.data.bindings_file;
   setSwitch($("custom-css-on"), settings.custom_css !== false);
@@ -1700,9 +1937,11 @@ async function saveSettings() {
     cooldown_seconds: Number($("cooldown").value),
     sounds: $("sounds").checked,
     close_action: $("close-action").value,
+    run_popup: $("run-popup").value,
     theme: $("theme").value,
     custom_css: $("custom-css-on").checked,
     guide_done: Boolean(app.data && app.data.settings.guide_done),
+    palette: (app.data && app.data.settings.palette) || "windows",
   };
   let result;
   try {
@@ -2628,6 +2867,61 @@ async function resetHandTuning() {
   toast(TEXT.handReset, "info");
 }
 
+/* Starter templates ------------------------------------------------------------------------------------
+
+   Ready-made pieces to begin a gesture from (palm_lab/templates.py). Picking
+   one fills the gesture being edited; the pieces are then edited as usual. */
+
+function openTemplates(row) {
+  app.templateRow = row;
+  const label = gestureInfo(row.gesture).label;
+  $("template-desc").textContent = row.actions.length
+    ? TEXT.templateReplaces(label, row.actions.length)
+    : TEXT.templateIntro(label);
+  const byCategory = (app.data.template_categories || []).map((category) => [
+    category, app.data.templates.filter((t) => t.category === category),
+  ]);
+  $("template-list").replaceChildren(...byCategory.flatMap(([category, templates]) => [
+    el("h3", { class: "template-category", textContent: category }),
+    el("div", { class: "template-grid" }, templates.map((template) => el("button", {
+      class: "template-card", type: "button", onclick: () => useTemplate(template),
+    }, [
+      el("span", { class: "template-name", textContent: template.name }),
+      el("span", { class: "template-text", textContent: template.description }),
+      el("span", { class: "template-steps", "aria-hidden": "true" }, template.action.map((a) => el("span", {
+        class: "chip", dataset: { type: a.type },
+      }, [
+        el("span", { class: "chip-icon", html: icon(ACTIONS[a.type].icon) }),
+        el("span", { class: "chip-text", textContent: shortTarget({ type: a.type, target: a.target }) }),
+      ]))),
+    ]))),
+  ]));
+  const overlay = $("template-overlay");
+  overlay.hidden = false;
+  void overlay.offsetHeight; // commit the start state so the transition runs
+  overlay.classList.add("is-in");
+  $("template-list").querySelector(".template-card").focus();
+}
+
+function closeTemplates() {
+  const overlay = $("template-overlay");
+  if (overlay.hidden) return;
+  overlay.classList.remove("is-in");
+  setTimeout(() => { overlay.hidden = true; }, 150);
+}
+
+function useTemplate(template) {
+  const row = app.templateRow;
+  closeTemplates();
+  if (!row) return;
+  row.actions = template.action.map((a) => newAction(a.type, a.target));
+  if (!row.name.trim()) row.name = template.name;
+  refreshRow(row, { flip: false, focus: { id: row.actions[0].id } });
+  sound.play("snap", { delay: SNAP_SOUND_DELAY });
+  scheduleSave();
+  toast(TEXT.templateAdded(template.name), "info");
+}
+
 /* Two-hand setups ----------------------------------------------------------------------------------------
 
    Made from two gestures you already have. The new row opens ready for its
@@ -2888,6 +3182,10 @@ function wireControls() {
 
   $("add-gesture").addEventListener("click", openWizard);
   $("add-pair").addEventListener("click", openPairDialog);
+  $("template-close").addEventListener("click", closeTemplates);
+  $("template-overlay").addEventListener("click", (event) => {
+    if (event.target === event.currentTarget) closeTemplates();
+  });
   $("open-guide").addEventListener("click", openGuide);
   $("reset-tuning").addEventListener("click", resetHandTuning);
   $("guide-next").addEventListener("click", guideNext);
@@ -2925,11 +3223,13 @@ function wireControls() {
     if (event.key !== "Escape") return;
     if (!$("close-overlay").hidden) dismissCloseQuestion();
     else if (!$("pair-overlay").hidden) closePairDialog();
+    else if (!$("template-overlay").hidden) closeTemplates();
     else if (app.guide.open) closeGuide();
     else if (app.wizard.open) closeWizard();
   });
 
   $("close-action").addEventListener("change", saveSettings);
+  $("run-popup").addEventListener("change", saveSettings);
 
   $("custom-css-on").addEventListener("change", (event) => setCustomCssOn(event.target.checked));
   $("custom-css-edit").addEventListener("click", toggleCssEditor);

@@ -17,7 +17,7 @@
 
    Both blocks sit inside :where(), which gives them no specificity, so a plain
    `:root { --accent: ... }` in someone's custom CSS wins in either theme. */
-:where(:root) {
+:where(:root, [data-palette="windows"]) {
   color-scheme: light;
 
   /* Surfaces. --mica is also the title bar colour (see ui/app.py). */
@@ -70,6 +70,13 @@
   --piece-launch: #4460D8;
   --piece-web: #047D76;
   --piece-keys: #7D5BB5;
+  /* The newer pieces. White text on each is at least 4.5:1 too. */
+  --piece-text: #5E4AA8;
+  --piece-wait: #8A6100;
+  --piece-volume: #B0307A;
+  --piece-path: #A2510C;
+  --piece-settings: #2E6E8E;
+  --piece-system: #4F5B6E;
   --piece-hat: #EDB12C;
   --piece-hat-ink: #2E2100;
   --piece-ink: #FFFFFF;
@@ -96,7 +103,7 @@
   --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
 }
 
-:where(:root[data-theme="dark"]) {
+:where(:root[data-theme="dark"], [data-theme="dark"] [data-palette="windows"]) {
   color-scheme: dark;
 
   --mica: #202020;
@@ -149,6 +156,305 @@
   --piece-placeholder: rgba(255, 255, 255, 0.65);
 
   --shadow-flyout: 0 8px 16px rgba(0, 0, 0, 0.26);
+}
+
+/* Colour palettes ------------------------------------------------------------
+
+   Settings > Appearance > Colours. Each palette tints palm-lab's neutral
+   surfaces towards one hue and swaps the Windows accent colour for its own;
+   "Windows" (the defaults above) keeps the Windows accent. The action pieces
+   keep their colours in every palette, so each kind stays recognisable.
+
+   The selectors match any element with data-palette, not just <html>, so a
+   swatch in Settings previews its palette with the real colours. Every block
+   is wrapped in :where(), which has no specificity: a later block wins, and a
+   plain :root rule in custom CSS still beats them all.
+
+   Surfaces were worked out by mixing each neutral grey with the palette's
+   tint (3-12% in light, 5-16% in dark); every text and accent pairing was
+   checked against WCAG (tests/test_palettes.py checks them again). */
+
+
+/* Sunset */
+:where([data-palette="sunset"]) {
+  --mica: #F3E9E1;
+  --layer: #F9F2EE;
+  --layer-stroke: #E7DAD0;
+  --card: #FFFBF8;
+  --card-hover: #F8F1ED;
+  --card-2: #F7EFE9;
+  --stroke: #E7DAD0;
+  --divider: #ECE1DA;
+  --flyout: #FCF8F5;
+  --flyout-stroke: #E0D2C9;
+  --control: #FDF9F6;
+  --control-hover: #F7F0EC;
+  --control-pressed: #F3EBE6;
+  --control-stroke: #E5D8CE;
+  --control-stroke-strong: #CEBEB3;
+  --skeleton: #EFE4DD;
+  --accent: #C2410C;
+  --accent-text: #9A3412;
+  --on-accent: #FFFFFF;
+  --info-bg: #FAF0EC;
+}
+
+/* Neon */
+:where([data-palette="neon"]) {
+  --mica: #E2EFE7;
+  --layer: #EEF6F1;
+  --layer-stroke: #D2E2D8;
+  --card: #F8FDFA;
+  --card-hover: #EDF5F0;
+  --card-2: #EAF4EE;
+  --stroke: #D2E2D8;
+  --divider: #DBE8E0;
+  --flyout: #F5FAF7;
+  --flyout-stroke: #CADBD0;
+  --control: #F6FBF8;
+  --control-hover: #ECF4EF;
+  --control-pressed: #E6F0EA;
+  --control-stroke: #D0E0D6;
+  --control-stroke-strong: #B4C8BB;
+  --skeleton: #DEEBE2;
+  --accent: #15803D;
+  --accent-text: #166534;
+  --on-accent: #FFFFFF;
+  --info-bg: #ECF5EF;
+}
+
+/* Ocean */
+:where([data-palette="ocean"]) {
+  --mica: #E0EEF1;
+  --layer: #EDF6F7;
+  --layer-stroke: #CFE0E3;
+  --card: #F8FDFE;
+  --card-hover: #ECF5F6;
+  --card-2: #E9F3F5;
+  --stroke: #CFE0E3;
+  --divider: #D9E7E9;
+  --flyout: #F5FAFB;
+  --flyout-stroke: #C8D9DC;
+  --control: #F6FBFC;
+  --control-hover: #EBF4F5;
+  --control-pressed: #E5EFF1;
+  --control-stroke: #CDDEE2;
+  --control-stroke-strong: #B1C6C9;
+  --skeleton: #DBEAEC;
+  --accent: #0E7490;
+  --accent-text: #155E75;
+  --on-accent: #FFFFFF;
+  --info-bg: #ECF4F6;
+}
+
+/* Grape */
+:where([data-palette="grape"]) {
+  --mica: #EBE7F3;
+  --layer: #F3F1F9;
+  --layer-stroke: #DCD7E7;
+  --card: #FCFAFF;
+  --card-hover: #F3F0F8;
+  --card-2: #F1EEF7;
+  --stroke: #DCD7E7;
+  --divider: #E3E0EC;
+  --flyout: #F9F7FC;
+  --flyout-stroke: #D5D0E0;
+  --control: #FAF8FD;
+  --control-hover: #F2EFF7;
+  --control-pressed: #EDEAF3;
+  --control-stroke: #DAD6E5;
+  --control-stroke-strong: #C1BBCE;
+  --skeleton: #E6E2EF;
+  --accent: #7C3AED;
+  --accent-text: #5B21B6;
+  --on-accent: #FFFFFF;
+  --info-bg: #F5EFFE;
+}
+
+/* Rose */
+:where([data-palette="rose"]) {
+  --mica: #F2E5EC;
+  --layer: #F8F0F4;
+  --layer-stroke: #E6D5DD;
+  --card: #FEFAFC;
+  --card-hover: #F7EFF3;
+  --card-2: #F6ECF1;
+  --stroke: #E6D5DD;
+  --divider: #EBDEE4;
+  --flyout: #FCF7F9;
+  --flyout-stroke: #DECED6;
+  --control: #FCF8FA;
+  --control-hover: #F6EEF2;
+  --control-pressed: #F3E9EE;
+  --control-stroke: #E4D4DC;
+  --control-stroke-strong: #CCB9C2;
+  --skeleton: #EEE1E7;
+  --accent: #BE185D;
+  --accent-text: #9D174D;
+  --on-accent: #FFFFFF;
+  --info-bg: #FAEDF2;
+}
+
+/* Graphite */
+:where([data-palette="graphite"]) {
+  --mica: #E8E9EB;
+  --layer: #F2F2F3;
+  --layer-stroke: #D8DADC;
+  --card: #FAFBFC;
+  --card-hover: #F1F1F3;
+  --card-2: #EEEFF1;
+  --stroke: #D8DADC;
+  --divider: #E0E1E3;
+  --flyout: #F7F8F9;
+  --flyout-stroke: #D1D2D5;
+  --control: #F8F9FA;
+  --control-hover: #F0F0F2;
+  --control-pressed: #EAEBED;
+  --control-stroke: #D6D8DA;
+  --control-stroke-strong: #BCBEC1;
+  --skeleton: #E3E4E6;
+  --accent: #334155;
+  --accent-text: #1E293B;
+  --on-accent: #FFFFFF;
+  --info-bg: #EFF0F1;
+}
+
+:where([data-theme="dark"][data-palette="sunset"], [data-theme="dark"] [data-palette="sunset"]) {
+  --mica: #2F261F;
+  --layer: #362C26;
+  --layer-stroke: #28211D;
+  --card: #39302A;
+  --card-hover: #41362F;
+  --card-2: #352B25;
+  --stroke: #28211D;
+  --divider: #2A231F;
+  --flyout: #3A312A;
+  --flyout-stroke: #4D4036;
+  --control: #3B322B;
+  --control-hover: #423730;
+  --control-pressed: #362C26;
+  --control-stroke: #493B32;
+  --control-stroke-strong: #5B4B3F;
+  --skeleton: #413731;
+  --accent: #FB923C;
+  --accent-text: #FDBA74;
+  --on-accent: #000000;
+  --info-bg: #403631;
+}
+
+:where([data-theme="dark"][data-palette="neon"], [data-theme="dark"] [data-palette="neon"]) {
+  --mica: #202F26;
+  --layer: #27352C;
+  --layer-stroke: #1D2821;
+  --card: #2A3930;
+  --card-hover: #2F4036;
+  --card-2: #26342B;
+  --stroke: #1D2821;
+  --divider: #1F2A23;
+  --flyout: #2B3A31;
+  --flyout-stroke: #374C3F;
+  --control: #2C3B31;
+  --control-hover: #304137;
+  --control-pressed: #27352C;
+  --control-stroke: #33483A;
+  --control-stroke-strong: #405949;
+  --skeleton: #314037;
+  --accent: #39FF14;
+  --accent-text: #A6FF8F;
+  --on-accent: #000000;
+  --info-bg: #28442D;
+}
+
+:where([data-theme="dark"][data-palette="ocean"], [data-theme="dark"] [data-palette="ocean"]) {
+  --mica: #1E2A2D;
+  --layer: #253133;
+  --layer-stroke: #1C2526;
+  --card: #283537;
+  --card-hover: #2E3C3E;
+  --card-2: #243032;
+  --stroke: #1C2526;
+  --divider: #1E2728;
+  --flyout: #293638;
+  --flyout-stroke: #354649;
+  --control: #2A3739;
+  --control-hover: #2E3D3F;
+  --control-pressed: #253133;
+  --control-stroke: #304245;
+  --control-stroke-strong: #3D5356;
+  --skeleton: #303C3E;
+  --accent: #22D3EE;
+  --accent-text: #A5F3FC;
+  --on-accent: #000000;
+  --info-bg: #263E47;
+}
+
+:where([data-theme="dark"][data-palette="grape"], [data-theme="dark"] [data-palette="grape"]) {
+  --mica: #27242F;
+  --layer: #2E2B35;
+  --layer-stroke: #222028;
+  --card: #322E39;
+  --card-hover: #383441;
+  --card-2: #2D2A35;
+  --stroke: #222028;
+  --divider: #24222A;
+  --flyout: #332F3A;
+  --flyout-stroke: #423D4D;
+  --control: #34303B;
+  --control-hover: #393542;
+  --control-pressed: #2E2B35;
+  --control-stroke: #3E3948;
+  --control-stroke-strong: #4D485A;
+  --skeleton: #393641;
+  --accent: #A78BFA;
+  --accent-text: #DDD6FE;
+  --on-accent: #000000;
+  --info-bg: #353648;
+}
+
+:where([data-theme="dark"][data-palette="rose"], [data-theme="dark"] [data-palette="rose"]) {
+  --mica: #2E2328;
+  --layer: #35292F;
+  --layer-stroke: #271F23;
+  --card: #392D33;
+  --card-hover: #403339;
+  --card-2: #34282E;
+  --stroke: #271F23;
+  --divider: #292125;
+  --flyout: #392E34;
+  --flyout-stroke: #4C3B44;
+  --control: #3A2F35;
+  --control-hover: #41343A;
+  --control-pressed: #35292F;
+  --control-stroke: #47373F;
+  --control-stroke-strong: #59454F;
+  --skeleton: #40343A;
+  --accent: #F472B6;
+  --accent-text: #FBCFE8;
+  --on-accent: #000000;
+  --info-bg: #3F3340;
+}
+
+:where([data-theme="dark"][data-palette="graphite"], [data-theme="dark"] [data-palette="graphite"]) {
+  --mica: #242526;
+  --layer: #2A2B2D;
+  --layer-stroke: #202021;
+  --card: #2E2F30;
+  --card-hover: #343537;
+  --card-2: #292A2C;
+  --stroke: #202021;
+  --divider: #222223;
+  --flyout: #2F3031;
+  --flyout-stroke: #3D3F40;
+  --control: #303132;
+  --control-hover: #353638;
+  --control-pressed: #2A2B2D;
+  --control-stroke: #393A3C;
+  --control-stroke-strong: #484A4C;
+  --skeleton: #363738;
+  --accent: #CBD5E1;
+  --accent-text: #E2E8F0;
+  --on-accent: #000000;
+  --info-bg: #3A3F45;
 }
 
 /* Base -------------------------------------------------------------------- */
@@ -800,7 +1106,21 @@ input,
 
 .gesture {
   position: relative;
+  container: row / inline-size;
   transition: border-color 150ms ease;
+}
+
+/* A narrow row has no room for the action chips beside the name: drop them
+   and let the name and "Last ran" use the space. */
+@container row (max-width: 640px) {
+  .gesture-summary {
+    visibility: hidden;
+    flex: 0 0 0;
+  }
+
+  .gesture-titles {
+    flex: 1 1 auto;
+  }
 }
 
 /* ::after marks the gesture the camera sees right now; ::before is a one-off
@@ -988,6 +1308,39 @@ button.gesture-head:focus-visible {
   display: block;
 }
 
+/* Run sits just left of the switch, over a slot the head keeps free for it. */
+.gesture-run-slot {
+  display: none;
+  flex: none;
+  width: 32px;
+  margin-right: -8px; /* the head's 16px gap is more than the run button needs */
+}
+
+.gesture-run {
+  position: absolute;
+  top: 18px; /* centred in the 68px head */
+  right: 108px; /* the switch's 60px offset, its 40px width and an 8px gap */
+  z-index: 1;
+  display: none;
+}
+
+.gesture.has-switch .gesture-run-slot,
+.gesture.has-switch .gesture-run {
+  display: grid;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gesture:has(> .gesture-run:hover) > .gesture-head {
+    --row-bg: var(--card-hover);
+  }
+}
+
+/* The last run failed: the subtitle says so, and the flag turns red. */
+.gesture.has-failed .gesture-flag {
+  display: inline-grid;
+  color: var(--critical);
+}
+
 /* Switched off: everything stays editable, but reads as resting. */
 .gesture-label {
   transition: opacity 150ms ease;
@@ -1091,6 +1444,30 @@ button.gesture-head:focus-visible {
 
 [data-type="hotkey"] {
   --type: var(--piece-keys);
+}
+
+[data-type="type_text"] {
+  --type: var(--piece-text);
+}
+
+[data-type="wait"] {
+  --type: var(--piece-wait);
+}
+
+[data-type="volume"] {
+  --type: var(--piece-volume);
+}
+
+[data-type="open_path"] {
+  --type: var(--piece-path);
+}
+
+[data-type="settings"] {
+  --type: var(--piece-settings);
+}
+
+[data-type="system"] {
+  --type: var(--piece-system);
 }
 
 /* While a piece is dragged, closed gestures accept it too. */
@@ -1222,6 +1599,17 @@ button.gesture-head:focus-visible {
   color: var(--text-2);
   font-size: 12px;
   line-height: 16px;
+}
+
+/* A small heading over each group of pieces in the palette. */
+.palette-group {
+  margin: 4px 0 -10px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 14px;
+  text-transform: uppercase;
 }
 
 .palette-piece {
@@ -1434,7 +1822,8 @@ button.gesture-head:focus-visible {
     align-items: center;
   }
 
-  .palette-title {
+  .palette-title,
+  .palette-group {
     width: 100%;
     margin: 0;
   }
@@ -3107,4 +3496,158 @@ button.gesture-head:focus-visible {
   .specimen-fill {
     transition: none;
   }
+}
+
+/* Starter templates ------------------------------------------------------------ */
+
+.template-dialog {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+}
+
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  margin: 0 -4px;
+  padding: 0 4px 4px;
+  overflow: auto;
+}
+
+.template-category {
+  margin: 8px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.template-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--control-stroke);
+  border-radius: var(--radius);
+  background: var(--control);
+  color: var(--text-1);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .template-card:hover {
+    border-color: var(--accent);
+    background: var(--control-hover);
+  }
+}
+
+.template-name {
+  font-weight: 600;
+}
+
+.template-text {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.template-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.template-steps .chip {
+  max-width: 100%;
+}
+
+/* Colour palette swatches ------------------------------------------------------
+
+   Each swatch carries data-palette, so inside it --mica, --card and --accent
+   are that palette's own colours, in the current light or dark mode. */
+
+.palette-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  padding: 0 16px 16px 52px;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px;
+  border: 0;
+  border-radius: calc(var(--radius) + 4px);
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.swatch-preview {
+  display: grid;
+  place-items: end start;
+  height: 56px;
+  padding: 0 0 8px 10px;
+  border: 1px solid var(--control-stroke-strong);
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--mica);
+  box-shadow: inset 0 0 0 0 var(--accent);
+  transition: box-shadow 150ms ease;
+}
+
+.swatch-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 62px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.swatch-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.swatch-line {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent-text);
+  opacity: 0.55;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .swatch:hover .swatch-preview {
+    border-color: var(--text-3);
+  }
+}
+
+.swatch[aria-checked="true"] .swatch-preview {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.swatch[aria-checked="true"] .swatch-name {
+  font-weight: 600;
 }

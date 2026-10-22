@@ -2,13 +2,21 @@
 
 import json
 import tomllib
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
 from palm_lab.actions.errors import InvalidBindingError
 from palm_lab.actions.hotkeys import parse_hotkey
+from palm_lab.actions.targets import (
+    check_path,
+    check_text,
+    parse_system,
+    parse_volume,
+    parse_wait,
+    settings_uri,
+)
 from palm_lab.combos import COMBO_MARK, combo_key, combo_parts
 
 DEFAULT_STEP_DELAY_SECONDS = 0.4
@@ -20,6 +28,24 @@ class ActionType(StrEnum):
     LAUNCH = "launch"
     OPEN_URL = "open_url"
     HOTKEY = "hotkey"
+    TYPE_TEXT = "type_text"
+    WAIT = "wait"
+    VOLUME = "volume"
+    OPEN_PATH = "open_path"
+    SETTINGS = "settings"
+    SYSTEM = "system"
+
+
+# How each type's target is checked; each raises ValueError naming the problem.
+TARGET_CHECKS: dict[ActionType, Callable[[str], object]] = {
+    ActionType.HOTKEY: parse_hotkey,
+    ActionType.TYPE_TEXT: check_text,
+    ActionType.WAIT: parse_wait,
+    ActionType.VOLUME: parse_volume,
+    ActionType.OPEN_PATH: check_path,
+    ActionType.SETTINGS: settings_uri,
+    ActionType.SYSTEM: parse_system,
+}
 
 
 @dataclass(frozen=True)
@@ -116,9 +142,10 @@ def bindings_from_data(data: Mapping[str, object]) -> tuple[Binding, ...]:
             if not isinstance(target, str) or not target:
                 raise InvalidBindingError(f"{where}: 'target' must be a non-empty string")
 
-            if action_type is ActionType.HOTKEY:
+            check = TARGET_CHECKS.get(action_type)
+            if check is not None:
                 try:
-                    parse_hotkey(target)
+                    check(target)
                 except ValueError as exc:
                     raise InvalidBindingError(f"{where}: {exc}") from exc
 

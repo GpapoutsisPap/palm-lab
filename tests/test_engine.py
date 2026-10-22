@@ -7,12 +7,15 @@ from collections.abc import Callable
 import pytest
 from conftest import raw_hand, three_fingers_up
 
+from palm_lab.actions.errors import LaunchFailedError
 from palm_lab.actions.models import Action, ActionType, Binding
 from palm_lab.actions.runner import ActionResult
 from palm_lab.custom_gestures import CustomGesture
 from palm_lab.engine import (
+    HISTORY_LIMIT,
     MEASURE_FRAMES,
     MEASURE_SETTLE_FRAMES,
+    FiredEvent,
     FrameSource,
     HandDetector,
     Hands,
@@ -807,3 +810,75 @@ def test_nothing_runs_while_measuring() -> None:
     engine.start_measuring()
     hold_peace(engine, clock)
     assert ran == []
+
+
+# Run history -----------------------------------------------------------------------
+
+
+def test_runs_are_kept_in_order_with_numbers() -> None:
+    clock = FakeClock()
+    engine = make_engine(bindings=(PAUSE, BOTH), clock=clock)
+    hold_peace(engine, clock)
+    engine.process_frame(object(), ScriptedDetector([]))
+    hold(engine, clock, [[FIST, PEACE]] * 10)
+    version, events = engine.history()
+    assert [e.gesture for e in events] == ["peace", "fist + peace"]
+    assert [e.id for e in events] == [1, 2]
+    assert all(e.finished for e in events)
+    assert version == engine.status().history_version > 0
+
+
+def test_finishing_a_run_updates_its_history_entry() -> None:
+    """The run is recorded when the gesture fires, then completed in place."""
+    clock = FakeClock()
+    jobs: list[Callable[[], None]] = []
+    engine = make_engine(clock=clock, jobs=jobs)
+    hold_peace(engine, clock)
+    started_version, (started,) = engine.history()
+    assert not started.finished
+    jobs[0]()
+    version, (done,) = engine.history()
+    assert done.id == started.id and done.finished and not done.failed
+    assert version > started_version
+
+
+def test_the_history_keeps_only_the_latest_runs() -> None:
+    engine = make_engine()
+    for _ in range(HISTORY_LIMIT + 5):
+        engine.record_manual_run(PAUSE, [])
+    _, events = engine.history()
+    assert len(events) == HISTORY_LIMIT
+    assert events[-1].id == HISTORY_LIMIT + 5
+
+
+def test_a_manual_run_is_recorded_as_manual_and_finished() -> None:
+    engine = make_engine()
+    failed = ActionResult(action=PAUSE.actions[0], error=LaunchFailedError("x", "nope"))
+    event = engine.record_manual_run(PAUSE, [failed])
+    assert event.manual and event.finished and event.failed
+    assert engine.status().last_fired is None  # the hold ring's "last shortcut" is for gestures
+
+
+def test_listeners_hear_about_finished_runs_only() -> None:
+    clock = FakeClock()
+    heard: list[FiredEvent] = []
+    engine = make_engine(clock=clock)
+    engine.add_run_listener(heard.append)
+    engine.process_frame(object(), ScriptedDetector([]))
+    hold(engine, clock, [[FIST]] * 10)  # fist isn't set up: nothing runs
+    assert heard == []
+    hold_peace(engine, clock, start=clock.now + 0.1)
+    assert [(e.gesture, e.finished) for e in heard] == [("peace", True)]
+
+
+def test_a_failing_listener_does_not_break_runs() -> None:
+    clock = FakeClock()
+    engine = make_engine(clock=clock)
+
+    def broken(event: FiredEvent) -> None:
+        raise RuntimeError("pop-up crashed")
+
+    engine.add_run_listener(broken)
+    hold_peace(engine, clock)
+    fired = engine.status().last_fired
+    assert fired is not None and fired.finished
