@@ -20,12 +20,12 @@ DEFAULT_PALETTE = "windows"
 # In the order Settings shows them. "windows" keeps the Windows accent colour.
 PALETTES: dict[str, Palette] = {
     "windows": Palette("Windows", "#F3F3F3", "#202020"),
-    "sunset": Palette("Sunset", "#F3E9E1", "#2F261F"),
-    "neon": Palette("Neon", "#E2EFE7", "#202F26"),
-    "ocean": Palette("Ocean", "#E0EEF1", "#1E2A2D"),
-    "grape": Palette("Grape", "#EBE7F3", "#27242F"),
-    "rose": Palette("Rose", "#F2E5EC", "#2E2328"),
-    "graphite": Palette("Graphite", "#E8E9EB", "#242526"),
+    "sunset": Palette("Sunset", "#FCE4D2", "#1E1220"),
+    "neon": Palette("Neon", "#DAF5CF", "#070D09"),
+    "ocean": Palette("Ocean", "#D2EDF5", "#071A26"),
+    "grape": Palette("Grape", "#E6DBFB", "#160F24"),
+    "rose": Palette("Rose", "#FADDE9", "#200C16"),
+    "graphite": Palette("Graphite", "#DADFE6", "#111316"),
 }
 
 

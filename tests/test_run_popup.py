@@ -29,6 +29,7 @@ from palm_lab.run_popup import (
     RunPopup,
     gesture_label,
     message_for,
+    sample_runs,
 )
 
 ACTION = Action(type=ActionType.LAUNCH, target="spotify")
@@ -160,6 +161,19 @@ def test_a_repeat_while_showing_counts_up_instead_of_stacking() -> None:
     h.clock.now = 1.0 + SUCCESS_SECONDS + 0.1  # the second card has gone
     h.popup.on_run(ran())
     assert h.shown[-1].count == 1
+
+
+def test_the_sample_runs_show_a_success_a_repeat_and_a_failure() -> None:
+    """`palm-lab popup` feeds these through RunPopup, so they follow the real rules."""
+    h = Harness()
+    for _, event, pause in sample_runs():
+        h.popup.on_run(event)
+        h.clock.now += pause
+    assert [(m.title, m.count, m.failed) for m in h.shown] == [
+        ("Ran Morning setup", 1, False),
+        ("Ran Morning setup", 2, False),
+        ("Start my day ran, 1 of 3 steps failed", 1, True),
+    ]
 
 
 # The card's maths ------------------------------------------------------------------------

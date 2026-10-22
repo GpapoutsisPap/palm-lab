@@ -86,7 +86,9 @@ def test_capture_parses_its_arguments() -> None:
     assert args.camera == 1
 
 
-@pytest.mark.parametrize("command", ["ui", "run", "capture", "config", "doctor", "shortcut"])
+@pytest.mark.parametrize(
+    "command", ["ui", "run", "capture", "config", "doctor", "shortcut", "popup"]
+)
 def test_every_subcommand_maps_to_a_handler(command: str) -> None:
     """A subcommand with no handler would silently print help instead."""
     assert command in cli.HANDLERS
@@ -270,3 +272,21 @@ def test_config_marks_switched_off_bindings(
     )
     assert cli.main(["config"]) == 0
     assert "Quiet  (off)" in capsys.readouterr().out
+
+
+def test_popup_takes_a_theme() -> None:
+    args = cli.build_parser().parse_args(["popup", "--theme", "dark"])
+    assert (args.command, args.theme) == ("popup", "dark")
+    assert cli.build_parser().parse_args(["popup"]).theme is None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="on Windows the real card would show")
+def test_popup_says_so_off_windows(config_home: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["popup"]) == 1
+    assert "Windows window" in capsys.readouterr().err
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="draws a real Windows window")
+def test_popup_shows_its_cards_on_windows(config_home: Path) -> None:
+    args = cli.build_parser().parse_args(["popup", "--theme", "light"])
+    assert cli._cmd_popup(args, sleep=lambda seconds: None) == 0

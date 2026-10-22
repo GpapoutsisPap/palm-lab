@@ -10,8 +10,7 @@ from palm_lab.palettes import DEFAULT_PALETTE, PALETTES, background
 from palm_lab.ui.app import load_page, window_background
 
 CSS = (config.ui_static_dir() / "app.css").read_text(encoding="utf-8")
-DEFAULT_LIGHT_TEXT = ("#1B1B1B", "#5C5C5C")  # --text-1, --text-2
-DEFAULT_DARK_TEXT = ("#FFFFFF", "#CFCFCF")
+GLOW_STRENGTH = {"light": 0.16, "dark": 0.20}  # --glow-strength
 
 
 def tokens(selector: str) -> dict[str, str]:
@@ -29,6 +28,14 @@ def dark_block(palette: str) -> dict[str, str]:
     return tokens(
         f':where([data-theme="dark"][data-palette="{palette}"], '
         f'[data-theme="dark"] [data-palette="{palette}"])'
+    )
+
+
+def mix(top: str, base: str, share: float) -> str:
+    """The colour you see with `share` of top over base (how the glow lands on the page)."""
+    a, b = (tuple(int(c[i : i + 2], 16) for i in (1, 3, 5)) for c in (top, base))
+    return "#" + "".join(
+        f"{round(x * share + y * (1 - share)):02X}" for x, y in zip(a, b, strict=True)
     )
 
 
@@ -68,14 +75,31 @@ def test_the_window_frame_matches_the_page(palette: str) -> None:
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_every_palette_stays_readable(palette: str, theme: str) -> None:
     t = light_block(palette) if theme == "light" else dark_block(palette)
-    text_1, text_2 = DEFAULT_LIGHT_TEXT if theme == "light" else DEFAULT_DARK_TEXT
+    glow = mix(t["glow"], t["layer"], GLOW_STRENGTH[theme])  # the page's top corner
+    # Body text, on everything it sits on: cards, the page, and the sidebar's gradient.
+    for surface in ("card", "mica", "backdrop-end"):
+        assert contrast(t["text-1"], t[surface]) >= 7.0, surface
+    for surface in ("mica", "backdrop-end", "layer", "card-2"):
+        assert contrast(t["text-2"], t[surface]) >= 4.5, surface
+    assert contrast(t["text-2"], glow) >= 4.5
+    for surface in ("card", "layer"):  # hints only, as faint as the Windows default
+        assert contrast(t["text-3"], t[surface]) >= 3.0, surface
+    assert contrast(t["title"], t["layer"]) >= 4.5
+    assert contrast(t["title"], glow) >= 4.5
+    # The accent.
     assert contrast(t["on-accent"], t["accent"]) >= 4.5  # text on accent buttons
-    assert contrast(t["accent-text"], t["card"]) >= 4.5  # links and accent text
-    assert contrast(t["accent-text"], t["mica"]) >= 4.5
-    assert contrast(t["accent"], t["card"]) >= 3.0  # switches, rings, focus marks
-    assert contrast(text_1, t["card"]) >= 7.0
-    assert contrast(text_2, t["mica"]) >= 4.5
-    assert contrast(text_2, t["card-2"]) >= 4.5
+    for surface in ("card", "layer", "mica"):
+        assert contrast(t["accent-text"], t[surface]) >= 4.5, surface  # links, accent text
+    for surface in ("card", "layer"):
+        assert contrast(t["accent"], t[surface]) >= 3.0, surface  # switches, rings, focus
+
+
+def test_palettes_look_different_from_each_other() -> None:
+    """No two palettes share a page background or an accent, in either theme."""
+    for block in (light_block, dark_block):
+        for key in ("mica", "layer", "accent", "title"):
+            values = [block(palette)[key] for palette in COLOURED]
+            assert len(set(values)) == len(values), key
 
 
 @pytest.mark.parametrize("palette", COLOURED)

@@ -20,6 +20,9 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
+from palm_lab.actions.errors import LaunchFailedError
+from palm_lab.actions.models import Action, ActionType
+from palm_lab.actions.runner import ActionResult
 from palm_lab.combos import combo_parts
 from palm_lab.engine import FiredEvent
 
@@ -139,3 +142,30 @@ class RunPopup:
 
 def _same_card(a: PopupMessage, b: PopupMessage) -> bool:
     return (a.title, a.detail, a.failed) == (b.title, b.detail, b.failed)
+
+
+def sample_runs() -> list[tuple[str, FiredEvent, float]]:
+    """Made-up runs for `palm-lab popup`, to see the card without a camera.
+
+    Each is (what it shows, the run, seconds to wait before the next one).
+    They go through RunPopup like real runs, so the repeat counts up.
+    """
+    ok = ActionResult(action=Action(type=ActionType.OPEN_URL, target="https://example.com"))
+    spotify = Action(type=ActionType.LAUNCH, target="spotify")
+    failed = ActionResult(action=spotify, error=LaunchFailedError("spotify", "it's not installed"))
+    worked = FiredEvent(
+        gesture="peace", binding_name="Morning setup", at=0.0, results=(ok,), finished=True, id=1
+    )
+    half = FiredEvent(
+        gesture="fist + peace",
+        binding_name="Start my day",
+        at=0.0,
+        results=(ok, failed, ok),
+        finished=True,
+        id=3,
+    )
+    return [
+        ("a run that worked", worked, 1.2),
+        ("the same run again, which counts up instead of stacking", replace(worked, id=2), 3.5),
+        ("a run where one step failed, which stays longer", half, FAILURE_SECONDS + 0.5),
+    ]

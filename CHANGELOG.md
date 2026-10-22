@@ -27,8 +27,26 @@ for the people installing the app.
   note, to fill a gesture from and then make your own.
 - Colour palettes in Settings > Appearance > Colours: Sunset, Neon, Ocean,
   Grape, Rose and Graphite, each in light and dark, alongside the Windows
-  accent colour. Every one is checked for readable contrast, and the puzzle
-  pieces keep their colours in all of them.
+  accent colour. Each has its own backgrounds, text and title colours, a
+  gradient behind the sidebar and a glow on the page (Neon adds a grid).
+  Every one is checked for readable contrast, and the puzzle pieces keep
+  their colours in all of them.
+- `palm-lab popup` shows the pop-up by the clock with a few made-up runs, so
+  you can see it without a camera.
+
+- Strictness in Settings > Recognition. A gesture now only counts when the
+  hand is held like one: palm (or back of the hand) to the camera and
+  pointing up, or, for a thumbs up, the thumb pointing up. A hand resting on
+  your chin with its fingers out no longer runs anything. Normal is the
+  default; Strict narrows the limits, and Relaxed counts the fingers alone,
+  as before. The live view and the setup guide say how to hold a hand that
+  isn't counted.
+
+- An update check: once a day palm-lab asks GitHub whether a newer version is
+  out, and a bar on the Gestures page offers its notes and installer (and the
+  icon by the clock says so once). Settings > About shows when it last
+  checked, has Check now, and turns it off. Only palm-lab's version number is
+  sent.
 
 ### Changed
 

@@ -1,5 +1,6 @@
 """Open the palm-lab window."""
 
+import threading
 from collections.abc import Callable
 from pathlib import Path
 
@@ -106,6 +107,7 @@ def _run_window(*, debug: bool, background: bool, custom_css: bool, guard: Insta
     from palm_lab.camera import MediaPipeDetector, open_camera, probe_cameras, render_preview
     from palm_lab.engine import TrackingEngine
     from palm_lab.ui.api import Api
+    from palm_lab.updates import UpdateChecker
 
     ensure_bindings_file()
     set_app_id()
@@ -114,6 +116,15 @@ def _run_window(*, debug: bool, background: bool, custom_css: bool, guard: Insta
         # Two hands, so two-hand setups can be recognised.
         make_detector=lambda: MediaPipeDetector(num_hands=2),
         render_preview=render_preview,
+    )
+    # Once a day, ask GitHub whether a newer palm-lab is out (palm_lab.updates).
+    updates = UpdateChecker(
+        enabled=lambda: saved_settings().check_updates,
+        # tray is defined below; this only runs once the window is up.
+        on_found=lambda release: tray.notify(
+            f"palm-lab {release.version} is out",
+            "Open palm-lab to see what’s new and download it.",
+        ),
     )
     api = Api(
         engine,
@@ -128,6 +139,7 @@ def _run_window(*, debug: bool, background: bool, custom_css: bool, guard: Insta
         custom_css_file=custom_css_path(),
         custom_css_allowed=custom_css,
         hand_profile_file=hand_profile_path(),
+        updates=updates,
     )
     starting = saved_settings()
     theme, palette = starting.theme, starting.palette
@@ -276,9 +288,12 @@ def _run_window(*, debug: bool, background: bool, custom_css: bool, guard: Insta
     window.events.shown += watch_closing
     tray.start()
     overlay.start()
+    stop_updates = threading.Event()
+    updates.run_in_background(stop_updates)
     try:
         webview.start(on_started, debug=debug, icon=str(icon_path()))
     finally:
+        stop_updates.set()
         overlay.stop()
         tray.stop()
         engine.stop()

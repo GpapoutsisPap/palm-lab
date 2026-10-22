@@ -33,8 +33,13 @@ and runs the actions you snap together for each one, all on your own computer.
 - **Know what ran:** a small pop-up by the clock confirms each gesture (or
   says what failed) while the window is closed, and every gesture shows when
   it last ran.
+- **Fewer accidents:** a gesture only counts when the hand is held up and
+  facing the camera, so a hand resting on your chin with its fingers out
+  doesn't run anything. Settings > Strictness makes this stricter, or turns
+  it off.
 - **Live view:** see what the camera sees, the hand it found, how far through
   a hold you are, and what ran, or why nothing did.
+  "Open palm not counted: point your fingers up" says how to hold it.
 - **Pause:** stop gestures for 15 minutes to a few hours, with the camera off,
   from the window or the icon by the clock.
 - **Make it yours:** light or dark theme, colour palettes (Sunset, Neon,
@@ -47,7 +52,8 @@ and runs the actions you snap together for each one, all on your own computer.
 - **For programmers:** gestures live in a plain TOML file, and everything the
   window does is also available from the command line.
 - **Private:** frames never leave your PC. Hand tracking runs locally with
-  Google's MediaPipe.
+  Google's MediaPipe. The only thing palm-lab sends anywhere is the daily
+  update check (see below), which you can turn off.
 
 ## Install
 
@@ -57,6 +63,19 @@ and run it. No administrator rights are needed. The app is not code-signed yet, 
 Windows SmartScreen may ask you to confirm the first time.
 
 A webcam is needed. A phone works too, through an app such as DroidCam.
+
+### Updates
+
+Once a day palm-lab asks GitHub whether a newer version is out. When one is,
+a bar on the Gestures page says so, with **What's new** and **Download**:
+run the new installer over the old one and it upgrades in place, keeping
+your gestures and settings. Nothing is downloaded or installed by itself.
+
+The check is one HTTPS request to `api.github.com` for the latest release,
+carrying only palm-lab's version number (in the User-Agent, as GitHub asks).
+GitHub sees it like any page visit, including your IP address. Turn it off
+in Settings > About > Check for updates; **Check now** asks straight away.
+You can also follow new releases on GitHub with **Watch > Custom > Releases**.
 
 ## Build from source
 
@@ -133,6 +152,7 @@ off, or start palm-lab with `palm-lab ui --no-custom-css`.
 | `palm-lab shortcut [--start-menu] [--startup] [--remove]` | Add or remove the desktop, Start menu and Start with Windows shortcuts |
 | `palm-lab run` | Watch the camera in a plain preview window |
 | `palm-lab capture GESTURE` | Save landmark samples for testing |
+| `palm-lab popup [--theme light\|dark]` | Show the pop-up by the clock with a few made-up runs, to see how it looks |
 
 In an installed copy, use `palm-lab-cli.exe` for these.
 

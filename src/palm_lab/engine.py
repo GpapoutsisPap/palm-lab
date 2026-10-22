@@ -29,6 +29,7 @@ from palm_lab.features import (
 )
 from palm_lab.gestures import FingerTuple, classify
 from palm_lab.landmarks import Point, normalise
+from palm_lab.pose import DEFAULT_ASPECT, DEFAULT_STRICTNESS, measure_pose, pose_problem
 from palm_lab.settings import Settings
 from palm_lab.state import GestureTrigger, TriggerState
 
@@ -78,38 +79,91 @@ def run_in_background(job: Callable[[], None]) -> None:
     threading.Thread(target=job, daemon=True).start()
 
 
+@dataclass(frozen=True)
+class HandReading:
+    """What the hands in view add up to, and why they don't, if they don't."""
+
+    gesture: str | None  # the gesture that counts, if any
+    shape: str | None = None  # the gesture the fingers make, even if not held like one
+    problem: str | None = None  # why it doesn't count (see palm_lab.pose), or None
+
+
+def read_hand(
+    points: list[Point],
+    rules: Mapping[FingerTuple, str] | None = None,
+    profile: HandProfile = STANDARD_PROFILE,
+    strictness: str = DEFAULT_STRICTNESS,
+    aspect: float = DEFAULT_ASPECT,
+) -> HandReading:
+    """One hand: which gesture its fingers make, and whether it's held like one."""
+    try:
+        features = extract(normalise(points), profile)
+        shape = classify(features, rules)
+        if shape is None:
+            return HandReading(None)
+        problem = pose_problem(features.as_tuple(), measure_pose(points, aspect), strictness)
+    except ValueError:  # a degenerate hand
+        return HandReading(None)
+    if problem is not None:
+        return HandReading(None, shape, problem)
+    return HandReading(shape, shape)
+
+
 def classify_hand(
     points: list[Point],
     rules: Mapping[FingerTuple, str] | None = None,
     profile: HandProfile = STANDARD_PROFILE,
+    strictness: str = DEFAULT_STRICTNESS,
+    aspect: float = DEFAULT_ASPECT,
 ) -> str | None:
-    """Gesture name for one hand, or None if unrecognised or degenerate."""
-    try:
-        return classify(extract(normalise(points), profile), rules)
-    except ValueError:
-        return None
+    """Gesture name for one hand, or None if unrecognised, held wrong or degenerate."""
+    return read_hand(points, rules, profile, strictness, aspect).gesture
+
+
+def read_hands(
+    hands: Hands,
+    rules: Mapping[FingerTuple, str] | None = None,
+    profile: HandProfile = STANDARD_PROFILE,
+    strictness: str = DEFAULT_STRICTNESS,
+    aspect: float = DEFAULT_ASPECT,
+) -> HandReading:
+    """The gesture for everything in view.
+
+    One hand gives its own gesture. Two hands give the two-hand key for both
+    shapes together, and only that: a one-hand gesture never runs while the
+    other hand is also in view. If either hand isn't a recognised gesture
+    held up properly, or more than two hands are found, there is no gesture.
+    """
+    if len(hands) == 1:
+        return read_hand(hands[0], rules, profile, strictness, aspect)
+    if len(hands) == 2:
+        first, second = (read_hand(hand, rules, profile, strictness, aspect) for hand in hands)
+        if first.gesture is not None and second.gesture is not None:
+            key = combo_key(first.gesture, second.gesture)
+            return HandReading(key, key)
+        return HandReading(None, None, first.problem or second.problem)
+    return HandReading(None)
 
 
 def classify_hands(
     hands: Hands,
     rules: Mapping[FingerTuple, str] | None = None,
     profile: HandProfile = STANDARD_PROFILE,
+    strictness: str = DEFAULT_STRICTNESS,
+    aspect: float = DEFAULT_ASPECT,
 ) -> str | None:
-    """The gesture for everything in view.
+    """The gesture name for everything in view, or None (see read_hands)."""
+    return read_hands(hands, rules, profile, strictness, aspect).gesture
 
-    One hand gives its own gesture. Two hands give the two-hand key for both
-    shapes together, and only that: a one-hand gesture never runs while the
-    other hand is also in view. If either hand's shape isn't recognised, or
-    more than two hands are found, there is no gesture.
-    """
-    if len(hands) == 1:
-        return classify_hand(hands[0], rules, profile)
-    if len(hands) == 2:
-        first, second = (classify_hand(hand, rules, profile) for hand in hands)
-        if first is None or second is None:
-            return None
-        return combo_key(first, second)
-    return None
+
+def frame_aspect(frame: object) -> float:
+    """Width over height of a camera frame (an OpenCV array), or the usual 4:3."""
+    shape = getattr(frame, "shape", None)
+    try:
+        height, width = int(shape[0]), int(shape[1])  # type: ignore[index]
+    except (TypeError, IndexError, ValueError):
+        return DEFAULT_ASPECT
+    return width / height if height > 0 and width > 0 else DEFAULT_ASPECT
 
 
 def hand_features(
@@ -192,6 +246,10 @@ class EngineStatus:
     last_fired: FiredEvent | None
     trigger: TriggerState = TriggerState()
     history_version: int = 0  # changes whenever a run is added or finishes
+    # A hand whose fingers make a gesture but which isn't held like one (see
+    # palm_lab.pose): which gesture, and what's wrong, for the live view's hint.
+    held_shape: str | None = None
+    pose_problem: str | None = None
 
 
 @dataclass(frozen=True)
@@ -242,6 +300,7 @@ class TrackingEngine:
         self._measuring: _Measuring | None = None
 
         self._gesture: str | None = None
+        self._reading = HandReading(None)
         self._combo_seen: tuple[str, float] | None = None  # key, when last seen
         self._hands = 0
         self._fps = 0.0
@@ -319,6 +378,7 @@ class TrackingEngine:
             detector.close()
             with self._lock:
                 self._gesture = None
+                self._reading = HandReading(None)
                 self._hands = 0
                 self._fps = 0.0
                 self._preview = None
@@ -334,7 +394,8 @@ class TrackingEngine:
             rules = self._rules
             profile = self._profile
             preview_enabled = self._preview_enabled
-        reading = classify_hands(hands, rules, profile)
+            strictness = self._settings.strictness
+        reading = read_hands(hands, rules, profile, strictness, frame_aspect(frame))
         # Encoding a picture every frame is wasted work while the window is hidden.
         preview = self._render_preview(frame, hands) if preview_enabled else None
         now = self._clock()
@@ -344,8 +405,9 @@ class TrackingEngine:
                 instant = 1.0 / (now - self._last_frame_at)
                 self._fps = instant if self._fps == 0 else 0.9 * self._fps + 0.1 * instant
             self._last_frame_at = now
-            gesture = self._bridge_combo_flicker(reading, len(hands), now)
+            gesture = self._bridge_combo_flicker(reading.gesture, len(hands), now)
             self._gesture = gesture
+            self._reading = reading
             self._hands = len(hands)
             self._preview = preview
             self._preview_hands = hands
@@ -525,6 +587,8 @@ class TrackingEngine:
                 last_fired=self._last_fired,
                 trigger=trigger,
                 history_version=self._history_version,
+                held_shape=self._reading.shape if self._reading.problem else None,
+                pose_problem=self._reading.problem,
             )
 
     def preview(self) -> bytes | None:

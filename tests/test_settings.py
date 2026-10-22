@@ -169,3 +169,24 @@ def test_the_palette_defaults_to_windows_and_round_trips(tmp_path: Path) -> None
 def test_an_unknown_palette_is_refused() -> None:
     with pytest.raises(SettingsError, match="'palette' must be one of: windows, sunset"):
         settings_from_data({"palette": "vaporwave"})
+
+
+def test_strictness_defaults_to_normal_and_round_trips(tmp_path: Path) -> None:
+    path = tmp_path / "settings.toml"
+    assert Settings().strictness == "normal"
+    save_settings(Settings(strictness="strict"), path)
+    assert load_settings(path).strictness == "strict"
+
+
+def test_an_unknown_strictness_is_refused() -> None:
+    with pytest.raises(SettingsError, match="'strictness' must be one of: relaxed, normal, strict"):
+        settings_from_data({"strictness": "picky"})
+
+
+def test_the_update_check_is_on_by_default_and_can_be_turned_off(tmp_path: Path) -> None:
+    path = tmp_path / "settings.toml"
+    assert Settings().check_updates is True
+    save_settings(Settings(check_updates=False), path)
+    assert load_settings(path).check_updates is False
+    with pytest.raises(SettingsError, match="'check_updates' must be true or false"):
+        settings_from_data({"check_updates": "yes"})

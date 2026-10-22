@@ -30,6 +30,21 @@ const TEXT = {
   trackingDescPaused: (time) => `Paused until ${time}. Your gestures won\u2019t run until then.`,
   holdRaise: "Hold up a gesture to run it",
   holdMake: "Make one of your gestures",
+  /* Updates (palm_lab.updates). */
+  updateBar: (version) => `palm-lab ${version} is out. Download and run the installer; your gestures and settings stay as they are.`,
+  updateLatest: (version, when) => `You have the latest version, ${version}. Checked ${when}.`,
+  updateNever: (version) => `You have version ${version}. Not checked yet.`,
+  updateAvailable: (version) => `palm-lab ${version} is out.`,
+  updateOff: (version) => `You have version ${version}. Checking is off.`,
+  updateChecking: "Checking\u2026",
+  /* A hand with a gesture's fingers out, but not held like one (palm_lab.pose). */
+  poseTitle: (label) => `${label} not counted`,
+  pose: {
+    palm: "Turn your palm to face the camera",
+    upright: "Point your fingers up",
+    thumb: "Point your thumb straight up",
+  },
+  poseGuide: (label, problem) => `${label} not counted: ${TEXT.pose[problem].toLowerCase()}.`,
   holding: (label) => `Holding ${label}`,
   holdKeep: "Keep holding\u2026",
   holdUnbound: "Not set up yet, so nothing will run",
@@ -753,6 +768,7 @@ async function init() {
   fillDatalists();
   renderSettings();
   showProblems(data.problems);
+  showUpdates(data.updates);
   $("welcome").hidden = data.bindings.length > 0;
 
   await splashDone;
@@ -798,6 +814,44 @@ function fillDatalists() {
     OPTION_LABELS[type] = Object.fromEntries(options.map(([value, label]) => [value.toLowerCase(), label]));
     $(id).replaceChildren(...options.map(([value, label]) => el("option", { value, label })));
   }
+}
+
+/* Updates ------------------------------------------------------------------------------
+
+   Python asks GitHub once a day (palm_lab.updates); the page only shows the
+   answer: a bar on the Gestures page until it's closed for that version, and a
+   line under Settings > Check for updates. */
+
+function showUpdates(updates) {
+  if (!updates) return;
+  app.updates = updates;
+  const release = updates.available;
+  $("update-bar").hidden = !release || updates.dismissed;
+  if (release) $("update-bar-text").textContent = TEXT.updateBar(release.version);
+  $("update-download").hidden = !(release && release.has_installer);
+  let line;
+  if (!updates.enabled) line = TEXT.updateOff(updates.current);
+  else if (release) line = TEXT.updateAvailable(release.version);
+  else if (updates.checked_at) line = TEXT.updateLatest(updates.current, ago(updates.checked_at));
+  else line = TEXT.updateNever(updates.current);
+  $("updates-state").textContent = line;
+  $("updates-check").disabled = !updates.enabled;
+}
+
+async function checkForUpdates() {
+  const button = $("updates-check");
+  button.disabled = true;
+  $("updates-state").textContent = TEXT.updateChecking;
+  const result = await api().check_for_updates();
+  button.disabled = false;
+  showUpdates(result.updates);
+  if (!result.ok) toast(result.error, "error");
+}
+
+async function dismissUpdate() {
+  const release = app.updates && app.updates.available;
+  $("update-bar").hidden = true;
+  if (release) showUpdates((await api().dismiss_update(release.version)).updates);
 }
 
 function showProblems(problems) {
@@ -1541,13 +1595,13 @@ function showSeen(status) {
     });
   }
   // While preview frames arrive they carry the hold too, many times a second.
-  if (!app.hasFrame) showHold(status.running ? status.hold : null, status.hands);
+  if (!app.hasFrame) showHold(status.running ? status.hold : null, status.hands, status.pose);
   $("fps").textContent = status.running ? TEXT.fps(status.fps) : "\u2013";
 }
 
 /* The hold in progress, as a filling ring and a line of words. Every phase has
    its own wording, because "why didn't that run?" is the question it answers. */
-function showHold(hold, hands) {
+function showHold(hold, hands, pose = null) {
   const box = $("hold");
   const gesture = hold && hold.phase !== "idle" ? hold.gesture : null;
   const info = gesture ? gestureInfo(gesture) : null;
@@ -1557,7 +1611,12 @@ function showHold(hold, hands) {
   let sub = "";
   let fill = 0;
 
-  if (!gesture) {
+  const held = !gesture && hands && pose && pose.gesture ? pose : null;
+  if (held) {
+    // The right fingers, held the wrong way: say how to hold it.
+    title = TEXT.poseTitle(gestureInfo(held.gesture).label);
+    sub = TEXT.pose[held.problem] || TEXT.holdMake;
+  } else if (!gesture) {
     title = hands ? TEXT.handInView : TEXT.noHands;
     sub = hands ? TEXT.holdMake : TEXT.holdRaise;
   } else if (!row || row.actions.length === 0) {
@@ -1593,7 +1652,7 @@ function showHold(hold, hands) {
   // Only a changed line is written, so screen readers hear each phase once.
   if ($("seen-text").textContent !== title) $("seen-text").textContent = title;
   if ($("hold-sub").textContent !== sub) $("hold-sub").textContent = sub;
-  const shown = gesture || "open_palm";
+  const shown = gesture || (held && held.gesture) || "open_palm";
   if (app.holdGlyph !== shown) {
     app.holdGlyph = shown;
     $("seen-glyph").innerHTML = gestureGlyph(shown);
@@ -1681,7 +1740,7 @@ async function startPreview() {
     if (frame && app.status.running) {
       img.src = frame.image;
       drawHands(frame.hands);
-      showHold(frame.hold, frame.hands.length);
+      showHold(frame.hold, frame.hands.length, frame.pose);
       if (!app.hasFrame) {
         app.hasFrame = true;
         setLive("on");
@@ -1904,8 +1963,10 @@ function renderSettings() {
     showSliderValue(input);
   }
   setSwitch($("sounds"), settings.sounds !== false);
+  setSwitch($("check-updates"), settings.check_updates !== false);
   $("close-action").value = settings.close_action || "ask";
   $("run-popup").value = settings.run_popup || "all";
+  $("strictness").value = settings.strictness || "normal";
   $("theme").value = settings.theme || "system";
   $("bindings-file").textContent = app.data.bindings_file;
   setSwitch($("custom-css-on"), settings.custom_css !== false);
@@ -1936,8 +1997,10 @@ async function saveSettings() {
     dwell_seconds: Number($("dwell").value),
     cooldown_seconds: Number($("cooldown").value),
     sounds: $("sounds").checked,
+    check_updates: $("check-updates").checked,
     close_action: $("close-action").value,
     run_popup: $("run-popup").value,
+    strictness: $("strictness").value,
     theme: $("theme").value,
     custom_css: $("custom-css-on").checked,
     guide_done: Boolean(app.data && app.data.settings.guide_done),
@@ -2653,7 +2716,12 @@ function tickTest(status) {
       sound.play("snap");
     }
   }
-  showTestProgress(g.holding && !g.tested.has(g.holding.gesture) ? g.holding.gesture : null);
+  const held = !seen && status && status.running ? status.pose : null;
+  if (held && GESTURES[held.gesture] && TEXT.pose[held.problem]) {
+    setReading("guide-test-reading", TEXT.poseGuide(gestureInfo(held.gesture).label, held.problem));
+  } else {
+    showTestProgress(g.holding && !g.tested.has(g.holding.gesture) ? g.holding.gesture : null);
+  }
 }
 
 /* Step 5: building the first shortcut ----------------------------------------------------
@@ -3179,6 +3247,16 @@ function wireControls() {
   }
   $("open-folder").addEventListener("click", () => api().open_config_folder());
   $("open-project").addEventListener("click", () => api().open_project_page());
+  $("update-notes").addEventListener("click", () => api().open_update("notes"));
+  $("update-download").addEventListener("click", () => api().open_update("download"));
+  $("update-dismiss").addEventListener("click", dismissUpdate);
+  $("updates-check").addEventListener("click", checkForUpdates);
+  $("check-updates").addEventListener("change", async () => {
+    await saveSettings();
+    showUpdates(await api().update_status());
+  });
+  // The background check runs in Python once a day; look for its answer now and then.
+  setInterval(async () => showUpdates(await api().update_status()), 10 * 60 * 1000);
 
   $("add-gesture").addEventListener("click", openWizard);
   $("add-pair").addEventListener("click", openPairDialog);
@@ -3230,6 +3308,7 @@ function wireControls() {
 
   $("close-action").addEventListener("change", saveSettings);
   $("run-popup").addEventListener("change", saveSettings);
+  $("strictness").addEventListener("change", saveSettings);
 
   $("custom-css-on").addEventListener("change", (event) => setCustomCssOn(event.target.checked));
   $("custom-css-edit").addEventListener("click", toggleCssEditor);

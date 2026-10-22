@@ -181,6 +181,10 @@ def test_only_the_intended_methods_are_exposed_to_javascript() -> None:
         "reset_hand_tuning",
         "set_guide_quiet",
         "activity",
+        "update_status",
+        "check_for_updates",
+        "dismiss_update",
+        "open_update",
     }
 
 
@@ -923,6 +927,17 @@ def test_status_and_preview_describe_the_hold(tmp_path: Path) -> None:
         engine.stop()
 
 
+def test_status_says_when_a_hand_isnt_held_like_its_gesture(tmp_path: Path) -> None:
+    from test_pose import lean_to
+
+    api, engine, *_ = build(tmp_path)
+    assert api.status()["pose"] is None
+    engine.process_frame(object(), FixedHands([lean_to(raw_hand("open_palm"), 110)]))
+    assert api.status()["pose"] == {"gesture": "open_palm", "problem": "upright"}
+    engine.process_frame(object(), FixedHands([raw_hand("open_palm")]))
+    assert api.status()["pose"] is None
+
+
 # The setup guide ------------------------------------------------------------------
 
 
@@ -1023,3 +1038,74 @@ def test_running_from_the_window_shows_in_activity(tmp_path: Path) -> None:
     assert event["id"] == 1
     assert result["version"] == api.status()["history_version"] > 0
     json.dumps(result)
+
+
+# Updates ------------------------------------------------------------------------------
+
+
+def test_the_window_hears_about_a_newer_version_and_opens_it(tmp_path: Path) -> None:
+    from palm_lab.updates import Release, UpdateChecker
+
+    release = Release(
+        version="9.0.0",
+        page_url="https://github.com/GpapoutsisPap/palm-lab/releases/tag/v9.0.0",
+        installer_url="https://github.com/GpapoutsisPap/palm-lab/releases/download/v9.0.0/palm-lab-setup-9.0.0.exe",
+    )
+    opened: list[str] = []
+    checker = UpdateChecker(
+        enabled=lambda: True, state_file=tmp_path / "updates.json", fetch=lambda: release
+    )
+    engine = TrackingEngine(
+        open_camera=lambda i: Source(), make_detector=NoHands, render_preview=lambda f, h: None
+    )
+    api = Api(
+        engine,
+        bindings_file=tmp_path / "bindings.toml",
+        settings_file=tmp_path / "settings.toml",
+        gestures_file=tmp_path / "gestures.toml",
+        probe_cameras=lambda: [0],
+        open_url=opened.append,
+        updates=checker,
+    )
+    assert api.get_state()["updates"]["available"] is None
+    assert api.open_update("download")["ok"] is False
+    result = api.check_for_updates()
+    assert result["ok"]
+    assert result["updates"]["available"] == {"version": "9.0.0", "has_installer": True}
+    api.open_update("notes")
+    api.open_update("download")
+    assert opened == [release.page_url, release.installer_url]
+    assert api.dismiss_update("9.0.0")["updates"]["dismissed"] is True
+
+
+def test_a_failed_check_is_explained(tmp_path: Path) -> None:
+    from palm_lab.updates import UpdateChecker, UpdateCheckError
+
+    def offline() -> None:
+        raise UpdateCheckError("couldn't reach GitHub (are you online?)")
+
+    checker = UpdateChecker(enabled=lambda: True, state_file=tmp_path / "u.json", fetch=offline)
+    engine = TrackingEngine(
+        open_camera=lambda i: Source(), make_detector=NoHands, render_preview=lambda f, h: None
+    )
+    api = Api(
+        engine,
+        bindings_file=tmp_path / "bindings.toml",
+        settings_file=tmp_path / "settings.toml",
+        gestures_file=tmp_path / "gestures.toml",
+        probe_cameras=lambda: [0],
+        updates=checker,
+    )
+    result = api.check_for_updates()
+    assert result == {
+        "ok": False,
+        "error": "Couldn\u2019t check for updates: couldn't reach GitHub (are you online?).",
+        "updates": api.update_status(),
+    }
+
+
+def test_the_update_check_follows_the_setting(tmp_path: Path) -> None:
+    api, *_ = build(tmp_path)
+    assert api.update_status()["enabled"] is True
+    api.save_settings({**Settings().as_dict(), "check_updates": False})
+    assert api.update_status()["enabled"] is False
