@@ -67,6 +67,7 @@ def test_integers_are_accepted_for_times() -> None:
         ({"close_action": True}, "'close_action' must be one of"),
         ({"theme": "blue"}, "'theme' must be one of: system, light, dark"),
         ({"theme": 1}, "'theme' must be one of"),
+        ({"custom_css": "yes"}, "'custom_css' must be true or false"),
     ],
 )
 def test_bad_values_are_rejected(data: dict[str, object], expected: str) -> None:
@@ -123,3 +124,48 @@ def test_the_theme_round_trips(tmp_path: Path, theme: str) -> None:
     path = tmp_path / "settings.toml"
     save_settings(Settings(theme=theme), path)
     assert load_settings(path).theme == theme
+
+
+def test_custom_css_is_used_by_default_and_can_be_turned_off(tmp_path: Path) -> None:
+    assert Settings().custom_css is True
+    path = tmp_path / "settings.toml"
+    save_settings(Settings(custom_css=False), path)
+    assert load_settings(path).custom_css is False
+
+
+def test_the_setup_guide_shows_until_it_is_done(tmp_path: Path) -> None:
+    """A settings file from before the guide existed opens it once, too."""
+    path = tmp_path / "settings.toml"
+    path.write_text('theme = "dark"\n', encoding="utf-8")
+    assert load_settings(path).guide_done is False
+    save_settings(Settings(guide_done=True), path)
+    assert load_settings(path).guide_done is True
+
+
+def test_guide_done_must_be_true_or_false() -> None:
+    with pytest.raises(SettingsError, match="'guide_done' must be true or false"):
+        settings_from_data({"guide_done": "yes"})
+
+
+def test_the_run_pop_up_shows_by_default_and_round_trips(tmp_path: Path) -> None:
+    path = tmp_path / "settings.toml"
+    assert Settings().run_popup == "all"
+    save_settings(Settings(run_popup="failures"), path)
+    assert load_settings(path).run_popup == "failures"
+
+
+def test_the_run_pop_up_setting_is_checked() -> None:
+    with pytest.raises(SettingsError, match="'run_popup' must be one of: all, failures, off"):
+        settings_from_data({"run_popup": "sometimes"})
+
+
+def test_the_palette_defaults_to_windows_and_round_trips(tmp_path: Path) -> None:
+    path = tmp_path / "settings.toml"
+    assert Settings().palette == "windows"
+    save_settings(Settings(palette="neon"), path)
+    assert load_settings(path).palette == "neon"
+
+
+def test_an_unknown_palette_is_refused() -> None:
+    with pytest.raises(SettingsError, match="'palette' must be one of: windows, sunset"):
+        settings_from_data({"palette": "vaporwave"})

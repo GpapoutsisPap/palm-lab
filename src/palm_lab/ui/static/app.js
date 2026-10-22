@@ -23,7 +23,28 @@ const TEXT = {
     stopping: "Stopping\u2026",
     running: "Tracking",
     error: "Camera problem",
+    paused: "Paused",
   },
+  navPaused: (time) => `Paused until ${time}`,
+  trackingPaused: "Paused",
+  trackingDescPaused: (time) => `Paused until ${time}. Your gestures won\u2019t run until then.`,
+  holdRaise: "Hold up a gesture to run it",
+  holdMake: "Make one of your gestures",
+  holding: (label) => `Holding ${label}`,
+  holdKeep: "Keep holding\u2026",
+  holdUnbound: "Not set up yet, so nothing will run",
+  holdOff: (label) => `${label} is turned off`,
+  holdOffSub: "Switch it on in its row to use it again",
+  rowOff: "Off",
+  rowSwitch: (label) => `Run the ${label} shortcut`,
+  rowSwitchOn: "Turned on: click to stop this gesture running",
+  rowSwitchOff: "Turned off: click to let this gesture run again",
+  ran: (name) => `Ran ${name}`,
+  readyIn: (s) => `Ready again in ${Number(s).toFixed(1)} s`,
+  lowerHand: "Lower your hand, then show it again",
+  coolingDown: (label) => `${label} is cooling down`,
+  recentOk: "Ran",
+  recentFailed: "Something failed; see Activity",
   when: "When I show",
   nameLabel: "Name",
   namePlaceholder: "Name this shortcut",
@@ -37,6 +58,19 @@ const TEXT = {
   palette: "Actions",
   addTo: (action) => `${action}: click to add, or drag into place`,
   test: "Test",
+  runRow: (name) => `Run ${name} now`,
+  ranByButton: "Run from the window",
+  lastRan: (when) => `Last ran ${when}`,
+  lastFailed: (when) => `Failed ${when}`,
+  lastFailedFlag: "The last run failed. Activity has the details.",
+  ranToday: (n) => `${n} today`,
+  justNow: "just now",
+  // Whole words: screen readers read "5m" as "5 metres".
+  minutesAgo: (n) => `${n} minute${n === 1 ? "" : "s"} ago`,
+  hoursAgo: (n) => `${n} hour${n === 1 ? "" : "s"} ago`,
+  yesterday: "yesterday",
+  daysAgo: (n) => `${n} days ago`,
+  onDate: (date) => `on ${date}`,
   testing: "Testing\u2026",
   testRan: (name) => `Ran \u201C${name}\u201D`,
   moveUp: "Move up",
@@ -63,6 +97,10 @@ const TEXT = {
     ? "No working camera found. Is DroidCam or your webcam connected?"
     : `Found ${n} working camera${n === 1 ? "" : "s"}.`),
   seconds: (s) => `${Number(s).toFixed(1)} s`,
+  cssSaving: "Saving\u2026",
+  cssSaved: "Saved",
+  cssBlocked: "Custom CSS is off for this run, because palm-lab was started with --no-custom-css. You can still edit it here.",
+  cssOff: "Custom CSS is off. Turn it back on in Settings > Appearance.",
   version: (v) => `Version ${v} \u00B7 Open source under the MIT licence.`,
   dismiss: "Dismiss",
   wizardStarting: "Starting camera\u2026",
@@ -77,6 +115,15 @@ const TEXT = {
     + "Try a different combination of fingers.",
   wizardNameRequired: "Give this gesture a name before saving.",
   removeGesture: "Remove gesture",
+  removePair: "Remove setup",
+  templates: "Templates",
+  templateIntro: (gesture) => `Pick one to fill ${gesture} with its pieces, then change them to suit you.`,
+  templateReplaces: (gesture, n) => `Pick one to replace the ${n} piece${n === 1 ? "" : "s"} in ${gesture}. You can change everything afterwards.`,
+  templateAdded: (name) => `Added \u201C${name}\u201D. Change the pieces to make it yours.`,
+  pairAdded: (label) => `Added \u201C${label}\u201D`,
+  pairRemoved: (label) => `Removed \u201C${label}\u201D`,
+  pairExists: "You already have this two-hand setup.",
+  gestureRemovedWithPairs: (name, n) => `Removed \u201C${name}\u201D and ${n} two-hand setup${n === 1 ? "" : "s"} using it`,
   gestureAdded: (name) => `Added \u201C${name}\u201D`,
   gestureRemoved: (name) => `Removed \u201C${name}\u201D`,
 };
@@ -93,7 +140,25 @@ const ACTIONS = {
   launch: { label: "Open app", icon: "app", placeholder: "Steam, Spotify, notepad\u2026", list: "known-apps", input: "text" },
   open_url: { label: "Open website", icon: "globe", placeholder: "https://youtube.com", list: null, input: "url" },
   hotkey: { label: "Press keys", icon: "keyboard", placeholder: "media_play_pause or ctrl+alt+t", list: "hotkey-presets", input: "text" },
+  type_text: { label: "Type text", icon: "text", placeholder: "Hello! Any language works", list: null, input: "text" },
+  wait: { label: "Wait", icon: "timer", placeholder: "Seconds, like 1.5", list: "wait-presets", input: "text" },
+  volume: { label: "Volume", icon: "speaker", placeholder: "50, mute or mic_mute", list: "volume-options", input: "text" },
+  open_path: { label: "Open folder", icon: "folder", placeholder: "Downloads, or a folder\u2019s path", list: "path-options", input: "text" },
+  settings: { label: "Open setting", icon: "nav_settings", placeholder: "sound, bluetooth\u2026", list: "settings-options", input: "text" },
+  system: { label: "Windows", icon: "power", placeholder: "lock, show_desktop or screenshot", list: "system-options", input: "text" },
 };
+
+/* The palette's groups, in the order they're shown. */
+const ACTION_GROUPS = [
+  ["Apps & places", ["launch", "open_url", "open_path", "settings"]],
+  ["Keyboard", ["hotkey", "type_text"]],
+  ["Sound & Windows", ["volume", "system"]],
+  ["Timing", ["wait"]],
+];
+const WAIT_PRESETS = ["0.5", "1", "2", "5"];
+
+/* Friendly names for the suggested targets, filled from Python's lists. */
+const OPTION_LABELS = {};
 
 const HOTKEY_LABELS = {
   media_play_pause: "Play / pause",
@@ -128,6 +193,7 @@ const ICONS = {
   start: [20, ["M2 3.5C2 2.67 2.67 2 3.5 2h1C5.33 2 6 2.67 6 3.5v1C6 5.33 5.33 6 4.5 6h-1A1.5 1.5 0 0 1 2 4.5zM3.5 3a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM2 9.5C2 8.67 2.67 8 3.5 8h1C5.33 8 6 8.67 6 9.5v1c0 .83-.67 1.5-1.5 1.5h-1A1.5 1.5 0 0 1 2 10.5zM3.5 9a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM2 15.5c0-.83.67-1.5 1.5-1.5h1c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5h-1A1.5 1.5 0 0 1 2 16.5zm1.5-.5a.5.5 0 0 0-.5.5v1c0 .28.22.5.5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM8 4.5c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 6c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 6c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5"]],
   power: [20, ["M10.5 2.5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0zM13.74 4a.5.5 0 1 0-.5.87 6.5 6.5 0 1 1-6.49 0 .5.5 0 1 0-.5-.87 7.5 7.5 0 1 0 7.5 0"]],
   window: [20, ["M6 3a3 3 0 0 0-3 3v8a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3zM4 6c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2zm0 1h12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"]],
+  paint: [20, ["M5.5 2a.5.5 0 0 0-.5.5V11c0 1.1.9 2 2 2h1v3a2 2 0 1 0 4 0v-3h1a2 2 0 0 0 2-2V2.5a.5.5 0 0 0-.5-.5zm.5 8h8v1a1 1 0 0 1-1 1h-1.5a.5.5 0 0 0-.5.5V16a1 1 0 1 1-2 0v-3.5a.5.5 0 0 0-.5-.5H7a1 1 0 0 1-1-1zm8-1H6V3h4v1.5a.5.5 0 0 0 1 0V3h1v2.5a.5.5 0 0 0 1 0V3h1z"]],
   theme: [20, ["M10 3a7 7 0 1 1 0 14zm0-1a8 8 0 1 0 0 16 8 8 0 0 0 0-16"]],
   code: [20, ["M12.64 1.02a.5.5 0 0 1 .34.62l-5 17a.5.5 0 0 1-.96-.28l5-17a.5.5 0 0 1 .62-.34M5.13 5.17a.5.5 0 0 1 .74.66L2.17 10l3.7 4.17a.5.5 0 0 1-.74.66l-4-4.5a.5.5 0 0 1 0-.66zm9.04-.04a.5.5 0 0 1 .7.04l4 4.5a.5.5 0 0 1 0 .66l-4 4.5a.5.5 0 0 1-.74-.66l3.7-4.17-3.7-4.17a.5.5 0 0 1 .04-.7"]],
   folder: [20, ["M3 5.5v6.6l1.5-2.6A3 3 0 0 1 7.1 8H15v-.5c0-.83-.67-1.5-1.5-1.5h-4a.5.5 0 0 1-.35-.15l-1.71-1.7A.5.5 0 0 0 7.09 4H4.5C3.67 4 3 4.67 3 5.5m1.28 10.48.22.02h9.4a2 2 0 0 0 1.73-1l2.17-3.75A1.5 1.5 0 0 0 16.5 9H7.1a2 2 0 0 0-1.73 1L3.2 13.75a1.5 1.5 0 0 0 1.08 2.23M2 14.46V5.5A2.5 2.5 0 0 1 4.5 3h2.59c.4 0 .78.16 1.06.44L9.7 5h3.79A2.5 2.5 0 0 1 16 7.5V8h.5a2.5 2.5 0 0 1 2.16 3.75L16.5 15.5a3 3 0 0 1-2.6 1.5H4.5a2.5 2.5 0 0 1-1.62-.6A2.5 2.5 0 0 1 2 14.46"]],
@@ -147,7 +213,10 @@ const ICONS = {
   puzzle: [16, ["M7 3a2 2 0 0 1 4 0h1.5c.83 0 1.5.67 1.5 1.5V7h-1a1 1 0 0 0 0 2h1v2.5c0 .83-.67 1.5-1.5 1.5H11a2 2 0 0 1-4 0H5.5A1.5 1.5 0 0 1 4 11.5V10a2 2 0 0 1 0-4V4.5C4 3.67 4.67 3 5.5 3zm2-1a1 1 0 0 0-1 1v1H5.5a.5.5 0 0 0-.5.5V7H4a1 1 0 0 0 0 2h1v2.5c0 .28.22.5.5.5H8v1a1 1 0 0 0 2 0v-1h2.5a.5.5 0 0 0 .5-.5V10a2 2 0 0 1 0-4V4.5a.5.5 0 0 0-.5-.5H10V3a1 1 0 0 0-1-1"]],
   app: [16, ["M4.5 2A2.5 2.5 0 0 0 2 4.5v7A2.5 2.5 0 0 0 4.5 14h7a2.5 2.5 0 0 0 2.5-2.5v-7A2.5 2.5 0 0 0 11.5 2zM13 5H3v-.5C3 3.67 3.67 3 4.5 3h7c.83 0 1.5.67 1.5 1.5zM3 6h10v5.5c0 .83-.67 1.5-1.5 1.5h-7A1.5 1.5 0 0 1 3 11.5z"]],
   globe: [16, ["M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12M8 3c.37 0 .88.36 1.31 1.32q.14.3.26.68H6.43q.12-.37.26-.68C7.12 3.36 7.63 3 8 3m-2.22.9q-.23.5-.4 1.1H4a5 5 0 0 1 2.04-1.6q-.14.24-.26.5M5.16 6a12 12 0 0 0 0 4H3.42a5 5 0 0 1 0-4zm.22 5a8 8 0 0 0 .66 1.6A5 5 0 0 1 4 11zm1.05 0h3.14a6 6 0 0 1-.26.68C8.88 12.64 8.37 13 8 13s-.88-.36-1.31-1.32a6 6 0 0 1-.26-.68m3.4-1H6.17a11 11 0 0 1 0-4h3.64a11 11 0 0 1 0 4m.79 1H12a5 5 0 0 1-2.04 1.6q.15-.24.26-.5.23-.5.4-1.1m1.96-1h-1.74a12 12 0 0 0 0-4h1.74a5 5 0 0 1 0 4M9.96 3.4c.81.35 1.52.9 2.04 1.6h-1.38a8 8 0 0 0-.66-1.6"]],
+  text: [16, ["M3 3.5c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1H8.5v8.5a.5.5 0 0 1-1 0V4h-4a.5.5 0 0 1-.5-.5"]],
   keyboard: [16, ["M3 10.5c0-.28.22-.5.5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M3.25 7a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M10 6.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M6.25 7a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M13 6.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M5.25 9a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M9 8.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m2.25.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M1 4.75C1 3.78 1.78 3 2.75 3h10.5c.97 0 1.75.78 1.75 1.75v6.5c0 .97-.78 1.75-1.75 1.75H2.75C1.78 13 1 12.22 1 11.25zM2.75 4a.75.75 0 0 0-.75.75v6.5c0 .41.34.75.75.75h10.5c.41 0 .75-.34.75-.75v-6.5a.75.75 0 0 0-.75-.75z"]],
+  pause: [16, ["M3.75 2C2.78 2 2 2.78 2 3.75v8.5c0 .97.78 1.75 1.75 1.75h1.5C6.22 14 7 13.22 7 12.25v-8.5C7 2.78 6.22 2 5.25 2zM3 3.75c0-.41.34-.75.75-.75h1.5c.41 0 .75.34.75.75v8.5c0 .41-.34.75-.75.75h-1.5a.75.75 0 0 1-.75-.75zM10.75 2C9.78 2 9 2.78 9 3.75v8.5c0 .97.78 1.75 1.75 1.75h1.5c.97 0 1.75-.78 1.75-1.75v-8.5C14 2.78 13.22 2 12.25 2zM10 3.75c0-.41.34-.75.75-.75h1.5c.41 0 .75.34.75.75v8.5c0 .41-.34.75-.75.75h-1.5a.75.75 0 0 1-.75-.75z"]],
+  play: [16, ["M5.75 3.06A.5.5 0 0 0 5 3.5v9c0 .38.41.62.75.44l8-4.5a.5.5 0 0 0 0-.88zM4 3.5a1.5 1.5 0 0 1 2.24-1.3l8 4.5a1.5 1.5 0 0 1 0 2.6l-8 4.5A1.5 1.5 0 0 1 4 12.5z"]],
   add: [16, ["M8 2c.28 0 .5.22.5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5c0-.28.22-.5.5-.5"]],
 };
 
@@ -173,16 +242,29 @@ const app = {
   status: null,
   startError: null,    // why the last start failed, shown in the tracking card
   seen: null,
+  holdGlyph: "open_palm", // gesture drawn inside the hold ring
+  holdRow: null,       // gesture whose row shows the hold bar
+  recent: [],          // newest shortcuts that ran, for "Recently ran"
   drag: null,          // {kind: "new", type} or {kind: "move", gesture, id, type}
   saveTimer: null,
   saveRequest: 0,
-  lastEvent: null,     // {at, finished} of the newest fired gesture
+  historyVersion: 0,   // the engine's run history last caught up with
+  syncingActivity: false,
+  seenEvents: new Map(), // run id -> whether it had finished when last seen
+  lastRuns: new Map(),   // gesture -> {at, failed, times: [...]} for "Last ran"
   unread: 0,
   previewing: false,
   hasFrame: false,
   busy: false,
   nextId: 1,
   shortcutsLoaded: false,
+  css: {                 // the user's custom CSS
+    style: null,         // the <style> element it is applied through
+    text: "",
+    allowed: true,       // false when started with --no-custom-css
+    saveTimer: null,
+    saveRequest: 0,
+  },
   wizard: {              // state for the "Add gesture" wizard, while it's open
     open: false,
     polling: false,
@@ -280,8 +362,36 @@ function appIcon(id) {
     + "</g></g></svg>";
 }
 
+/* Two-hand setups are stored under one key naming both shapes, sorted so it
+   doesn't matter which hand makes which: "fist + peace". Python makes the
+   same key (combos.py), and gesture names can never contain "+". */
+const COMBO_JOIN = " + ";
+const comboKey = (a, b) => [a, b].sort().join(COMBO_JOIN);
+
+/* The two shapes of a two-hand key, or null for a one-hand gesture. */
+function comboParts(id) {
+  if (GESTURES[id]) return null;
+  const parts = String(id).split(COMBO_JOIN);
+  return parts.length === 2 && parts.every(Boolean) ? parts : null;
+}
+
 function gestureInfo(id) {
-  return GESTURES[id] || { label: String(id).replace(/_/g, " "), fingers: [1, 1, 1, 1, 1] };
+  if (GESTURES[id]) return GESTURES[id];
+  const parts = comboParts(id);
+  if (parts) {
+    const [a, b] = parts.map(gestureInfo);
+    return { label: `${a.label} + ${b.label}`, fingers: a.fingers, hands: parts, combo: true };
+  }
+  return { label: String(id).replace(/_/g, " "), fingers: [1, 1, 1, 1, 1] };
+}
+
+/* A gesture's picture: one hand, or two side by side for a two-hand setup,
+   the second mirrored so they read as a left and a right hand. */
+function gestureGlyph(id) {
+  const parts = comboParts(id);
+  if (!parts) return glyph(gestureInfo(id).fingers);
+  const [a, b] = parts.map((part) => glyph(gestureInfo(part).fingers));
+  return `<span class="glyph-pair">${a}${b}</span>`;
 }
 
 /* A gesture recorded through the wizard: its name doubles as its id and its
@@ -303,6 +413,12 @@ function shortTarget(action) {
     }
   }
   if (action.type === "hotkey") return HOTKEY_LABELS[target.toLowerCase()] || target;
+  if (action.type === "wait") return `${target.replace(/\s*s$/i, "")} s`;
+  if (action.type === "type_text") return `\u201C${target.length > 18 ? `${target.slice(0, 17)}\u2026` : target}\u201D`;
+  if (action.type === "volume" && /^\d+%?$/.test(target)) return `${target.replace("%", "")}%`;
+  const named = (OPTION_LABELS[action.type] || {})[target.toLowerCase()];
+  if (named) return named;
+  if (action.type === "settings") return target.replace(/^ms-settings:/i, "");
   const base = target.split(/[\\/]/).pop();
   return base.replace(/\.(exe|lnk|url)$/i, "") || target;
 }
@@ -510,6 +626,64 @@ function applyTheme(setting = themeSetting()) {
   document.documentElement.dataset.theme = dark ? "dark" : "light";
 }
 
+/* Colour palettes: <html data-palette="sunset">. The colours are all in
+   app.css, which also lets each swatch in Settings preview its own palette. */
+function applyPalette(palette) {
+  document.documentElement.dataset.palette = palette || "windows";
+}
+
+function renderPalettes() {
+  const current = (app.data && app.data.settings.palette) || "windows";
+  const choices = (app.data && app.data.palettes) || [];
+  $("palette-choices").replaceChildren(...choices.map(([id, label]) => {
+    const chosen = id === current;
+    return el("button", {
+      class: "swatch", type: "button", role: "radio",
+      "aria-checked": String(chosen), tabIndex: chosen ? 0 : -1,
+      dataset: { palette: id }, title: label,
+      onclick: () => choosePalette(id),
+      onkeydown: (event) => movePalette(event, id),
+    }, [
+      el("span", { class: "swatch-preview", "aria-hidden": "true" }, [
+        el("span", { class: "swatch-card" }, [
+          el("span", { class: "swatch-dot" }),
+          el("span", { class: "swatch-line" }),
+        ]),
+      ]),
+      el("span", { class: "swatch-name", textContent: label }),
+    ]);
+  }));
+}
+
+/* A radio group: arrow keys move the choice, as Windows' own pickers do. */
+function movePalette(event, id) {
+  const ids = app.data.palettes.map(([value]) => value);
+  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+  if (!step) return;
+  event.preventDefault();
+  const next = ids[(ids.indexOf(id) + step + ids.length) % ids.length];
+  choosePalette(next);
+  document.querySelector(`.swatch[data-palette="${next}"]`).focus();
+}
+
+/* Moves the tick without rebuilding the buttons, so the focus stays put. */
+function markPalette(id) {
+  document.querySelectorAll(".swatch").forEach((swatch) => {
+    const chosen = swatch.dataset.palette === id;
+    swatch.setAttribute("aria-checked", String(chosen));
+    swatch.tabIndex = chosen ? 0 : -1;
+  });
+}
+
+async function choosePalette(id) {
+  if (!app.data || app.data.settings.palette === id) return;
+  app.data.settings.palette = id;
+  applyPalette(id);
+  markPalette(id);
+  await saveSettings();
+  api().theme_changed(); // the title bar follows the palette too
+}
+
 /* Navigation ------------------------------------------------------------------------ */
 
 function showPage(name) {
@@ -566,9 +740,15 @@ async function init() {
   app.data = data;
   applyAccent(data.accent);
   applyTheme();
+  applyPalette(data.settings.palette);
+  loadCustomCss(data.custom_css);
   registerCustomGestures(data.custom_gestures);
   const gestureIds = [...data.gestures, ...data.custom_gestures.map((g) => g.name)];
   app.rows = gestureIds.map((gesture) => rowFromBinding(gesture, data.bindings.find((b) => b.gesture === gesture)));
+  // Two-hand setups come after the one-hand gestures they're made from.
+  for (const binding of data.bindings) {
+    if (binding.hands) app.rows.push(rowFromBinding(binding.gesture, binding));
+  }
 
   fillDatalists();
   renderSettings();
@@ -580,16 +760,22 @@ async function init() {
   $("tracking-switch").disabled = false;
   applyStatus(data.status);
   setInterval(pollStatus, STATUS_INTERVAL_MS);
+  setInterval(refreshLastRan, LAST_RAN_REFRESH_MS);
+  document.addEventListener("visibilitychange", refreshLastRan);
+  showHandTuning();
+  // First run (or never finished): start with the setup guide.
+  if (!data.settings.guide_done) openGuide();
 }
 
 function rowFromBinding(gesture, binding) {
   const label = gestureInfo(gesture).label;
-  if (!binding) return { gesture, name: "", stepDelay: null, actions: [] };
+  if (!binding) return { gesture, name: "", stepDelay: null, enabled: true, actions: [] };
   return {
     gesture,
     // A blank name is saved as the gesture's label; show it as blank again.
     name: binding.name === label ? "" : binding.name,
     stepDelay: binding.step_delay_seconds,
+    enabled: binding.enabled !== false,
     actions: binding.action.map((a) => newAction(a.type, a.target)),
   };
 }
@@ -605,6 +791,13 @@ function fillDatalists() {
   $("hotkey-presets").replaceChildren(
     ...app.data.hotkey_presets.map((key) => el("option", { value: key, label: HOTKEY_LABELS[key] || key })),
   );
+  $("wait-presets").replaceChildren(...WAIT_PRESETS.map((value) => el("option", { value, label: `${value} s` })));
+  const lists = { volume: "volume-options", open_path: "path-options", settings: "settings-options", system: "system-options" };
+  for (const [type, id] of Object.entries(lists)) {
+    const options = (app.data.action_options || {})[type] || [];
+    OPTION_LABELS[type] = Object.fromEntries(options.map(([value, label]) => [value.toLowerCase(), label]));
+    $(id).replaceChildren(...options.map(([value, label]) => el("option", { value, label })));
+  }
 }
 
 function showProblems(problems) {
@@ -642,13 +835,15 @@ function renderRow(row) {
     "aria-expanded": String(open), "aria-controls": bodyId,
     onclick: () => setOpen(app.open === row.gesture ? null : row.gesture),
   }, [
-    el("span", { class: "gesture-glyph", html: glyph(info.fingers) }),
+    el("span", { class: "gesture-glyph", html: gestureGlyph(row.gesture) }),
     el("span", { class: "gesture-titles" }, [
       el("span", { class: "gesture-label", textContent: info.label }),
       el("span", { class: "gesture-sub" }),
     ]),
     el("span", { class: "gesture-summary", "aria-hidden": "true" }),
     iconEl("warning", "gesture-flag"),
+    el("span", { class: "gesture-run-slot", "aria-hidden": "true" }),
+    el("span", { class: "gesture-switch-slot", "aria-hidden": "true" }),
     iconEl("chevron", "chevron"),
   ]);
 
@@ -657,25 +852,60 @@ function renderRow(row) {
   ]);
   setCollapse(body, open);
 
+  // Run and the on/off switch sit beside the head button, not inside it: a
+  // control nested in a button can't be reached or announced properly.
+  const run = el("button", {
+    class: "btn btn-subtle btn-icon gesture-run", type: "button", html: icon("play"),
+    onclick: () => runRow(row, run),
+  });
+  const toggle = el("input", {
+    class: "switch gesture-switch", type: "checkbox", role: "switch",
+    checked: row.enabled, "aria-label": TEXT.rowSwitch(info.label),
+    onchange: (event) => setRowEnabled(row, event.target.checked),
+  });
+
   const node = el("li", {
     class: "card gesture" + (open ? " is-open" : ""),
     dataset: { gesture: row.gesture },
     ondragover: (event) => rowDragOver(event, row, node),
     ondragleave: (event) => rowDragLeave(event, node),
     ondrop: (event) => rowDrop(event, row, node),
-  }, [head, body]);
+  }, [head, run, toggle, body, el("span", { class: "gesture-hold", "aria-hidden": "true" })]);
   if (app.seen === row.gesture) node.classList.add("is-seen");
   updateHead(row, node);
   return node;
 }
 
 function updateHead(row, node = rowNode(row.gesture)) {
+  // Typing a target in the guide's editor can make its Next button usable.
+  if (guideEditorFor(row)) updateGuideNav();
   if (!node) return;
   const count = row.actions.length;
   const name = row.name.trim();
+  // A row with nothing in it isn't saved, so it has nothing to switch off;
+  // the next action put into it starts switched on.
+  if (count === 0) row.enabled = true;
   let sub = TEXT.notSet;
-  if (count) sub = name ? `${name} \u00B7 ${TEXT.actionCount(count)}` : TEXT.actionCount(count);
+  const ran = count ? lastRanText(row.gesture) : "";
+  if (count) sub = [name, ran || TEXT.actionCount(count)].filter(Boolean).join(" \u00B7 ");
+  if (count && !row.enabled) sub = `${TEXT.rowOff} \u00B7 ${sub}`;
   node.querySelector(".gesture-sub").textContent = sub;
+  const last = app.lastRuns.get(row.gesture);
+  node.querySelector(".gesture-sub").title = count && last ? new Date(last.at * 1000).toLocaleString() : "";
+  const failed = Boolean(count && last && last.failed);
+  node.classList.toggle("has-failed", failed);
+  node.querySelector(".gesture-flag").title = failed ? TEXT.lastFailedFlag : "";
+
+  const label = name || gestureInfo(row.gesture).label;
+  const run = node.querySelector(".gesture-run");
+  run.setAttribute("aria-label", TEXT.runRow(label));
+  run.title = TEXT.runRow(label);
+
+  const toggle = node.querySelector(".gesture-switch");
+  toggle.checked = row.enabled;
+  toggle.title = row.enabled ? TEXT.rowSwitchOn : TEXT.rowSwitchOff;
+  node.classList.toggle("has-switch", count > 0);
+  node.classList.toggle("is-off", count > 0 && !row.enabled);
 
   const chips = row.actions.slice(0, 3).map((action) => el("span", {
     class: "chip" + (action.target.trim() ? "" : " is-empty"),
@@ -687,6 +917,12 @@ function updateHead(row, node = rowNode(row.gesture)) {
   if (count > 3) chips.push(el("span", { class: "chip chip-more", textContent: TEXT.more(count - 3) }));
   node.querySelector(".gesture-summary").replaceChildren(...chips);
   node.classList.toggle("has-warning", row.actions.some((a) => !a.target.trim()));
+}
+
+function setRowEnabled(row, enabled) {
+  row.enabled = enabled;
+  updateHead(row);
+  scheduleSave();
 }
 
 function renderEditor(row) {
@@ -706,27 +942,40 @@ function renderEditor(row) {
       }),
     ]),
     el("span", { class: "spacer" }),
+    (app.data.templates || []).length ? el("button", {
+      class: "btn btn-subtle template-button", type: "button",
+      onclick: () => openTemplates(row),
+    }, [el("span", { class: "btn-icon-slot", html: icon("puzzle") }), el("span", { textContent: TEXT.templates })]) : null,
     info.custom ? el("button", {
-      class: "btn btn-subtle", type: "button",
+      class: "btn btn-subtle remove-gesture", type: "button",
       onclick: () => removeCustomGesture(row),
     }, [el("span", { class: "btn-icon-slot", html: icon("close") }), el("span", { textContent: TEXT.removeGesture })]) : null,
+    info.combo ? el("button", {
+      class: "btn btn-subtle remove-pair", type: "button",
+      onclick: () => removePair(row),
+    }, [el("span", { class: "btn-icon-slot", html: icon("close") }), el("span", { textContent: TEXT.removePair })]) : null,
     testButton,
   ]);
 
+  const piece = (type) => el("button", {
+    class: "palette-piece piece has-socket", type: "button", draggable: true, dataset: { type },
+    title: TEXT.addTo(ACTIONS[type].label),
+    onclick: () => insertAction(row, row.actions.length, type),
+    ondragstart: (event) => startDrag(event, { kind: "new", type }),
+    ondragend: endDrag,
+  }, [iconEl(ACTIONS[type].icon), el("span", { textContent: ACTIONS[type].label })]);
+  const known = new Set(app.data.action_types.filter((type) => ACTIONS[type]));
   const palette = el("div", { class: "palette" }, [
     el("p", { class: "palette-title" }, [iconEl("puzzle"), TEXT.palette]),
-    ...app.data.action_types.map((type) => el("button", {
-      class: "palette-piece piece has-socket", type: "button", draggable: true, dataset: { type },
-      title: TEXT.addTo(ACTIONS[type].label),
-      onclick: () => insertAction(row, row.actions.length, type),
-      ondragstart: (event) => startDrag(event, { kind: "new", type }),
-      ondragend: endDrag,
-    }, [iconEl(ACTIONS[type].icon), el("span", { textContent: ACTIONS[type].label })])),
+    ...ACTION_GROUPS.flatMap(([name, types]) => {
+      const pieces = types.filter((type) => known.has(type));
+      return pieces.length ? [el("p", { class: "palette-group" }, [name]), ...pieces.map(piece)] : [];
+    }),
   ]);
 
   const hat = el("div", { class: "hat piece" }, [
     el("span", { textContent: TEXT.when }),
-    el("span", { class: "hat-gesture" }, [el("span", { html: glyph(info.fingers) }), info.label]),
+    el("span", { class: "hat-gesture" }, [el("span", { class: "hat-glyph", html: gestureGlyph(row.gesture) }), info.label]),
   ]);
 
   const stack = el("ol", { class: "stack", "aria-label": TEXT.stackLabel(info.label) },
@@ -783,21 +1032,32 @@ function renderBlock(row, action, index) {
   return block;
 }
 
-/* Re-draw one row's editor, animating what moved, snapped in, or needs focus. */
+/* The setup guide's copy of a row's editor, while the guide is building that row. */
+const guideEditorFor = (row) => (app.guide && app.guide.open && app.guide.editing === row.gesture ? $("guide-editor") : null);
+
+/* Re-draw one row's editor, animating what moved, snapped in, or needs focus.
+   The row's editor is drawn in its place in the list and, while the setup
+   guide is building it, in the guide too; animation and focus go to the one
+   the person is using. */
 function refreshRow(row, { snapId = null, focus = null, flip = false } = {}) {
   const node = rowNode(row.gesture);
-  if (!node) return;
-  const isOpen = app.open === row.gesture;
+  const guide = guideEditorFor(row);
+  const active = guide || node;
+  if (!active) return;
+  const isOpen = Boolean(guide) || app.open === row.gesture;
   const before = new Map();
   if (flip && isOpen) {
-    node.querySelectorAll(".block[data-id]").forEach((b) => before.set(b.dataset.id, b.getBoundingClientRect().top));
+    active.querySelectorAll(".block[data-id]").forEach((b) => before.set(b.dataset.id, b.getBoundingClientRect().top));
   }
 
-  node.querySelector(".gesture-body .collapse-inner").replaceChildren(renderEditor(row));
-  updateHead(row, node);
+  if (node) {
+    node.querySelector(".gesture-body .collapse-inner").replaceChildren(renderEditor(row));
+    updateHead(row, node);
+  }
+  if (guide) guide.replaceChildren(renderEditor(row));
 
   if (before.size && !reducedMotion.matches) {
-    node.querySelectorAll(".block[data-id]").forEach((b) => {
+    active.querySelectorAll(".block[data-id]").forEach((b) => {
       const top = before.get(b.dataset.id);
       if (top === undefined || b.dataset.id === String(snapId)) return;
       const dy = top - b.getBoundingClientRect().top;
@@ -806,14 +1066,15 @@ function refreshRow(row, { snapId = null, focus = null, flip = false } = {}) {
   }
   if (snapId !== null) {
     if (isOpen) {
-      const block = node.querySelector(`.block[data-id="${snapId}"]`);
+      const block = active.querySelector(`.block[data-id="${snapId}"]`);
       if (block) snapIn(block);
     } else {
-      const chip = node.querySelector(`.chip[data-id="${snapId}"]`);
+      const chip = active.querySelector(`.chip[data-id="${snapId}"]`);
       if (chip) enter(chip);
     }
   }
-  if (focus) focusInRow(node, focus);
+  if (focus) focusInRow(active, focus);
+  if (guide) updateGuideNav();
 }
 
 function focusInRow(node, { id, part = "input" }) {
@@ -905,7 +1166,7 @@ function moveAction(fromGesture, id, toGesture, toIndex, { focusPart = null } = 
 }
 
 async function removeAction(row, id) {
-  const node = rowNode(row.gesture);
+  const node = guideEditorFor(row) || rowNode(row.gesture);
   const block = node && node.querySelector(`.block[data-id="${id}"]`);
   sound.play("remove");
   if (block) {
@@ -1056,11 +1317,13 @@ function buildPayload() {
   const used = app.rows.filter((row) => row.actions.length > 0);
   const binding = used.map((row) => {
     const entry = {
-      gesture: row.gesture,
+      // A two-hand setup is sent as its two shapes; Python makes the key.
+      gesture: comboParts(row.gesture) || row.gesture,
       name: row.name.trim() || gestureInfo(row.gesture).label,
       action: row.actions.map((action) => ({ type: action.type, target: action.target.trim() })),
     };
     if (row.stepDelay !== null && row.stepDelay !== undefined) entry.step_delay_seconds = row.stepDelay;
+    if (!row.enabled) entry.enabled = false;
     return entry;
   });
   return { used, payload: { binding } };
@@ -1114,14 +1377,14 @@ function showBindingError(used, message) {
   return true;
 }
 
-async function testRow(row, button) {
-  const label = button.querySelector(".test-label");
-  const slot = button.querySelector(".btn-icon-slot");
-  button.disabled = true;
-  slot.innerHTML = icon("spinner");
-  label.textContent = TEXT.testing;
+/* Run a row's shortcut now, without the camera: the editor's Test button
+   and the Run button on each row. The run is added to Activity like any other. */
+async function runShortcut(row) {
   try {
-    if (!(await saveNow())) return;
+    if (!(await saveNow())) {
+      if (row.actions.some((a) => !a.target.trim())) toast(TEXT.incomplete, "error");
+      return;
+    }
     const result = await api().test_binding(row.gesture);
     if (!result.results) {
       toast(result.error, "error");
@@ -1136,10 +1399,33 @@ async function testRow(row, button) {
     }
   } catch (err) {
     toast(String(err), "error");
+  }
+  syncActivity();
+}
+
+async function testRow(row, button) {
+  const label = button.querySelector(".test-label");
+  const slot = button.querySelector(".btn-icon-slot");
+  button.disabled = true;
+  slot.innerHTML = icon("spinner");
+  label.textContent = TEXT.testing;
+  try {
+    await runShortcut(row);
   } finally {
     button.disabled = row.actions.length === 0;
     slot.innerHTML = icon("bolt");
     label.textContent = TEXT.test;
+  }
+}
+
+async function runRow(row, button) {
+  button.disabled = true;
+  button.innerHTML = icon("spinner");
+  try {
+    await runShortcut(row);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = icon("play");
   }
 }
 
@@ -1180,20 +1466,29 @@ async function pollStatus() {
   }
 }
 
-function showTrackingState(state) {
+function shortTime(seconds) {
+  return new Date(seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function showTrackingState(state, pausedUntil = null) {
   const running = state === "running";
+  const paused = state === "paused";
   const toggle = $("tracking-switch");
   toggle.checked = running || state === "starting";
   toggle.disabled = state === "starting" || state === "stopping";
   $("tracking-label").textContent = {
-    starting: TEXT.starting, stopping: TEXT.stopping, running: TEXT.switchOn,
+    starting: TEXT.starting, stopping: TEXT.stopping, running: TEXT.switchOn, paused: TEXT.trackingPaused,
   }[state] || TEXT.switchOff;
-  $("tracking-desc").textContent = running && app.data
-    ? TEXT.trackingDescOn(app.data.settings.camera_index)
-    : TEXT.trackingDesc;
+  let desc = TEXT.trackingDesc;
+  if (running && app.data) desc = TEXT.trackingDescOn(app.data.settings.camera_index);
+  if (paused) desc = TEXT.trackingDescPaused(shortTime(pausedUntil));
+  $("tracking-desc").textContent = desc;
   $("tracking").dataset.state = state;
   $("nav-status").dataset.state = state;
-  $("nav-status-text").textContent = TEXT.navStatus[state];
+  $("nav-status-text").textContent = paused ? TEXT.navPaused(shortTime(pausedUntil)) : TEXT.navStatus[state];
+  $("pause-button").hidden = !running;
+  $("resume-button").hidden = !paused;
+  if (!running) closePauseMenu(false);
 }
 
 function showTrackingError(message) {
@@ -1208,7 +1503,12 @@ function applyStatus(status) {
   if (app.busy) return;
 
   const error = status.running ? null : status.error || app.startError;
-  showTrackingState(status.running ? "running" : error ? "error" : "stopped");
+  const paused = !status.running && Boolean(status.paused_until);
+  let state = "stopped";
+  if (status.running) state = "running";
+  else if (paused) state = "paused";
+  else if (error) state = "error";
+  showTrackingState(state, status.paused_until);
   if (error) $("tracking-label").textContent = TEXT.switchOff;
   showTrackingError(error);
   $("scan-cameras").disabled = status.running;
@@ -1222,7 +1522,7 @@ function applyStatus(status) {
   showSeen(status);
 
   if (status.error && previous && previous.running && !status.running) toast(status.error, "error");
-  recordActivity(status.last_fired);
+  if (status.history_version !== app.historyVersion) syncActivity();
   if (status.running && !app.previewing) startPreview();
 }
 
@@ -1239,11 +1539,133 @@ function showSeen(status) {
     document.querySelectorAll(".gesture[data-gesture]").forEach((node) => {
       node.classList.toggle("is-seen", node.dataset.gesture === seen);
     });
-    $("seen-glyph").hidden = !seen;
-    if (seen) $("seen-glyph").innerHTML = glyph(gestureInfo(seen).fingers);
   }
-  $("seen-text").textContent = seen ? gestureInfo(seen).label : status.hands ? TEXT.handInView : TEXT.noHands;
+  // While preview frames arrive they carry the hold too, many times a second.
+  if (!app.hasFrame) showHold(status.running ? status.hold : null, status.hands);
   $("fps").textContent = status.running ? TEXT.fps(status.fps) : "\u2013";
+}
+
+/* The hold in progress, as a filling ring and a line of words. Every phase has
+   its own wording, because "why didn't that run?" is the question it answers. */
+function showHold(hold, hands) {
+  const box = $("hold");
+  const gesture = hold && hold.phase !== "idle" ? hold.gesture : null;
+  const info = gesture ? gestureInfo(gesture) : null;
+  const row = gesture ? rowOf(gesture) : null;
+  let phase = gesture ? hold.phase : "idle";
+  let title;
+  let sub = "";
+  let fill = 0;
+
+  if (!gesture) {
+    title = hands ? TEXT.handInView : TEXT.noHands;
+    sub = hands ? TEXT.holdMake : TEXT.holdRaise;
+  } else if (!row || row.actions.length === 0) {
+    phase = "unbound";
+    title = info.label;
+    sub = TEXT.holdUnbound;
+  } else if (phase === "off" || !row.enabled) {
+    // The row's switch may have just been turned off, before the engine
+    // has heard; trust the switch the person can see.
+    phase = "off";
+    title = TEXT.holdOff(info.label);
+    sub = TEXT.holdOffSub;
+  } else if (phase === "holding") {
+    title = TEXT.holding(info.label);
+    sub = TEXT.holdKeep;
+    fill = hold.progress;
+  } else if (phase === "fired") {
+    title = TEXT.ran(row.name.trim() || info.label);
+    sub = hold.cooldown > 0 ? TEXT.readyIn(hold.cooldown) : TEXT.lowerHand;
+    fill = 1;
+  } else if (phase === "cooldown") {
+    title = TEXT.coolingDown(info.label);
+    sub = TEXT.readyIn(hold.cooldown);
+    const total = app.data ? app.data.settings.cooldown_seconds : 0;
+    fill = total > 0 ? Math.min(hold.cooldown / total, 1) : 0;
+  } else {
+    title = info.label;
+    sub = TEXT.lowerHand;
+  }
+
+  box.dataset.phase = phase;
+  box.style.setProperty("--hold", String(fill));
+  // Only a changed line is written, so screen readers hear each phase once.
+  if ($("seen-text").textContent !== title) $("seen-text").textContent = title;
+  if ($("hold-sub").textContent !== sub) $("hold-sub").textContent = sub;
+  const shown = gesture || "open_palm";
+  if (app.holdGlyph !== shown) {
+    app.holdGlyph = shown;
+    $("seen-glyph").innerHTML = gestureGlyph(shown);
+  }
+
+  const rowFill = phase === "holding" || phase === "fired" ? fill : 0;
+  if (app.holdRow && app.holdRow !== gesture) {
+    const old = rowNode(app.holdRow);
+    if (old) old.style.setProperty("--hold", "0");
+  }
+  app.holdRow = gesture;
+  const node = gesture && rowNode(gesture);
+  if (node) node.style.setProperty("--hold", String(rowFill));
+}
+
+/* Pausing ------------------------------------------------------------------ */
+
+function openPauseMenu() {
+  $("pause-menu").hidden = false;
+  $("pause-button").setAttribute("aria-expanded", "true");
+  $("pause-menu").querySelector(".menu-item").focus();
+}
+
+function closePauseMenu(focusButton = true) {
+  const menu = $("pause-menu");
+  if (menu.hidden) return;
+  menu.hidden = true;
+  $("pause-button").setAttribute("aria-expanded", "false");
+  if (focusButton) $("pause-button").focus();
+}
+
+function pauseMenuKeys(event) {
+  const items = [...$("pause-menu").querySelectorAll(".menu-item")];
+  const index = items.indexOf(document.activeElement);
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    const step = event.key === "ArrowDown" ? 1 : -1;
+    items[(index + step + items.length) % items.length].focus();
+  } else if (event.key === "Home" || event.key === "End") {
+    event.preventDefault();
+    items[event.key === "Home" ? 0 : items.length - 1].focus();
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    closePauseMenu();
+  } else if (event.key === "Tab") {
+    closePauseMenu(false);
+  }
+}
+
+async function pauseFor(minutes) {
+  closePauseMenu(false);
+  let result;
+  try {
+    result = await api().pause(minutes);
+  } catch (err) {
+    result = { ok: false, error: String(err) };
+  }
+  if (!result.ok) toast(result.error, "error");
+  if (result.status) applyStatus(result.status);
+  $("tracking-switch").focus();
+}
+
+async function resumeNow() {
+  let result;
+  try {
+    result = await api().resume();
+  } catch (err) {
+    result = { ok: false, error: String(err), status: app.status };
+  }
+  app.startError = result.ok ? null : result.error;
+  applyStatus(result.status);
 }
 
 async function startPreview() {
@@ -1259,6 +1681,7 @@ async function startPreview() {
     if (frame && app.status.running) {
       img.src = frame.image;
       drawHands(frame.hands);
+      showHold(frame.hold, frame.hands.length);
       if (!app.hasFrame) {
         app.hasFrame = true;
         setLive("on");
@@ -1282,16 +1705,32 @@ function drawHands(hands) {
 
 /* Activity --------------------------------------------------------------------------------------------- */
 
+/* Catch up with the engine's run history: every run since the last look,
+   including any that happened while the window was hidden. */
+async function syncActivity() {
+  if (app.syncingActivity) return;
+  app.syncingActivity = true;
+  try {
+    const data = await api().activity();
+    app.historyVersion = data.version;
+    for (const event of data.events) recordActivity(event);
+  } catch (err) {
+    // The next status poll notices the version is still behind and tries again.
+  } finally {
+    app.syncingActivity = false;
+  }
+}
+
 function recordActivity(event) {
   if (!event) return;
-  const previous = app.lastEvent;
-  if (previous && previous.at === event.at && previous.finished === event.finished) return;
-  const isNew = !previous || previous.at !== event.at;
-  const justFinished = event.finished && (isNew || !previous.finished);
-  app.lastEvent = { at: event.at, finished: event.finished };
+  const seen = app.seenEvents.get(event.id);
+  if (seen === event.finished) return;
+  const isNew = seen === undefined;
+  const justFinished = event.finished && seen !== true;
+  app.seenEvents.set(event.id, event.finished);
 
   const list = $("activity");
-  const id = `event-${String(event.at).replace(/\W/g, "-")}`;
+  const id = `event-${event.id}`;
   const item = renderEvent(event, id);
   const existing = document.getElementById(id);
   if (existing) {
@@ -1303,13 +1742,16 @@ function recordActivity(event) {
   while (list.children.length > ACTIVITY_LIMIT) list.lastElementChild.remove();
   $("activity-empty").hidden = true;
   showLastRun(event);
+  updateRecent(event);
 
   if (isNew) {
     if (app.page !== "activity") app.unread += 1;
     updateBadge();
-    pulse(rowNode(event.gesture), "var(--accent)");
+    if (!event.manual) pulse(rowNode(event.gesture), "var(--accent)");
   }
-  if (justFinished) {
+  if (justFinished) noteRun(event);
+  // A run from the window already said how it went, in its own toast.
+  if (justFinished && !event.manual) {
     const failures = event.results.filter((r) => !r.ok);
     if (failures.length) {
       toast(`${event.name || gestureInfo(event.gesture).label}: ${failures.map((r) => r.message).join(" ")}`, "error");
@@ -1317,10 +1759,95 @@ function recordActivity(event) {
   }
 }
 
+/* "Recently ran": the newest few shortcuts on the Gestures page itself. */
+const RECENT_LIMIT = 3;
+
+function updateRecent(event) {
+  if (!event.name) return; // a gesture with nothing set up ran nothing
+  app.recent = [event, ...app.recent.filter((e) => e.id !== event.id)].slice(0, RECENT_LIMIT);
+  renderRecent();
+}
+
+function renderRecent() {
+  $("recent-list").replaceChildren(...app.recent.map((event) => {
+    const failed = event.finished && event.results.some((r) => !r.ok);
+    const state = !event.finished ? "spinner" : failed ? "error" : "success";
+    return el("li", { class: "recent-item" }, [
+      el("span", { class: "recent-glyph", html: gestureGlyph(event.gesture) }),
+      el("span", { class: "recent-name", textContent: event.name }),
+      el("span", { class: "recent-time", textContent: clock(event.at) }),
+      el("span", {
+        class: `recent-result ${failed ? "run-fail" : "run-ok"}`,
+        title: failed ? TEXT.recentFailed : TEXT.recentOk,
+        "aria-label": failed ? TEXT.recentFailed : TEXT.recentOk,
+        role: "img",
+        html: icon(state),
+      }),
+    ]);
+  }));
+  $("recent-empty").hidden = app.recent.length > 0;
+}
+
 function updateBadge() {
   const badge = $("activity-badge");
   badge.hidden = app.unread === 0;
   badge.textContent = String(app.unread);
+}
+
+/* "Last ran" on each gesture row ------------------------------------------------- */
+
+const LAST_RAN_REFRESH_MS = 30000;
+const RUN_TIMES_KEPT = 100;
+
+function noteRun(event) {
+  if (!event.name) return; // a gesture with nothing set up ran nothing
+  const entry = app.lastRuns.get(event.gesture) || { at: 0, failed: false, times: [] };
+  if (event.at >= entry.at) {
+    entry.at = event.at;
+    entry.failed = event.results.some((r) => !r.ok);
+  }
+  entry.times = [...entry.times, event.at].slice(-RUN_TIMES_KEPT);
+  app.lastRuns.set(event.gesture, entry);
+  const row = rowOf(event.gesture);
+  if (row) updateHead(row);
+}
+
+/* Relative times as GitHub's Primer design system writes them: "just now"
+   under a minute, "... ago" up to a month, then the date. The exact time
+   goes in a tooltip. */
+function ago(seconds, now = Date.now()) {
+  const diff = Math.max(0, now / 1000 - seconds);
+  if (diff < 60) return TEXT.justNow;
+  if (diff < 3600) return TEXT.minutesAgo(Math.floor(diff / 60));
+  const then = new Date(seconds * 1000);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  if (then >= today) return TEXT.hoursAgo(Math.floor(diff / 3600));
+  const days = Math.round((today - new Date(then).setHours(0, 0, 0, 0)) / 86400000);
+  if (days === 1) return TEXT.yesterday;
+  if (days < 30) return TEXT.daysAgo(days);
+  const sameYear = then.getFullYear() === today.getFullYear();
+  return TEXT.onDate(then.toLocaleDateString([], { day: "numeric", month: "short", ...(sameYear ? {} : { year: "numeric" }) }));
+}
+
+function lastRanText(gesture, now = Date.now()) {
+  const entry = app.lastRuns.get(gesture);
+  if (!entry) return "";
+  const when = ago(entry.at, now);
+  const midnight = new Date(now);
+  midnight.setHours(0, 0, 0, 0);
+  const today = entry.times.filter((at) => at * 1000 >= midnight.getTime()).length;
+  const text = entry.failed ? TEXT.lastFailed(when) : TEXT.lastRan(when);
+  return today > 1 ? `${text} \u00B7 ${TEXT.ranToday(today)}` : text;
+}
+
+/* Keep "5 min ago" true while the window stays open. */
+function refreshLastRan() {
+  if (document.hidden) return;
+  for (const gesture of app.lastRuns.keys()) {
+    const row = rowOf(gesture);
+    if (row) updateHead(row);
+  }
 }
 
 function showLastRun(event) {
@@ -1347,10 +1874,10 @@ function renderEvent(event, id) {
     ]));
   }
   return el("li", { class: "card event", id }, [
-    el("span", { html: glyph(info.fingers) }),
+    el("span", { class: "event-glyph", html: gestureGlyph(event.gesture) }),
     el("div", { class: "event-body" }, [
       el("p", { class: "card-title", textContent: event.name || info.label }),
-      el("p", { class: "card-desc", textContent: info.label }),
+      el("p", { class: "card-desc", textContent: event.manual ? `${info.label} \u00B7 ${TEXT.ranByButton}` : info.label }),
       el("ul", { class: "event-results" }, results),
     ]),
     el("span", { class: "event-time", textContent: clock(event.at) }),
@@ -1361,6 +1888,7 @@ function renderEvent(event, id) {
 
 function renderSettings() {
   const { settings, limits } = app.data;
+  renderPalettes();
   const select = $("camera-select");
   select.replaceChildren();
   for (let i = limits.camera_index[0]; i <= limits.camera_index[1]; i += 1) {
@@ -1377,8 +1905,10 @@ function renderSettings() {
   }
   setSwitch($("sounds"), settings.sounds !== false);
   $("close-action").value = settings.close_action || "ask";
+  $("run-popup").value = settings.run_popup || "all";
   $("theme").value = settings.theme || "system";
   $("bindings-file").textContent = app.data.bindings_file;
+  setSwitch($("custom-css-on"), settings.custom_css !== false);
   $("about-version").textContent = TEXT.version(app.data.version);
 }
 
@@ -1407,7 +1937,11 @@ async function saveSettings() {
     cooldown_seconds: Number($("cooldown").value),
     sounds: $("sounds").checked,
     close_action: $("close-action").value,
+    run_popup: $("run-popup").value,
     theme: $("theme").value,
+    custom_css: $("custom-css-on").checked,
+    guide_done: Boolean(app.data && app.data.settings.guide_done),
+    palette: (app.data && app.data.settings.palette) || "windows",
   };
   let result;
   try {
@@ -1688,13 +2222,847 @@ async function removeCustomGesture(row) {
     toast(result.error, "error");
     return;
   }
+  // Two-hand setups made with this gesture can't work without it either.
+  const gone = (r) => r.gesture === row.gesture || (comboParts(r.gesture) || []).includes(row.gesture);
+  const pairs = app.rows.filter((r) => r !== row && gone(r)).length;
+  if (app.open && app.rows.some((r) => r.gesture === app.open && gone(r))) app.open = null;
+  app.rows = app.rows.filter((r) => !gone(r));
   delete GESTURES[row.gesture];
-  const index = app.rows.findIndex((r) => r.gesture === row.gesture);
-  if (index >= 0) app.rows.splice(index, 1);
-  if (app.open === row.gesture) app.open = null;
   renderRows(true);
-  toast(TEXT.gestureRemoved(row.gesture));
+  toast(pairs ? TEXT.gestureRemovedWithPairs(row.gesture, pairs) : TEXT.gestureRemoved(row.gesture));
   await saveNow();
+}
+
+/* Setup guide ---------------------------------------------------------------------------------------------
+
+   A short "experiment" that opens the first time palm-lab starts, and from
+   Settings > Setup guide. One step shows at a time; each step's enter()
+   prepares it and tick() runs on every poll while it's showing. The camera
+   view is a single element moved into whichever step needs it.
+
+   Nothing here runs a shortcut except the "Run the experiment" step: while
+   checking gestures the engine is put in quiet mode, and while measuring the
+   hand it never fires anyway. */
+
+const GUIDE_STEPS = ["briefing", "camera", "tune", "test", "experiment", "run", "report"];
+const GUIDE_NAMES = {
+  briefing: "Briefing", camera: "Calibration", tune: "Measurement", test: "Gesture test",
+  experiment: "First experiment", run: "Trial run", report: "Lab report",
+};
+const GUIDE_CAMERA_STEPS = new Set(["camera", "tune", "test", "run"]);
+const GUIDE_NO_HAND_GRACE_MS = 8000;  // then the camera step lets you carry on without a hand
+
+Object.assign(TEXT, {
+  guideKicker: (n, total, name) => `Step ${n} of ${total} \u00B7 ${name}`,
+  guideStart: "Start the experiment",
+  guideNext: "Next",
+  guideFinish: "Finish",
+  guideSkipStep: "Skip this step",
+  guideAnyway: "Continue anyway",
+  guideSaveFailed: "The shortcut couldn\u2019t be saved. The Gestures page shows what went wrong.",
+  cameraOpening: "Opening camera\u2026",
+  cameraLooking: "Looking for your hand\u2026",
+  cameraFound: "Hand found. The camera is calibrated.",
+  cameraStuck: "No hand found yet. Check the tips, or carry on and come back later.",
+  measureStart: "Start measuring",
+  measureAgain: "Measure again",
+  measureShow: (pose) => `Show your ${pose === "open" ? "open hand, fingers spread" : "fist"} to the camera.`,
+  measureOneHand: "Just one hand, please.",
+  measureHold: (pose) => `Hold your ${pose === "open" ? "open hand" : "fist"} still\u2026`,
+  measureNowFist: "Got it. Now make a tight fist and hold it.",
+  measureTuning: "Tuning to your hand\u2026",
+  measureTuned: "Tuned to your hand. palm-lab now reads your fingers by your own measurements.",
+  measureKept: (fingers) => ` Your ${fingers.join(" and ")} kept the standard setting, because it barely moved.`,
+  measureNotAvailable: "Measuring isn\u2019t available here; palm-lab will use the standard settings.",
+  testProgress: (n, total) => `${n} of ${total} gestures read.`,
+  testAll: "Every gesture reads correctly for your hand.",
+  testSeeing: (label) => `Seeing ${label}\u2026`,
+  inUse: "Already set up",
+  noFreeGesture: "All four gestures already have shortcuts, so there\u2019s nothing new to make here. Skip ahead to the report.",
+  pieceIncomplete: "Fill in the empty piece to carry on.",
+  pieceDone: "Ready. Next, you\u2019ll try it for real.",
+  pieceStart: "Click or drag a piece from Actions into the stack under \u201CWhen I show\u201D.",
+  actionSummary: (label, target) => `${label} (${target})`,
+  runLead: (gesture, summary) => `Hold the ${gesture} until the ring fills. It will really run: ${summary}.`,
+  runDesktop: " Your windows will minimise; click palm-lab on the taskbar to come back.",
+  runWaiting: (gesture) => `Waiting for the ${gesture}\u2026`,
+  runHolding: "Keep holding\u2026",
+  runWorked: (name) => `It worked! palm-lab ran \u201C${name}\u201D.`,
+  runFailed: (message) => `palm-lab recognised it, but the action failed: ${message} You can fix it on the Gestures page.`,
+  reportCamera: ["Camera found your hand", "No hand seen during calibration"],
+  reportTuned: ["Tuned to your hand", "Standard finger settings"],
+  reportTested: (n, total) => `${n} of ${total} gestures read correctly`,
+  reportShortcut: (gesture, summary) => `${gesture} \u2192 ${summary}`,
+  reportRan: "and it ran",
+  reportNotRun: "made, not tried yet",
+  reportNoShortcut: "No shortcut made in the guide",
+  reportTracking: "palm-lab is watching for your gestures now.",
+  handTuned: "Tuned to your hand by the setup guide.",
+  handStandard: "Standard settings for reading fingers.",
+  handReset: "Back to the standard settings for your hand",
+});
+
+function guideState() {
+  return {
+    open: false, index: 0, polling: false, wasRunning: false, hasFrame: false,
+    openedAt: 0, cameraSeen: false, measuring: null, tuned: null, tuneKept: [],
+    tested: new Set(), holding: null,
+    freeAtStart: new Set(),  // built-in gestures with nothing set up when the guide opened
+    editing: null,           // the gesture whose row step 5 is building
+    created: null, ran: null, runSince: 0,
+  };
+}
+app.guide = guideState();
+
+const guideStep = () => GUIDE_STEPS[app.guide.index];
+const guideSection = (step) => document.querySelector(`.guide-step[data-step="${step}"]`);
+/* Only the built-in gestures: the guide is about getting started, and a
+   gesture someone recorded later belongs on the Gestures page. */
+const testGestures = () => app.data.gestures.filter((g) => GESTURES[g]);
+/* A gesture's name mid-sentence: "the open palm", but a custom name as typed. */
+const inSentence = (gesture) => {
+  const info = gestureInfo(gesture);
+  return info.custom ? info.label : info.label.toLowerCase();
+};
+
+function openGuide() {
+  if (app.guide.open || !app.data) return;
+  app.guide = guideState();
+  app.guide.open = true;
+  app.guide.wasRunning = Boolean(app.status && app.status.running);
+  app.guide.tuned = app.data.hand && app.data.hand.tuned ? true : null;
+  app.guide.freeAtStart = new Set(testGestures().filter((g) => !rowOf(g) || rowOf(g).actions.length === 0));
+  $("guide-frame").dataset.state = "starting";
+  $("guide-preview-img").src = "";
+  $("guide-bones").replaceChildren();
+  for (const node of document.querySelectorAll("#guide [data-glyph]")) {
+    node.innerHTML = glyph(gestureInfo(node.dataset.glyph).fingers);
+  }
+  const overlay = $("guide-overlay");
+  overlay.hidden = false;
+  void overlay.offsetHeight; // commit the start state so the transition runs
+  overlay.classList.add("is-in");
+  guideGoTo(0);
+  guidePoll();
+}
+
+async function closeGuide() {
+  if (!app.guide.open) return;
+  const finished = guideStep() === "report";
+  // A piece left empty in the guide would block saving; drop it.
+  const editing = app.guide.editing && rowOf(app.guide.editing);
+  app.guide.open = false;
+  if (editing) pruneEmptyActions(editing);
+  const overlay = $("guide-overlay");
+  overlay.classList.remove("is-in");
+  setTimeout(() => { overlay.hidden = true; }, 150);
+  api().cancel_hand_measure().catch(() => {});
+  api().set_guide_quiet(false).catch(() => {});
+  // Finishing leaves tracking on, ready to use; skipping puts it back as it was.
+  if (!finished && !app.guide.wasRunning && app.status && app.status.running) {
+    api().stop().then((result) => applyStatus(result.status)).catch(() => {});
+  }
+  if (!app.data.settings.guide_done) {
+    app.data.settings.guide_done = true;
+    await saveSettings();
+  }
+  $(app.page === "settings" ? "open-guide" : "add-gesture").focus();
+}
+
+function guideGoTo(index) {
+  const before = guideStep();
+  if (app.guide.measuring) cancelMeasuring();
+  if (before === "test") api().set_guide_quiet(false).catch(() => {});
+  app.guide.index = index;
+  const step = guideStep();
+  for (const section of document.querySelectorAll(".guide-step")) section.hidden = section.dataset.step !== step;
+
+  const slot = guideSection(step).querySelector(".guide-camera-slot");
+  if (slot) slot.append($("guide-frame"));
+  $("guide-frame").hidden = !slot;
+
+  $("guide-kicker").textContent = TEXT.guideKicker(index + 1, GUIDE_STEPS.length, GUIDE_NAMES[step]);
+  document.querySelectorAll(".guide-rack .tube").forEach((tube, i) => {
+    tube.dataset.state = i < index ? "done" : i === index ? "current" : "";
+  });
+  $("guide-back").hidden = index === 0;
+  $("guide-skip").hidden = step === "report";
+
+  document.querySelector(".guide-body").scrollTop = 0;
+  GUIDE_ENTER[step]();
+  updateGuideNav();
+  guideSection(step).querySelector(".guide-title").focus({ preventScroll: true });
+}
+
+/* Next's label says what pressing it means on this step, right now. */
+function updateGuideNav() {
+  const g = app.guide;
+  const next = $("guide-next");
+  let label = TEXT.guideNext;
+  let enabled = true;
+  switch (guideStep()) {
+    case "briefing": label = TEXT.guideStart; break;
+    case "camera":
+      if (!g.cameraSeen) {
+        enabled = Date.now() - g.openedAt > GUIDE_NO_HAND_GRACE_MS;
+        label = TEXT.guideAnyway;
+      }
+      break;
+    case "tune":
+      if (g.measuring) enabled = false;
+      else if (!g.tuned) label = TEXT.guideSkipStep;
+      break;
+    case "experiment": {
+      const row = g.editing && rowOf(g.editing);
+      if (!row || row.actions.length === 0) label = TEXT.guideSkipStep;
+      else enabled = guideChoiceReady();
+      break;
+    }
+    case "run": if (!g.ran) label = TEXT.guideSkipStep; break;
+    case "report": label = TEXT.guideFinish; break;
+    default: break;
+  }
+  next.textContent = label;
+  next.disabled = !enabled;
+  if (guideStep() === "experiment") updateExperimentNote();
+}
+
+async function guideNext() {
+  const step = guideStep();
+  if (step === "report") { await closeGuide(); return; }
+  if (step === "experiment") {
+    if (guideChoiceReady()) {
+      if (!(await saveGuideShortcut())) return;
+    } else {
+      // Nothing to make: skip the trial run too.
+      guideGoTo(GUIDE_STEPS.indexOf("report"));
+      return;
+    }
+  }
+  guideGoTo(app.guide.index + 1);
+}
+
+function guideBack() {
+  let index = app.guide.index - 1;
+  // Back from the report skips the trial run if no shortcut was made.
+  if (GUIDE_STEPS[index] === "run" && !app.guide.created) index -= 1;
+  guideGoTo(Math.max(index, 0));
+}
+
+async function ensureTracking() {
+  if (app.status && app.status.running) return true;
+  try {
+    const result = await api().start();
+    applyStatus(result.status);
+    return result.ok;
+  } catch (err) {
+    return false;
+  }
+}
+
+/* The loop: camera picture for steps that show it, then the step's own tick. */
+async function guidePoll() {
+  if (app.guide.polling) return;
+  app.guide.polling = true;
+  while (app.guide.open) {
+    const step = guideStep();
+    try {
+      if (GUIDE_CAMERA_STEPS.has(step)) {
+        const [frame, status] = await Promise.all([api().preview(), api().status()]);
+        if (frame) {
+          $("guide-preview-img").src = frame.image;
+          drawHandsInto($("guide-bones"), frame.hands);
+          if (!app.guide.hasFrame) {
+            app.guide.hasFrame = true;
+            $("guide-frame").dataset.state = "on";
+          }
+        }
+        if (app.guide.open && step === guideStep()) await GUIDE_TICK[step](status);
+      }
+    } catch (err) {
+      // A dropped poll is harmless; the next one tries again.
+    }
+    await sleep(PREVIEW_INTERVAL_MS);
+  }
+  app.guide.polling = false;
+}
+
+function setReading(id, text, tone = "") {
+  const node = $(id);
+  if (node.textContent !== text) node.textContent = text;
+  node.dataset.tone = tone;
+}
+
+/* Step 2: the camera ----------------------------------------------------------------- */
+
+async function enterCamera() {
+  app.guide.openedAt = Date.now();
+  setReading("guide-camera-reading", TEXT.cameraOpening);
+  if (!(await ensureTracking())) {
+    setReading("guide-camera-reading", (app.status && app.status.error) || app.startError || TEXT.cameraStuck, "error");
+  }
+}
+
+function tickCamera(status) {
+  const g = app.guide;
+  if (status && status.hands > 0 && !g.cameraSeen) {
+    g.cameraSeen = true;
+    sound.play("snap");
+  }
+  if (g.cameraSeen) setReading("guide-camera-reading", TEXT.cameraFound, "success");
+  else if (Date.now() - g.openedAt > GUIDE_NO_HAND_GRACE_MS) setReading("guide-camera-reading", TEXT.cameraStuck, "warn");
+  else if (status && status.running) setReading("guide-camera-reading", TEXT.cameraLooking);
+  updateGuideNav();
+}
+
+/* Step 3: measuring the hand ---------------------------------------------------------- */
+
+function setSpecimen(pose, state, fill = 0) {
+  const node = $(`specimen-${pose}`);
+  node.dataset.state = state;
+  node.style.setProperty("--fill", String(fill));
+}
+
+function enterTune() {
+  const available = app.data.hand && app.data.hand.available;
+  $("guide-measure").hidden = !available;
+  $("guide-measure").textContent = app.guide.tuned ? TEXT.measureAgain : TEXT.measureStart;
+  setSpecimen("open", app.guide.tuned ? "done" : "waiting", app.guide.tuned ? 1 : 0);
+  setSpecimen("fist", app.guide.tuned ? "done" : "waiting", app.guide.tuned ? 1 : 0);
+  if (!available) setReading("guide-tune-reading", TEXT.measureNotAvailable, "warn");
+  else if (app.guide.tuned) setReading("guide-tune-reading", TEXT.measureTuned, "success");
+  else setReading("guide-tune-reading", "");
+}
+
+async function startMeasuring(pose) {
+  app.guide.measuring = pose;
+  if (pose === "open") {
+    app.guide.tuned = null;
+    setSpecimen("fist", "waiting");
+  }
+  setSpecimen(pose, "measuring");
+  $("guide-measure").hidden = true;
+  setReading("guide-tune-reading", pose === "open" ? TEXT.measureShow("open") : TEXT.measureNowFist);
+  updateGuideNav();
+  let result;
+  try {
+    result = await api().start_hand_measure();
+  } catch (err) {
+    result = { ok: false, error: String(err) };
+  }
+  if (result.status) applyStatus(result.status);
+  if (!result.ok) measureFailed(result.error);
+}
+
+function cancelMeasuring() {
+  app.guide.measuring = null;
+  api().cancel_hand_measure().catch(() => {});
+}
+
+function measureFailed(message) {
+  app.guide.measuring = null;
+  setSpecimen("open", "waiting");
+  setSpecimen("fist", "waiting");
+  setReading("guide-tune-reading", message, "error");
+  $("guide-measure").hidden = false;
+  $("guide-measure").textContent = TEXT.measureAgain;
+  updateGuideNav();
+}
+
+async function tickTune() {
+  const pose = app.guide.measuring;
+  if (!pose) return;
+  const status = await api().hand_measure_status();
+  if (!status || pose !== app.guide.measuring) return;
+  setSpecimen(pose, "measuring", status.progress);
+  if (!status.done) {
+    let text = TEXT.measureHold(pose);
+    if (status.hands === 0) text = TEXT.measureShow(pose);
+    else if (status.hands > 1) text = TEXT.measureOneHand;
+    if (pose === "fist" && status.progress === 0 && status.hands === 1) text = TEXT.measureNowFist;
+    setReading("guide-tune-reading", text);
+    return;
+  }
+  const kept = await api().keep_hand_measure(pose);
+  if (!kept.ok) { measureFailed(kept.error); return; }
+  setSpecimen(pose, "done", 1);
+  sound.play("snap");
+  if (pose === "open") {
+    await startMeasuring("fist");
+    return;
+  }
+  app.guide.measuring = null;
+  setReading("guide-tune-reading", TEXT.measureTuning);
+  const result = await api().tune_hand();
+  if (!result.ok) { measureFailed(result.error); return; }
+  app.data.hand = result.hand;
+  app.guide.tuned = true;
+  app.guide.tuneKept = result.kept_standard;
+  showHandTuning();
+  const kept_ = result.kept_standard.length ? TEXT.measureKept(result.kept_standard) : "";
+  setReading("guide-tune-reading", TEXT.measureTuned + kept_, "success");
+  $("guide-measure").hidden = false;
+  $("guide-measure").textContent = TEXT.measureAgain;
+  updateGuideNav();
+}
+
+/* Step 4: testing every gesture -------------------------------------------------------- */
+
+function enterTest() {
+  api().set_guide_quiet(true).catch(() => {});
+  app.guide.holding = null;
+  $("guide-test-specimens").replaceChildren(...testGestures().map((gesture) => el("div", {
+    class: "specimen", dataset: { gesture, state: app.guide.tested.has(gesture) ? "done" : "waiting" },
+    style: `--fill: ${app.guide.tested.has(gesture) ? 1 : 0}`,
+  }, [
+    el("span", { class: "specimen-glyph", html: gestureGlyph(gesture) }),
+    el("span", { class: "specimen-label", textContent: gestureInfo(gesture).label }),
+    el("span", { class: "specimen-tube", "aria-hidden": "true" }, [el("span", { class: "specimen-fill" })]),
+  ])));
+  showTestProgress();
+}
+
+function showTestProgress(seeing = null) {
+  const total = testGestures().length;
+  const done = testGestures().filter((g) => app.guide.tested.has(g)).length;
+  if (done === total) setReading("guide-test-reading", TEXT.testAll, "success");
+  else if (seeing) setReading("guide-test-reading", TEXT.testSeeing(gestureInfo(seeing).label));
+  else setReading("guide-test-reading", TEXT.testProgress(done, total));
+}
+
+function tickTest(status) {
+  const g = app.guide;
+  const seen = status && status.running ? status.gesture : null;
+  const now = Date.now();
+  const holdMs = app.data.settings.dwell_seconds * 1000;
+  if (!seen || !GESTURES[seen]) {
+    g.holding = null;
+  } else if (!g.holding || g.holding.gesture !== seen) {
+    g.holding = { gesture: seen, since: now };
+  }
+  for (const node of $("guide-test-specimens").children) {
+    const gesture = node.dataset.gesture;
+    if (g.tested.has(gesture)) continue;
+    const active = g.holding && g.holding.gesture === gesture;
+    const fill = active ? Math.min((now - g.holding.since) / holdMs, 1) : 0;
+    node.style.setProperty("--fill", String(fill));
+    node.dataset.state = active ? "measuring" : "waiting";
+    if (fill >= 1) {
+      g.tested.add(gesture);
+      node.dataset.state = "done";
+      sound.play("snap");
+    }
+  }
+  showTestProgress(g.holding && !g.tested.has(g.holding.gesture) ? g.holding.gesture : null);
+}
+
+/* Step 5: building the first shortcut ----------------------------------------------------
+
+   The same puzzle editor as the Gestures page, drawn for the chosen gesture's
+   own row: pieces dropped here are that row's pieces, saved as usual.
+   Gestures already set up before the guide opened can't be picked, so the
+   guide never changes a shortcut someone already made. */
+
+function guideFreeGestures() {
+  return testGestures().filter((g) => app.guide.freeAtStart.has(g));
+}
+
+/* Ready when it has pieces and none is missing its target. */
+function guideChoiceReady() {
+  const row = app.guide.editing && rowOf(app.guide.editing);
+  return Boolean(row && row.actions.length && row.actions.every((a) => a.target.trim()));
+}
+
+function enterExperiment() {
+  const free = guideFreeGestures();
+  const pick = app.guide.editing || app.guide.created || free[0] || null;
+  $("guide-editor").hidden = !pick;
+  if (pick) chooseGuideGesture(pick);
+  else renderGuideChoices();
+}
+
+/* Switching gesture carries the pieces built so far over to the new one. */
+function chooseGuideGesture(gesture) {
+  const g = app.guide;
+  const previous = g.editing && g.editing !== gesture ? rowOf(g.editing) : null;
+  const row = rowOf(gesture);
+  if (previous && previous.actions.length) {
+    row.actions = previous.actions;
+    row.name = previous.name;
+    previous.actions = [];
+    previous.name = "";
+    g.editing = null;
+    refreshRow(previous);
+    scheduleSave();
+  }
+  g.editing = gesture;
+  if (g.created && g.created !== gesture) g.created = null;
+  if (app.open !== gesture) setOpen(gesture); // drops in the guide land in the open row
+  refreshRow(row); // draws it in the guide, and updates its row on the Gestures page
+  renderGuideChoices();
+}
+
+function renderGuideChoices() {
+  const g = app.guide;
+  const free = new Set(guideFreeGestures());
+  $("guide-gesture-choices").replaceChildren(...testGestures().map((gesture) => {
+    const taken = !free.has(gesture);
+    return el("button", {
+      class: "choice", type: "button", role: "radio", disabled: taken,
+      "aria-checked": String(g.editing === gesture), dataset: { gesture },
+      onclick: () => chooseGuideGesture(gesture),
+    }, [
+      el("span", { class: "choice-glyph", html: gestureGlyph(gesture) }),
+      el("span", { class: "choice-label" }, [
+        gestureInfo(gesture).label,
+        taken ? el("span", { class: "choice-hint", textContent: TEXT.inUse }) : null,
+      ]),
+    ]);
+  }));
+  updateGuideNav();
+}
+
+function updateExperimentNote() {
+  const row = app.guide.editing && rowOf(app.guide.editing);
+  let note = "";
+  let tone = "";
+  if (!guideFreeGestures().length) { note = TEXT.noFreeGesture; tone = "warn"; }
+  else if (row && row.actions.length && !guideChoiceReady()) { note = TEXT.pieceIncomplete; tone = "warn"; }
+  else if (row && row.actions.length) { note = TEXT.pieceDone; tone = "success"; }
+  else if (row) note = TEXT.pieceStart;
+  setReading("guide-experiment-note", note, tone);
+}
+
+async function saveGuideShortcut() {
+  const saved = await saveNow();
+  if (!saved) {
+    setReading("guide-experiment-note", TEXT.guideSaveFailed, "error");
+    return false;
+  }
+  if (app.guide.created !== app.guide.editing) app.guide.ran = null;
+  app.guide.created = app.guide.editing;
+  return true;
+}
+
+/* "Press keys (Play / pause), then Open app (Spotify)" */
+function describeActions(row) {
+  return row.actions.map((a) => TEXT.actionSummary(ACTIONS[a.type].label, shortTarget(a))).join(", then ");
+}
+
+/* Step 6: the trial run ------------------------------------------------------------------ */
+
+async function enterRun() {
+  const gesture = app.guide.created;
+  const row = rowOf(gesture);
+  const minimises = row.actions.some((a) => a.type === "hotkey" && a.target.trim().toLowerCase() === "win+d");
+  $("guide-run-lead").textContent = TEXT.runLead(inSentence(gesture), describeActions(row)) + (minimises ? TEXT.runDesktop : "");
+  $("guide-run-glyph").innerHTML = gestureGlyph(gesture);
+  $("guide-run").dataset.phase = app.guide.ran ? "fired" : "idle";
+  $("guide-run").style.setProperty("--hold", app.guide.ran ? "1" : "0");
+  // Fired events carry Python's wall-clock time; allow for a little skew.
+  app.guide.runSince = Date.now() / 1000 - 1;
+  if (!app.guide.ran) setReading("guide-run-reading", TEXT.runWaiting(inSentence(gesture)));
+  await ensureTracking();
+}
+
+function tickRun(status) {
+  const g = app.guide;
+  if (!status) return;
+  const gesture = g.created;
+  const fired = status.last_fired;
+  if (fired && fired.gesture === gesture && fired.at >= g.runSince && fired.finished) {
+    if (!g.ran) {
+      g.ran = fired;
+      const failure = fired.results.find((r) => !r.ok);
+      $("guide-run").dataset.phase = "fired";
+      $("guide-run").style.setProperty("--hold", "1");
+      if (failure) setReading("guide-run-reading", TEXT.runFailed(failure.message), "error");
+      else setReading("guide-run-reading", TEXT.runWorked(fired.name || gestureInfo(gesture).label), "success");
+      updateGuideNav();
+    }
+    return;
+  }
+  if (g.ran) return;
+  const hold = status.hold;
+  const holding = hold && hold.gesture === gesture && hold.phase === "holding";
+  $("guide-run").dataset.phase = holding ? "holding" : "idle";
+  $("guide-run").style.setProperty("--hold", String(holding ? hold.progress : 0));
+  setReading("guide-run-reading", holding ? TEXT.runHolding : TEXT.runWaiting(inSentence(gesture)));
+}
+
+/* Step 7: the lab report ----------------------------------------------------------------- */
+
+async function enterReport() {
+  const g = app.guide;
+  const total = testGestures().length;
+  const tested = testGestures().filter((x) => g.tested.has(x)).length;
+  const item = (ok, text, detail = "") => el("li", { class: "report-item", dataset: { ok: String(ok) } }, [
+    el("span", { class: "report-icon", html: icon(ok ? "success" : "info") }),
+    el("span", { textContent: text }),
+    detail ? el("span", { class: "report-detail", textContent: detail }) : null,
+  ]);
+  const made = g.created && rowOf(g.created);
+  $("guide-report").replaceChildren(
+    item(g.cameraSeen, TEXT.reportCamera[g.cameraSeen ? 0 : 1]),
+    item(Boolean(g.tuned), TEXT.reportTuned[g.tuned ? 0 : 1]),
+    item(tested === total, TEXT.reportTested(tested, total)),
+    made && made.actions.length
+      ? item(Boolean(g.ran), TEXT.reportShortcut(gestureInfo(g.created).label, describeActions(made)), g.ran ? TEXT.reportRan : TEXT.reportNotRun)
+      : item(false, TEXT.reportNoShortcut),
+    app.status && app.status.running ? item(true, TEXT.reportTracking) : null,
+  );
+  const input = $("guide-startup");
+  input.disabled = true;
+  try {
+    const state = await api().shortcut_state();
+    setSwitch(input, Boolean(state.startup));
+    input.disabled = !state.supported;
+  } catch (err) {
+    input.disabled = true;
+  }
+}
+
+async function setGuideStartup() {
+  const input = $("guide-startup");
+  const wanted = input.checked;
+  input.disabled = true;
+  let result;
+  try {
+    result = await api().set_shortcut("startup", wanted);
+  } catch (err) {
+    result = { ok: false, error: String(err) };
+  }
+  setSwitch(input, result.ok ? wanted : !wanted);
+  input.disabled = false;
+  if (result.shortcuts) showShortcuts(result.shortcuts);
+  if (!result.ok) toast(result.error, "error");
+}
+
+const GUIDE_ENTER = {
+  briefing: () => {}, camera: enterCamera, tune: enterTune, test: enterTest,
+  experiment: enterExperiment, run: enterRun, report: enterReport,
+};
+const GUIDE_TICK = {
+  camera: tickCamera, tune: tickTune, test: tickTest, run: tickRun,
+};
+
+/* Settings > Your hand --------------------------------------------------------------------- */
+
+function showHandTuning() {
+  const hand = app.data.hand || { available: false, tuned: false };
+  $("hand-tuning-desc").textContent = hand.tuned ? TEXT.handTuned : TEXT.handStandard;
+  $("reset-tuning").disabled = !hand.tuned;
+}
+
+async function resetHandTuning() {
+  let result;
+  try {
+    result = await api().reset_hand_tuning();
+  } catch (err) {
+    result = { ok: false, error: String(err) };
+  }
+  if (!result.ok) { showSettingsError(result.error); return; }
+  app.data.hand = result.hand;
+  showHandTuning();
+  toast(TEXT.handReset, "info");
+}
+
+/* Starter templates ------------------------------------------------------------------------------------
+
+   Ready-made pieces to begin a gesture from (palm_lab/templates.py). Picking
+   one fills the gesture being edited; the pieces are then edited as usual. */
+
+function openTemplates(row) {
+  app.templateRow = row;
+  const label = gestureInfo(row.gesture).label;
+  $("template-desc").textContent = row.actions.length
+    ? TEXT.templateReplaces(label, row.actions.length)
+    : TEXT.templateIntro(label);
+  const byCategory = (app.data.template_categories || []).map((category) => [
+    category, app.data.templates.filter((t) => t.category === category),
+  ]);
+  $("template-list").replaceChildren(...byCategory.flatMap(([category, templates]) => [
+    el("h3", { class: "template-category", textContent: category }),
+    el("div", { class: "template-grid" }, templates.map((template) => el("button", {
+      class: "template-card", type: "button", onclick: () => useTemplate(template),
+    }, [
+      el("span", { class: "template-name", textContent: template.name }),
+      el("span", { class: "template-text", textContent: template.description }),
+      el("span", { class: "template-steps", "aria-hidden": "true" }, template.action.map((a) => el("span", {
+        class: "chip", dataset: { type: a.type },
+      }, [
+        el("span", { class: "chip-icon", html: icon(ACTIONS[a.type].icon) }),
+        el("span", { class: "chip-text", textContent: shortTarget({ type: a.type, target: a.target }) }),
+      ]))),
+    ]))),
+  ]));
+  const overlay = $("template-overlay");
+  overlay.hidden = false;
+  void overlay.offsetHeight; // commit the start state so the transition runs
+  overlay.classList.add("is-in");
+  $("template-list").querySelector(".template-card").focus();
+}
+
+function closeTemplates() {
+  const overlay = $("template-overlay");
+  if (overlay.hidden) return;
+  overlay.classList.remove("is-in");
+  setTimeout(() => { overlay.hidden = true; }, 150);
+}
+
+function useTemplate(template) {
+  const row = app.templateRow;
+  closeTemplates();
+  if (!row) return;
+  row.actions = template.action.map((a) => newAction(a.type, a.target));
+  if (!row.name.trim()) row.name = template.name;
+  refreshRow(row, { flip: false, focus: { id: row.actions[0].id } });
+  sound.play("snap", { delay: SNAP_SOUND_DELAY });
+  scheduleSave();
+  toast(TEXT.templateAdded(template.name), "info");
+}
+
+/* Two-hand setups ----------------------------------------------------------------------------------------
+
+   Made from two gestures you already have. The new row opens ready for its
+   actions; like any row, it is saved once it has some. */
+
+function pairChoices() {
+  return Object.keys(GESTURES);
+}
+
+function openPairDialog() {
+  const choices = pairChoices();
+  for (const [id, chosen] of [["pair-first", choices[0]], ["pair-second", choices[1] || choices[0]]]) {
+    $(id).replaceChildren(...choices.map((g) => el("option", { value: g, textContent: gestureInfo(g).label })));
+    $(id).value = chosen;
+  }
+  $("pair-error").hidden = true;
+  updatePairPreview();
+  const overlay = $("pair-overlay");
+  overlay.hidden = false;
+  void overlay.offsetHeight; // commit the start state so the transition runs
+  overlay.classList.add("is-in");
+  $("pair-first").focus();
+}
+
+function closePairDialog(focusButton = true) {
+  const overlay = $("pair-overlay");
+  if (overlay.hidden) return;
+  overlay.classList.remove("is-in");
+  setTimeout(() => { overlay.hidden = true; }, 150);
+  if (focusButton) $("add-pair").focus();
+}
+
+function chosenPair() {
+  return comboKey($("pair-first").value, $("pair-second").value);
+}
+
+function updatePairPreview() {
+  const key = chosenPair();
+  $("pair-glyph").innerHTML = gestureGlyph(key);
+  const taken = Boolean(rowOf(key));
+  $("pair-error").hidden = !taken;
+  $("pair-error").textContent = taken ? TEXT.pairExists : "";
+  $("pair-add").disabled = taken;
+}
+
+function addPair() {
+  const key = chosenPair();
+  if (rowOf(key)) return;
+  app.rows.push(rowFromBinding(key, null));
+  closePairDialog(false);
+  renderRows(false);
+  setOpen(key);
+  const node = rowNode(key);
+  if (node) {
+    node.querySelector(".gesture-head").focus({ preventScroll: true });
+    node.scrollIntoView({ block: "nearest", behavior: reducedMotion.matches ? "auto" : "smooth" });
+  }
+  toast(TEXT.pairAdded(gestureInfo(key).label));
+}
+
+async function removePair(row) {
+  if (app.open === row.gesture) app.open = null;
+  app.rows = app.rows.filter((r) => r !== row);
+  renderRows(false);
+  toast(TEXT.pairRemoved(gestureInfo(row.gesture).label));
+  await saveNow();
+}
+
+/* Custom CSS ----------------------------------------------------------------------------------------------
+
+   Applied as the text of its own <style> element, placed after palm-lab's
+   styles so it wins ties. Setting textContent (never innerHTML) means the text
+   is only ever CSS, whatever it contains. */
+
+const CSS_SAVE_DELAY_MS = 500;
+
+function loadCustomCss(state) {
+  const css = app.css;
+  css.style = document.createElement("style");
+  css.style.id = "custom-css";
+  document.head.append(css.style);
+  css.text = state.text || "";
+  css.allowed = state.allowed !== false;
+  $("custom-css-input").value = css.text;
+  $("custom-css-file").textContent = state.file || "";
+  $("custom-css-card").hidden = !state.file;
+  const notice = state.error || (css.allowed ? "" : TEXT.cssBlocked);
+  $("custom-css-notice").hidden = !notice;
+  $("custom-css-notice-text").textContent = notice;
+  applyCustomCss();
+}
+
+function customCssOn() {
+  return app.css.allowed && Boolean(app.data) && app.data.settings.custom_css !== false;
+}
+
+function applyCustomCss() {
+  if (app.css.style) app.css.style.textContent = customCssOn() ? app.css.text : "";
+}
+
+function setCssState(state, message = "") {
+  const node = $("custom-css-state");
+  node.dataset.state = state;
+  node.textContent = message;
+}
+
+function editCustomCss(event) {
+  app.css.text = event.target.value;
+  applyCustomCss();
+  clearTimeout(app.css.saveTimer);
+  app.css.saveTimer = setTimeout(saveCustomCss, CSS_SAVE_DELAY_MS);
+  setCssState("saving", TEXT.cssSaving);
+}
+
+async function saveCustomCss() {
+  app.css.saveRequest += 1;
+  const request = app.css.saveRequest;
+  let result;
+  try {
+    result = await api().save_custom_css(app.css.text);
+  } catch (err) {
+    result = { ok: false, error: String(err) };
+  }
+  if (request !== app.css.saveRequest) return; // a newer save superseded this one
+  if (result.ok) setCssState("saved", TEXT.cssSaved);
+  else setCssState("error", result.error);
+}
+
+function toggleCssEditor() {
+  const button = $("custom-css-edit");
+  const open = button.getAttribute("aria-expanded") !== "true";
+  button.setAttribute("aria-expanded", String(open));
+  setCollapse($("custom-css-wrap"), open);
+  if (open) setTimeout(() => $("custom-css-input").focus({ preventScroll: true }), 60);
+}
+
+async function setCustomCssOn(on) {
+  setSwitch($("custom-css-on"), on);
+  if (app.data) app.data.settings.custom_css = on;
+  applyCustomCss();
+  await saveSettings();
 }
 
 /* Closing -----------------------------------------------------------------------------------------------------
@@ -1775,6 +3143,19 @@ function wireControls() {
   }
   window.addEventListener("resize", moveIndicator);
   $("tracking-switch").addEventListener("change", toggleTracking);
+  $("pause-button").addEventListener("click", () => {
+    if ($("pause-menu").hidden) openPauseMenu();
+    else closePauseMenu();
+  });
+  $("pause-menu").addEventListener("keydown", pauseMenuKeys);
+  for (const item of document.querySelectorAll("#pause-menu .menu-item")) {
+    item.addEventListener("click", () => pauseFor(Number(item.dataset.minutes)));
+  }
+  $("resume-button").addEventListener("click", resumeNow);
+  $("recent-all").addEventListener("click", () => showPage("activity"));
+  document.addEventListener("pointerdown", (event) => {
+    if (!event.target.closest(".pause-wrap")) closePauseMenu(false);
+  });
   $("close-problems").addEventListener("click", () => { $("problems").hidden = true; });
   $("close-welcome").addEventListener("click", () => { $("welcome").hidden = true; });
 
@@ -1800,6 +3181,31 @@ function wireControls() {
   $("open-project").addEventListener("click", () => api().open_project_page());
 
   $("add-gesture").addEventListener("click", openWizard);
+  $("add-pair").addEventListener("click", openPairDialog);
+  $("template-close").addEventListener("click", closeTemplates);
+  $("template-overlay").addEventListener("click", (event) => {
+    if (event.target === event.currentTarget) closeTemplates();
+  });
+  $("open-guide").addEventListener("click", openGuide);
+  $("reset-tuning").addEventListener("click", resetHandTuning);
+  $("guide-next").addEventListener("click", guideNext);
+  $("guide-back").addEventListener("click", guideBack);
+  $("guide-skip").addEventListener("click", closeGuide);
+  $("guide-measure").addEventListener("click", () => startMeasuring("open"));
+  $("guide-startup").addEventListener("change", setGuideStartup);
+  // Pieces dropped into the guide's editor land in the gesture it's building.
+  const guideRow = () => app.guide.editing && rowOf(app.guide.editing);
+  $("guide-editor").addEventListener("dragover", (event) => { if (guideRow()) rowDragOver(event, guideRow(), $("guide-editor")); });
+  $("guide-editor").addEventListener("dragleave", (event) => rowDragLeave(event, $("guide-editor")));
+  $("guide-editor").addEventListener("drop", (event) => { if (guideRow()) rowDrop(event, guideRow(), $("guide-editor")); });
+  $("pair-first").addEventListener("change", updatePairPreview);
+  $("pair-second").addEventListener("change", updatePairPreview);
+  $("pair-add").addEventListener("click", addPair);
+  $("pair-cancel").addEventListener("click", () => closePairDialog());
+  $("pair-close").addEventListener("click", () => closePairDialog());
+  $("pair-overlay").addEventListener("click", (event) => {
+    if (event.target === event.currentTarget) closePairDialog();
+  });
   $("wizard-close").addEventListener("click", closeWizard);
   $("wizard-cancel").addEventListener("click", closeWizard);
   $("wizard-retry").addEventListener("click", retryWizard);
@@ -1816,10 +3222,31 @@ function wireControls() {
   window.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     if (!$("close-overlay").hidden) dismissCloseQuestion();
+    else if (!$("pair-overlay").hidden) closePairDialog();
+    else if (!$("template-overlay").hidden) closeTemplates();
+    else if (app.guide.open) closeGuide();
     else if (app.wizard.open) closeWizard();
   });
 
   $("close-action").addEventListener("change", saveSettings);
+  $("run-popup").addEventListener("change", saveSettings);
+
+  $("custom-css-on").addEventListener("change", (event) => setCustomCssOn(event.target.checked));
+  $("custom-css-edit").addEventListener("click", toggleCssEditor);
+  $("custom-css-input").addEventListener("input", editCustomCss);
+  $("custom-css-docs").addEventListener("click", (event) => {
+    event.preventDefault();
+    api().open_project_page();
+  });
+  // The way back from CSS that hides everything: script keeps working when
+  // CSS has hidden every button, so a key press can always turn it off.
+  window.addEventListener("keydown", (event) => {
+    if (!(event.ctrlKey && event.shiftKey && event.code === "KeyX")) return;
+    event.preventDefault();
+    if (!app.data || app.data.settings.custom_css === false) return;
+    setCustomCssOn(false);
+    toast(TEXT.cssOff, "info");
+  });
   $("close-yes").addEventListener("click", () => answerClose("background"));
   $("close-no").addEventListener("click", () => answerClose("quit"));
   $("close-overlay").addEventListener("click", (event) => {
@@ -1844,6 +3271,7 @@ function wireControls() {
 if (!document.documentElement.dataset.theme) applyTheme("system");
 paintStaticIcons();
 setCollapse($("live-wrap"), false);
+setCollapse($("custom-css-wrap"), false);
 wireControls();
 moveIndicator();
 

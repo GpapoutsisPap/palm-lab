@@ -58,6 +58,12 @@ def test_ui_can_start_in_the_background() -> None:
     assert cli.build_parser().parse_args([]).background is False
 
 
+def test_ui_can_skip_custom_css() -> None:
+    """The way back from custom CSS that hid the window's own controls."""
+    assert cli.build_parser().parse_args(["ui", "--no-custom-css"]).no_custom_css is True
+    assert cli.build_parser().parse_args([]).no_custom_css is False
+
+
 def test_run_accepts_a_camera_index() -> None:
     """A non-default camera can be selected."""
     args = cli.build_parser().parse_args(["run", "--camera", "2"])
@@ -92,6 +98,7 @@ def test_config_reports_the_location(config_home: Path, capsys: pytest.CaptureFi
     out = capsys.readouterr().out
     assert str(config_home) in out
     assert "binding(s)" in out
+    assert str(config_home / "custom.css") in out
 
 
 def test_config_creates_the_file_when_absent(config_home: Path) -> None:
@@ -249,3 +256,17 @@ def test_missing_handler_prints_help(
     monkeypatch.delitem(cli.HANDLERS, "config")
     assert cli.main(["config"]) == 2
     assert "usage:" in capsys.readouterr().out
+
+
+def test_config_marks_switched_off_bindings(
+    config_home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A gesture switched off in the window shows as off, not as working."""
+    config_home.mkdir(parents=True)
+    (config_home / "bindings.toml").write_text(
+        '[[binding]]\ngesture = "fist"\nname = "Quiet"\nenabled = false\n'
+        '[[binding.action]]\ntype = "hotkey"\ntarget = "volume_mute"\n',
+        encoding="utf-8",
+    )
+    assert cli.main(["config"]) == 0
+    assert "Quiet  (off)" in capsys.readouterr().out

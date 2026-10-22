@@ -12,7 +12,9 @@ from palm_lab.config import (
     ensure_bindings_file,
     ui_static_dir,
 )
+from palm_lab.custom_css import custom_css_path
 from palm_lab.custom_gestures import CustomGestureError, gestures_path, load_custom_gestures
+from palm_lab.hand_profile import HandProfileError, hand_profile_path, load_hand_profile
 from palm_lab.version import __version__
 
 MODEL_URL = (
@@ -39,6 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="start hidden in the notification area with tracking on (used at sign-in)",
     )
+    ui.add_argument(
+        "--no-custom-css",
+        action="store_true",
+        help="ignore your custom CSS for this run (if it made the window unusable)",
+    )
 
     run = subparsers.add_parser("run", help="watch the camera in a plain preview window")
     run.add_argument("--camera", type=int, default=0, help="camera index (default: 0)")
@@ -63,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # A bare `palm-lab`, which is what double-clicking the .exe runs, opens the
     # window. This must come after add_subparsers, which resets dest="command".
-    parser.set_defaults(command="ui", debug=False, background=False, camera=0)
+    parser.set_defaults(command="ui", debug=False, background=False, no_custom_css=False, camera=0)
     return parser
 
 
@@ -71,7 +78,7 @@ def _cmd_ui(args: argparse.Namespace) -> int:
     # Imported here so config/doctor never load pywebview, OpenCV or MediaPipe.
     from palm_lab.ui.app import run_ui
 
-    return run_ui(debug=args.debug, background=args.background)
+    return run_ui(debug=args.debug, background=args.background, custom_css=not args.no_custom_css)
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
@@ -100,6 +107,12 @@ def _cmd_config(_: argparse.Namespace) -> int:
     path, created = ensure_bindings_file()
     print(f"Config directory: {config_dir()}")
     print(f"Bindings file:    {path}{'  (just created)' if created else ''}")
+    print(f"Custom CSS:       {custom_css_path()}")
+    try:
+        tuned = "tuned to your hand" if load_hand_profile() else "standard (not tuned)"
+    except HandProfileError as exc:
+        tuned = f"unreadable ({exc})"
+    print(f"Hand tuning:      {hand_profile_path()}  {tuned}")
     try:
         bindings = load_bindings(path)
     except ActionError as exc:
@@ -107,7 +120,8 @@ def _cmd_config(_: argparse.Namespace) -> int:
         return 1
     print(f"\n{len(bindings)} binding(s):")
     for binding in bindings:
-        print(f"  {binding.gesture:<12} {binding.name}")
+        off = "" if binding.enabled else "  (off)"
+        print(f"  {binding.gesture:<12} {binding.name}{off}")
         for action in binding.actions:
             print(f"    {action.type.value:<10} {action.target}")
 

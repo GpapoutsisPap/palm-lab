@@ -54,7 +54,7 @@
 
     <main class="content" id="content">
       <!-- Gestures ------------------------------------------------------------------>
-      <section class="page" id="page-gestures" data-page="gestures" aria-labelledby="gestures-title">
+      <section class="page page-gestures" id="page-gestures" data-page="gestures" aria-labelledby="gestures-title">
         <header class="page-head">
           <h1 class="page-title" id="gestures-title">Gestures</h1>
           <span class="save-state" id="save-state" data-state="idle" role="status" aria-live="polite"></span>
@@ -72,6 +72,9 @@
           <button class="btn btn-subtle btn-icon" id="close-welcome" type="button" aria-label="Dismiss"><span data-icon="close"></span></button>
         </div>
 
+        <!-- One column; two on a wide window (tracking left, gestures right). -->
+        <div class="gestures-layout">
+        <div class="gestures-side">
         <section class="card tracking" id="tracking" data-state="stopped" aria-label="Gesture tracking">
           <div class="card-row">
             <span class="card-icon" data-icon="video"></span>
@@ -79,10 +82,21 @@
               <p class="card-title">Gesture tracking</p>
               <p class="card-desc" id="tracking-desc">Watch the camera and run your shortcuts.</p>
             </div>
-            <label class="toggle">
-              <span class="toggle-label" id="tracking-label">Off</span>
-              <input class="switch" id="tracking-switch" type="checkbox" role="switch" aria-label="Gesture tracking" disabled>
-            </label>
+            <div class="card-control">
+              <div class="pause-wrap">
+                <button class="btn" id="pause-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="pause-menu" hidden><span class="btn-icon-slot" data-icon="pause"></span>Pause<span class="btn-icon-slot btn-icon-end btn-chevron" data-icon="chevron"></span></button>
+                <button class="btn" id="resume-button" type="button" hidden><span class="btn-icon-slot" data-icon="play"></span>Resume now</button>
+                <div class="menu" id="pause-menu" role="menu" aria-label="Pause tracking" hidden>
+                  <button class="menu-item" type="button" role="menuitem" data-minutes="15">For 15 minutes</button>
+                  <button class="menu-item" type="button" role="menuitem" data-minutes="60">For 1 hour</button>
+                  <button class="menu-item" type="button" role="menuitem" data-minutes="240">For 4 hours</button>
+                </div>
+              </div>
+              <label class="toggle">
+                <span class="toggle-label" id="tracking-label">Off</span>
+                <input class="switch" id="tracking-switch" type="checkbox" role="switch" aria-label="Gesture tracking" disabled>
+              </label>
+            </div>
           </div>
           <div class="infobar is-error infobar-inset" id="tracking-error" role="alert" hidden>
             <span class="infobar-icon" data-icon="error"></span>
@@ -96,11 +110,18 @@
                   <img id="preview-img" alt="Live camera view">
                   <svg class="bones" id="bones" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
                 </div>
-                <dl class="facts">
-                  <div class="fact">
-                    <dt>Seeing</dt>
-                    <dd><span class="fact-glyph" id="seen-glyph"></span><span id="seen-text">No hand in view</span></dd>
+                <div class="facts">
+                  <div class="hold" id="hold" data-phase="idle">
+                    <span class="hold-ring" aria-hidden="true">
+                      <svg viewBox="0 0 48 48" focusable="false"><circle class="hold-track" cx="24" cy="24" r="22"/><circle class="hold-fill" cx="24" cy="24" r="22" pathLength="100"/></svg>
+                      <span class="hold-glyph" id="seen-glyph"></span>
+                    </span>
+                    <span class="hold-text">
+                      <span class="hold-title" id="seen-text" aria-live="polite">No hand in view</span>
+                      <span class="hold-sub" id="hold-sub"></span>
+                    </span>
                   </div>
+                  <dl class="facts-list">
                   <div class="fact">
                     <dt>Frame rate</dt>
                     <dd id="fps">&ndash;</dd>
@@ -109,15 +130,30 @@
                     <dt>Last shortcut</dt>
                     <dd id="last-run">Nothing yet</dd>
                   </div>
-                </dl>
+                  </dl>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
+        <section class="card recent" id="recent" aria-labelledby="recent-title">
+          <div class="recent-head">
+            <h2 class="recent-title" id="recent-title">Recently ran</h2>
+            <button class="btn btn-subtle" id="recent-all" type="button">See all</button>
+          </div>
+          <ul class="recent-list" id="recent-list"></ul>
+          <p class="recent-empty" id="recent-empty">Nothing has run yet. Hold up a gesture while tracking is on.</p>
+        </section>
+        </div>
+
+        <div class="gestures-main">
         <div class="group-title-row">
           <h2 class="group-title">Your gestures</h2>
-          <button class="btn" id="add-gesture" type="button"><span class="btn-icon-slot" data-icon="add"></span>Add gesture</button>
+          <span class="group-actions">
+            <button class="btn" id="add-pair" type="button"><span class="btn-icon-slot" data-icon="add"></span>Two-hand setup</button>
+            <button class="btn" id="add-gesture" type="button"><span class="btn-icon-slot" data-icon="add"></span>Add gesture</button>
+          </span>
         </div>
         <ul class="gesture-list" id="gesture-list" aria-busy="true">
           <li class="card gesture skeleton-row" aria-hidden="true"><div class="gesture-head"><span class="skeleton sk-glyph"></span><span class="sk-lines"><span class="skeleton sk-line"></span><span class="skeleton sk-line sk-short"></span></span><span class="skeleton sk-chip"></span></div></li>
@@ -125,6 +161,8 @@
           <li class="card gesture skeleton-row" aria-hidden="true"><div class="gesture-head"><span class="skeleton sk-glyph"></span><span class="sk-lines"><span class="skeleton sk-line"></span><span class="skeleton sk-line sk-short"></span></span></div></li>
           <li class="card gesture skeleton-row" aria-hidden="true"><div class="gesture-head"><span class="skeleton sk-glyph"></span><span class="sk-lines"><span class="skeleton sk-line sk-mid"></span><span class="skeleton sk-line sk-short"></span></span></div></li>
         </ul>
+        </div>
+        </div>
       </section>
 
       <!-- Activity ------------------------------------------------------------------>
@@ -194,18 +232,81 @@
         </div>
 
         <h2 class="group-title">Appearance</h2>
+        <div class="card-group">
+          <div class="card card-row">
+            <span class="card-icon" data-icon="theme"></span>
+            <div class="card-text">
+              <p class="card-title" id="theme-label">Theme</p>
+              <p class="card-desc">Light or dark, or match the mode you picked for Windows.</p>
+            </div>
+            <div class="card-control">
+              <span class="select-wrap">
+                <select class="select" id="theme" aria-labelledby="theme-label">
+                  <option value="system">Use my Windows setting</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+                <span class="select-chevron" data-icon="chevron"></span>
+              </span>
+            </div>
+          </div>
+          <div class="card palette-card">
+            <div class="card-row">
+              <span class="card-icon" data-icon="theme"></span>
+              <div class="card-text">
+                <p class="card-title" id="palette-label">Colours</p>
+                <p class="card-desc" id="palette-desc">A palette for backgrounds and highlights, in light and dark. Windows uses your Windows accent colour.</p>
+              </div>
+            </div>
+            <div class="palette-choices" id="palette-choices" role="radiogroup" aria-labelledby="palette-label" aria-describedby="palette-desc"></div>
+          </div>
+          <div class="card" id="custom-css-card">
+            <div class="card-row">
+              <span class="card-icon" data-icon="paint"></span>
+              <div class="card-text">
+                <p class="card-title" id="custom-css-label">Custom CSS</p>
+                <p class="card-desc">Restyle palm-lab with your own CSS: colours, fonts, spacing, anything. Press Ctrl+Shift+X to turn it off if something goes wrong.</p>
+              </div>
+              <div class="card-control">
+                <label class="toggle">
+                  <span class="toggle-label" data-for="custom-css-on">On</span>
+                  <input class="switch" id="custom-css-on" type="checkbox" role="switch" aria-labelledby="custom-css-label">
+                </label>
+                <button class="btn" id="custom-css-edit" type="button" aria-expanded="false" aria-controls="custom-css-wrap">Edit<span class="btn-icon-slot btn-icon-end btn-chevron" data-icon="chevron"></span></button>
+              </div>
+            </div>
+            <div class="collapse" id="custom-css-wrap">
+              <div class="collapse-inner">
+                <div class="css-editor">
+                  <div class="infobar is-warning" id="custom-css-notice" role="status" hidden>
+                    <span class="infobar-icon" data-icon="warning"></span>
+                    <p class="infobar-text" id="custom-css-notice-text"></p>
+                  </div>
+                  <textarea class="css-input" id="custom-css-input" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off" aria-labelledby="custom-css-label" placeholder="/* For example: */&#10;:root {&#10;  --accent: #E3008C;&#10;}&#10;&#10;.gesture {&#10;  border-radius: 16px;&#10;}"></textarea>
+                  <div class="css-editor-bar">
+                    <p class="css-hint">Changes show as you type and save by themselves. The colour variables are listed in the <a href="#" id="custom-css-docs">README</a>.</p>
+                    <span class="css-state" id="custom-css-state" role="status" aria-live="polite"></span>
+                  </div>
+                  <p class="card-path" id="custom-css-file"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h2 class="group-title">When a gesture runs</h2>
         <div class="card card-row">
-          <span class="card-icon" data-icon="theme"></span>
+          <span class="card-icon" data-icon="bolt"></span>
           <div class="card-text">
-            <p class="card-title" id="theme-label">Theme</p>
-            <p class="card-desc">Light or dark, or match the mode you picked for Windows.</p>
+            <p class="card-title" id="run-popup-label">Pop-up by the clock</p>
+            <p class="card-desc">A small card that says what ran, or what went wrong, when palm-lab&rsquo;s window isn&rsquo;t in front. It never takes focus, and stays away during games and presentations.</p>
           </div>
           <div class="card-control">
             <span class="select-wrap">
-              <select class="select" id="theme" aria-labelledby="theme-label">
-                <option value="system">Use my Windows setting</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
+              <select class="select" id="run-popup" aria-labelledby="run-popup-label">
+                <option value="all">For every run</option>
+                <option value="failures">Only when something fails</option>
+                <option value="off">Off</option>
               </select>
               <span class="select-chevron" data-icon="chevron"></span>
             </span>
@@ -283,6 +384,26 @@
           </div>
         </div>
 
+        <h2 class="group-title">Your hand</h2>
+        <div class="card-group">
+          <div class="card card-row">
+            <span class="card-icon" data-icon="nav_gestures"></span>
+            <div class="card-text">
+              <p class="card-title">Hand tuning</p>
+              <p class="card-desc" id="hand-tuning-desc">Standard settings for reading fingers.</p>
+            </div>
+            <button class="btn" id="reset-tuning" type="button">Reset to standard</button>
+          </div>
+          <div class="card card-row">
+            <span class="card-icon" data-icon="bolt"></span>
+            <div class="card-text">
+              <p class="card-title">Setup guide</p>
+              <p class="card-desc">Check the camera, measure your hand, test your gestures and make a shortcut, step by step.</p>
+            </div>
+            <button class="btn" id="open-guide" type="button">Run the guide</button>
+          </div>
+        </div>
+
         <h2 class="group-title">Advanced</h2>
         <div class="card card-row">
           <span class="card-icon" data-icon="code"></span>
@@ -348,6 +469,210 @@
     </div>
   </div>
 
+  <!-- Starter templates: ready-made pieces to begin a gesture from. -->
+  <div class="modal-overlay" id="template-overlay" hidden>
+    <div class="modal template-dialog" id="template-dialog" role="dialog" aria-modal="true" aria-labelledby="template-title" aria-describedby="template-desc">
+      <div class="modal-head">
+        <h2 class="modal-title" id="template-title">Start from a template</h2>
+        <button class="btn btn-subtle btn-icon" id="template-close" type="button" aria-label="Close"><span data-icon="close"></span></button>
+      </div>
+      <p class="modal-text" id="template-desc"></p>
+      <div class="template-list" id="template-list"></div>
+    </div>
+  </div>
+
+  <!-- A two-hand setup is two gestures you already have, held up together. -->
+  <div class="modal-overlay" id="pair-overlay" hidden>
+    <div class="modal pair-dialog" id="pair-dialog" role="dialog" aria-modal="true" aria-labelledby="pair-title" aria-describedby="pair-desc">
+      <div class="modal-head">
+        <h2 class="modal-title" id="pair-title">Add a two-hand setup</h2>
+        <button class="btn btn-subtle btn-icon" id="pair-close" type="button" aria-label="Close"><span data-icon="close"></span></button>
+      </div>
+      <p class="modal-text" id="pair-desc">It runs only when both hands show these shapes at once, so one hand resting on your chin can&rsquo;t set it off. Either hand can make either shape. While both hands are in view, your one-hand gestures don&rsquo;t run.</p>
+      <div class="pair-preview" id="pair-glyph" aria-hidden="true"></div>
+      <div class="pair-fields">
+        <label class="pair-field">
+          <span>One hand</span>
+          <span class="select-wrap">
+            <select class="select" id="pair-first"></select>
+            <span class="select-chevron" data-icon="chevron"></span>
+          </span>
+        </label>
+        <span class="pair-plus" aria-hidden="true">+</span>
+        <label class="pair-field">
+          <span>Other hand</span>
+          <span class="select-wrap">
+            <select class="select" id="pair-second"></select>
+            <span class="select-chevron" data-icon="chevron"></span>
+          </span>
+        </label>
+      </div>
+      <p class="pair-error" id="pair-error" role="alert" hidden></p>
+      <div class="modal-actions">
+        <span class="spacer"></span>
+        <button class="btn" id="pair-cancel" type="button">Cancel</button>
+        <button class="btn btn-accent" id="pair-add" type="button">Add setup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- The setup guide: a short "experiment" that opens on first run, and from
+       Settings > Setup guide. Each step is a <section data-step>; app.js shows
+       one at a time and fills the test tubes as steps are done. -->
+  <div class="guide-overlay" id="guide-overlay" hidden>
+    <div class="guide" id="guide" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <header class="guide-head">
+        <div class="guide-rack" aria-hidden="true">
+          <span class="tube"></span><span class="tube"></span><span class="tube"></span><span class="tube"></span><span class="tube"></span><span class="tube"></span><span class="tube"></span>
+        </div>
+        <p class="guide-kicker" id="guide-kicker"></p>
+        <span class="spacer"></span>
+        <button class="btn btn-subtle" id="guide-skip" type="button">Skip setup</button>
+      </header>
+
+      <div class="guide-body">
+        <!-- 1. Briefing -->
+        <section class="guide-step" data-step="briefing">
+          <h2 class="guide-title" tabindex="-1">Welcome to the lab</h2>
+          <p class="guide-lead">palm-lab watches your webcam for hand gestures and runs the shortcut you gave each one. Hold up a peace sign, and your music starts.</p>
+          <ul class="lab-notes">
+            <li class="lab-note"><span class="lab-note-icon" data-icon="timer"></span><span><strong>Hold, don&rsquo;t wave.</strong> A gesture runs after you hold it still for a moment, so passing movements don&rsquo;t count.</span></li>
+            <li class="lab-note"><span class="lab-note-icon" data-icon="camera"></span><span><strong>It stays on your PC.</strong> The camera picture is read on this computer and is never saved or sent anywhere.</span></li>
+            <li class="lab-note"><span class="lab-note-icon" data-icon="power"></span><span><strong>You&rsquo;re in charge.</strong> Pause tracking, switch any gesture off, or require both hands for extra safety.</span></li>
+          </ul>
+          <p class="guide-note">This experiment takes about two minutes: check the camera, measure your hand, test the gestures, and make your first shortcut.</p>
+        </section>
+
+        <!-- 2. Camera -->
+        <section class="guide-step" data-step="camera" hidden>
+          <h2 class="guide-title" tabindex="-1">Calibrate the camera</h2>
+          <p class="guide-lead">Raise one hand so palm-lab can find it. The dots and lines are how it sees your hand.</p>
+          <div class="guide-split">
+            <div class="guide-camera-slot"></div>
+            <div class="guide-side">
+              <p class="guide-reading" id="guide-camera-reading" role="status" aria-live="polite">Opening camera&hellip;</p>
+              <ul class="guide-tips">
+                <li>Sit about an arm&rsquo;s length from the camera.</li>
+                <li>Have light on your hand, not behind it.</li>
+                <li>Wrong camera? Change it in Settings afterwards.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Measure the hand -->
+        <section class="guide-step" data-step="tune" hidden>
+          <h2 class="guide-title" tabindex="-1">Measure your hand</h2>
+          <p class="guide-lead">Every hand bends a little differently. Hold each pose still while palm-lab measures, and it will tune itself to you.</p>
+          <div class="guide-split">
+            <div class="guide-camera-slot"></div>
+            <div class="guide-side">
+              <div class="specimens specimens-two">
+                <div class="specimen" id="specimen-open" data-state="waiting">
+                  <span class="specimen-glyph" data-glyph="open_palm"></span>
+                  <span class="specimen-label">Open hand<span class="specimen-hint">fingers spread</span></span>
+                  <span class="specimen-tube" aria-hidden="true"><span class="specimen-fill"></span></span>
+                </div>
+                <div class="specimen" id="specimen-fist" data-state="waiting">
+                  <span class="specimen-glyph" data-glyph="fist"></span>
+                  <span class="specimen-label">Fist<span class="specimen-hint">fingers curled tight</span></span>
+                  <span class="specimen-tube" aria-hidden="true"><span class="specimen-fill"></span></span>
+                </div>
+              </div>
+              <p class="guide-reading" id="guide-tune-reading" role="status" aria-live="polite"></p>
+              <div class="guide-inline-actions">
+                <button class="btn btn-accent" id="guide-measure" type="button">Start measuring</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Test the gestures -->
+        <section class="guide-step" data-step="test" hidden>
+          <h2 class="guide-title" tabindex="-1">Test your gestures</h2>
+          <p class="guide-lead">Make each gesture and hold it until its tube fills. Nothing runs yet; this only checks that palm-lab reads your hand.</p>
+          <div class="guide-split">
+            <div class="guide-camera-slot"></div>
+            <div class="guide-side">
+              <div class="specimens" id="guide-test-specimens"></div>
+              <p class="guide-reading" id="guide-test-reading" role="status" aria-live="polite"></p>
+              <details class="guide-help">
+                <summary>One won&rsquo;t light up?</summary>
+                <ul class="guide-tips">
+                  <li>Turn your palm toward the camera.</li>
+                  <li>Keep the fingers that should be up clearly apart.</li>
+                  <li>For the thumbs up, point the thumb out to the side or up, away from your fingers.</li>
+                  <li>Still stuck? Go back and measure your hand again.</li>
+                </ul>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. Build the first shortcut, with the same puzzle editor as the Gestures page -->
+        <section class="guide-step" data-step="experiment" hidden>
+          <h2 class="guide-title" tabindex="-1">Your first experiment</h2>
+          <p class="guide-lead">Pick a gesture, then drag a piece into it to say what it should do. Click a piece to add it, or drag it into place.</p>
+          <fieldset class="guide-field">
+            <legend>When I show</legend>
+            <div class="choice-row" id="guide-gesture-choices" role="radiogroup" aria-label="Gesture"></div>
+          </fieldset>
+          <p class="guide-reading is-quiet" id="guide-experiment-note"></p>
+          <div class="card guide-editor" id="guide-editor"></div>
+        </section>
+
+        <!-- 6. Run it for real -->
+        <section class="guide-step" data-step="run" hidden>
+          <h2 class="guide-title" tabindex="-1">Run the experiment</h2>
+          <p class="guide-lead" id="guide-run-lead"></p>
+          <div class="guide-split">
+            <div class="guide-camera-slot"></div>
+            <div class="guide-side">
+              <div class="guide-run-ring" id="guide-run" data-phase="idle">
+                <span class="hold-ring" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" focusable="false"><circle class="hold-track" cx="24" cy="24" r="22"/><circle class="hold-fill" cx="24" cy="24" r="22" pathLength="100"/></svg>
+                  <span class="hold-glyph" id="guide-run-glyph"></span>
+                </span>
+              </div>
+              <p class="guide-reading" id="guide-run-reading" role="status" aria-live="polite"></p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. Lab report -->
+        <section class="guide-step" data-step="report" hidden>
+          <h2 class="guide-title" tabindex="-1">Lab report</h2>
+          <p class="guide-lead">The experiment is complete. Here&rsquo;s what palm-lab found.</p>
+          <ul class="report" id="guide-report"></ul>
+          <div class="card card-row guide-startup">
+            <span class="card-icon" data-icon="power"></span>
+            <div class="card-text">
+              <p class="card-title" id="guide-startup-label">Start with Windows</p>
+              <p class="card-desc">Have palm-lab ready by the clock whenever you sign in.</p>
+            </div>
+            <label class="toggle">
+              <span class="toggle-label" data-for="guide-startup">Off</span>
+              <input class="switch" id="guide-startup" type="checkbox" role="switch" data-kind="startup" aria-labelledby="guide-startup-label" disabled>
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <!-- One camera view, moved into whichever step needs it. -->
+      <div class="camera-frame guide-frame" id="guide-frame" data-state="starting">
+        <div class="skeleton skeleton-dark camera-skeleton"><span class="camera-skeleton-label">Opening camera&hellip;</span></div>
+        <img id="guide-preview-img" alt="Live camera view">
+        <svg class="bones" id="guide-bones" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+
+      <footer class="guide-actions">
+        <button class="btn" id="guide-back" type="button">Back</button>
+        <span class="spacer"></span>
+        <button class="btn btn-accent" id="guide-next" type="button">Next</button>
+      </footer>
+    </div>
+  </div>
+
   <!-- Asked on closing the window, while "When I close the window" is "Ask me". -->
   <div class="modal-overlay" id="close-overlay" hidden>
     <div class="modal close-dialog" id="close-dialog" role="alertdialog" aria-modal="true" aria-labelledby="close-title" aria-describedby="close-desc">
@@ -369,6 +694,11 @@
 
   <datalist id="known-apps"></datalist>
   <datalist id="hotkey-presets"></datalist>
+  <datalist id="wait-presets"></datalist>
+  <datalist id="volume-options"></datalist>
+  <datalist id="path-options"></datalist>
+  <datalist id="settings-options"></datalist>
+  <datalist id="system-options"></datalist>
 
   <script src="app.js"></script>
 </body>

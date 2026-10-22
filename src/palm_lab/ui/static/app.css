@@ -13,8 +13,11 @@
 
 /* Light by default. <html data-theme="dark"> switches to the dark tokens below;
    ui/app.py writes it before the page loads, and app.js keeps it in step with
-   the Theme setting and with Windows. */
-:root {
+   the Theme setting and with Windows.
+
+   Both blocks sit inside :where(), which gives them no specificity, so a plain
+   `:root { --accent: ... }` in someone's custom CSS wins in either theme. */
+:where(:root, [data-palette="windows"]) {
   color-scheme: light;
 
   /* Surfaces. --mica is also the title bar colour (see ui/app.py). */
@@ -67,6 +70,13 @@
   --piece-launch: #4460D8;
   --piece-web: #047D76;
   --piece-keys: #7D5BB5;
+  /* The newer pieces. White text on each is at least 4.5:1 too. */
+  --piece-text: #5E4AA8;
+  --piece-wait: #8A6100;
+  --piece-volume: #B0307A;
+  --piece-path: #A2510C;
+  --piece-settings: #2E6E8E;
+  --piece-system: #4F5B6E;
   --piece-hat: #EDB12C;
   --piece-hat-ink: #2E2100;
   --piece-ink: #FFFFFF;
@@ -93,7 +103,7 @@
   --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
 }
 
-:root[data-theme="dark"] {
+:where(:root[data-theme="dark"], [data-theme="dark"] [data-palette="windows"]) {
   color-scheme: dark;
 
   --mica: #202020;
@@ -146,6 +156,305 @@
   --piece-placeholder: rgba(255, 255, 255, 0.65);
 
   --shadow-flyout: 0 8px 16px rgba(0, 0, 0, 0.26);
+}
+
+/* Colour palettes ------------------------------------------------------------
+
+   Settings > Appearance > Colours. Each palette tints palm-lab's neutral
+   surfaces towards one hue and swaps the Windows accent colour for its own;
+   "Windows" (the defaults above) keeps the Windows accent. The action pieces
+   keep their colours in every palette, so each kind stays recognisable.
+
+   The selectors match any element with data-palette, not just <html>, so a
+   swatch in Settings previews its palette with the real colours. Every block
+   is wrapped in :where(), which has no specificity: a later block wins, and a
+   plain :root rule in custom CSS still beats them all.
+
+   Surfaces were worked out by mixing each neutral grey with the palette's
+   tint (3-12% in light, 5-16% in dark); every text and accent pairing was
+   checked against WCAG (tests/test_palettes.py checks them again). */
+
+
+/* Sunset */
+:where([data-palette="sunset"]) {
+  --mica: #F3E9E1;
+  --layer: #F9F2EE;
+  --layer-stroke: #E7DAD0;
+  --card: #FFFBF8;
+  --card-hover: #F8F1ED;
+  --card-2: #F7EFE9;
+  --stroke: #E7DAD0;
+  --divider: #ECE1DA;
+  --flyout: #FCF8F5;
+  --flyout-stroke: #E0D2C9;
+  --control: #FDF9F6;
+  --control-hover: #F7F0EC;
+  --control-pressed: #F3EBE6;
+  --control-stroke: #E5D8CE;
+  --control-stroke-strong: #CEBEB3;
+  --skeleton: #EFE4DD;
+  --accent: #C2410C;
+  --accent-text: #9A3412;
+  --on-accent: #FFFFFF;
+  --info-bg: #FAF0EC;
+}
+
+/* Neon */
+:where([data-palette="neon"]) {
+  --mica: #E2EFE7;
+  --layer: #EEF6F1;
+  --layer-stroke: #D2E2D8;
+  --card: #F8FDFA;
+  --card-hover: #EDF5F0;
+  --card-2: #EAF4EE;
+  --stroke: #D2E2D8;
+  --divider: #DBE8E0;
+  --flyout: #F5FAF7;
+  --flyout-stroke: #CADBD0;
+  --control: #F6FBF8;
+  --control-hover: #ECF4EF;
+  --control-pressed: #E6F0EA;
+  --control-stroke: #D0E0D6;
+  --control-stroke-strong: #B4C8BB;
+  --skeleton: #DEEBE2;
+  --accent: #15803D;
+  --accent-text: #166534;
+  --on-accent: #FFFFFF;
+  --info-bg: #ECF5EF;
+}
+
+/* Ocean */
+:where([data-palette="ocean"]) {
+  --mica: #E0EEF1;
+  --layer: #EDF6F7;
+  --layer-stroke: #CFE0E3;
+  --card: #F8FDFE;
+  --card-hover: #ECF5F6;
+  --card-2: #E9F3F5;
+  --stroke: #CFE0E3;
+  --divider: #D9E7E9;
+  --flyout: #F5FAFB;
+  --flyout-stroke: #C8D9DC;
+  --control: #F6FBFC;
+  --control-hover: #EBF4F5;
+  --control-pressed: #E5EFF1;
+  --control-stroke: #CDDEE2;
+  --control-stroke-strong: #B1C6C9;
+  --skeleton: #DBEAEC;
+  --accent: #0E7490;
+  --accent-text: #155E75;
+  --on-accent: #FFFFFF;
+  --info-bg: #ECF4F6;
+}
+
+/* Grape */
+:where([data-palette="grape"]) {
+  --mica: #EBE7F3;
+  --layer: #F3F1F9;
+  --layer-stroke: #DCD7E7;
+  --card: #FCFAFF;
+  --card-hover: #F3F0F8;
+  --card-2: #F1EEF7;
+  --stroke: #DCD7E7;
+  --divider: #E3E0EC;
+  --flyout: #F9F7FC;
+  --flyout-stroke: #D5D0E0;
+  --control: #FAF8FD;
+  --control-hover: #F2EFF7;
+  --control-pressed: #EDEAF3;
+  --control-stroke: #DAD6E5;
+  --control-stroke-strong: #C1BBCE;
+  --skeleton: #E6E2EF;
+  --accent: #7C3AED;
+  --accent-text: #5B21B6;
+  --on-accent: #FFFFFF;
+  --info-bg: #F5EFFE;
+}
+
+/* Rose */
+:where([data-palette="rose"]) {
+  --mica: #F2E5EC;
+  --layer: #F8F0F4;
+  --layer-stroke: #E6D5DD;
+  --card: #FEFAFC;
+  --card-hover: #F7EFF3;
+  --card-2: #F6ECF1;
+  --stroke: #E6D5DD;
+  --divider: #EBDEE4;
+  --flyout: #FCF7F9;
+  --flyout-stroke: #DECED6;
+  --control: #FCF8FA;
+  --control-hover: #F6EEF2;
+  --control-pressed: #F3E9EE;
+  --control-stroke: #E4D4DC;
+  --control-stroke-strong: #CCB9C2;
+  --skeleton: #EEE1E7;
+  --accent: #BE185D;
+  --accent-text: #9D174D;
+  --on-accent: #FFFFFF;
+  --info-bg: #FAEDF2;
+}
+
+/* Graphite */
+:where([data-palette="graphite"]) {
+  --mica: #E8E9EB;
+  --layer: #F2F2F3;
+  --layer-stroke: #D8DADC;
+  --card: #FAFBFC;
+  --card-hover: #F1F1F3;
+  --card-2: #EEEFF1;
+  --stroke: #D8DADC;
+  --divider: #E0E1E3;
+  --flyout: #F7F8F9;
+  --flyout-stroke: #D1D2D5;
+  --control: #F8F9FA;
+  --control-hover: #F0F0F2;
+  --control-pressed: #EAEBED;
+  --control-stroke: #D6D8DA;
+  --control-stroke-strong: #BCBEC1;
+  --skeleton: #E3E4E6;
+  --accent: #334155;
+  --accent-text: #1E293B;
+  --on-accent: #FFFFFF;
+  --info-bg: #EFF0F1;
+}
+
+:where([data-theme="dark"][data-palette="sunset"], [data-theme="dark"] [data-palette="sunset"]) {
+  --mica: #2F261F;
+  --layer: #362C26;
+  --layer-stroke: #28211D;
+  --card: #39302A;
+  --card-hover: #41362F;
+  --card-2: #352B25;
+  --stroke: #28211D;
+  --divider: #2A231F;
+  --flyout: #3A312A;
+  --flyout-stroke: #4D4036;
+  --control: #3B322B;
+  --control-hover: #423730;
+  --control-pressed: #362C26;
+  --control-stroke: #493B32;
+  --control-stroke-strong: #5B4B3F;
+  --skeleton: #413731;
+  --accent: #FB923C;
+  --accent-text: #FDBA74;
+  --on-accent: #000000;
+  --info-bg: #403631;
+}
+
+:where([data-theme="dark"][data-palette="neon"], [data-theme="dark"] [data-palette="neon"]) {
+  --mica: #202F26;
+  --layer: #27352C;
+  --layer-stroke: #1D2821;
+  --card: #2A3930;
+  --card-hover: #2F4036;
+  --card-2: #26342B;
+  --stroke: #1D2821;
+  --divider: #1F2A23;
+  --flyout: #2B3A31;
+  --flyout-stroke: #374C3F;
+  --control: #2C3B31;
+  --control-hover: #304137;
+  --control-pressed: #27352C;
+  --control-stroke: #33483A;
+  --control-stroke-strong: #405949;
+  --skeleton: #314037;
+  --accent: #39FF14;
+  --accent-text: #A6FF8F;
+  --on-accent: #000000;
+  --info-bg: #28442D;
+}
+
+:where([data-theme="dark"][data-palette="ocean"], [data-theme="dark"] [data-palette="ocean"]) {
+  --mica: #1E2A2D;
+  --layer: #253133;
+  --layer-stroke: #1C2526;
+  --card: #283537;
+  --card-hover: #2E3C3E;
+  --card-2: #243032;
+  --stroke: #1C2526;
+  --divider: #1E2728;
+  --flyout: #293638;
+  --flyout-stroke: #354649;
+  --control: #2A3739;
+  --control-hover: #2E3D3F;
+  --control-pressed: #253133;
+  --control-stroke: #304245;
+  --control-stroke-strong: #3D5356;
+  --skeleton: #303C3E;
+  --accent: #22D3EE;
+  --accent-text: #A5F3FC;
+  --on-accent: #000000;
+  --info-bg: #263E47;
+}
+
+:where([data-theme="dark"][data-palette="grape"], [data-theme="dark"] [data-palette="grape"]) {
+  --mica: #27242F;
+  --layer: #2E2B35;
+  --layer-stroke: #222028;
+  --card: #322E39;
+  --card-hover: #383441;
+  --card-2: #2D2A35;
+  --stroke: #222028;
+  --divider: #24222A;
+  --flyout: #332F3A;
+  --flyout-stroke: #423D4D;
+  --control: #34303B;
+  --control-hover: #393542;
+  --control-pressed: #2E2B35;
+  --control-stroke: #3E3948;
+  --control-stroke-strong: #4D485A;
+  --skeleton: #393641;
+  --accent: #A78BFA;
+  --accent-text: #DDD6FE;
+  --on-accent: #000000;
+  --info-bg: #353648;
+}
+
+:where([data-theme="dark"][data-palette="rose"], [data-theme="dark"] [data-palette="rose"]) {
+  --mica: #2E2328;
+  --layer: #35292F;
+  --layer-stroke: #271F23;
+  --card: #392D33;
+  --card-hover: #403339;
+  --card-2: #34282E;
+  --stroke: #271F23;
+  --divider: #292125;
+  --flyout: #392E34;
+  --flyout-stroke: #4C3B44;
+  --control: #3A2F35;
+  --control-hover: #41343A;
+  --control-pressed: #35292F;
+  --control-stroke: #47373F;
+  --control-stroke-strong: #59454F;
+  --skeleton: #40343A;
+  --accent: #F472B6;
+  --accent-text: #FBCFE8;
+  --on-accent: #000000;
+  --info-bg: #3F3340;
+}
+
+:where([data-theme="dark"][data-palette="graphite"], [data-theme="dark"] [data-palette="graphite"]) {
+  --mica: #242526;
+  --layer: #2A2B2D;
+  --layer-stroke: #202021;
+  --card: #2E2F30;
+  --card-hover: #343537;
+  --card-2: #292A2C;
+  --stroke: #202021;
+  --divider: #222223;
+  --flyout: #2F3031;
+  --flyout-stroke: #3D3F40;
+  --control: #303132;
+  --control-hover: #353638;
+  --control-pressed: #2A2B2D;
+  --control-stroke: #393A3C;
+  --control-stroke-strong: #484A4C;
+  --skeleton: #363738;
+  --accent: #CBD5E1;
+  --accent-text: #E2E8F0;
+  --on-accent: #000000;
+  --info-bg: #3A3F45;
 }
 
 /* Base -------------------------------------------------------------------- */
@@ -291,6 +600,45 @@ input,
   margin: 0;
 }
 
+/* Gestures page: one column, or two on a wide window ------------------------
+
+   Past about 1000px of page width, tracking moves to a left column and the
+   gestures to a wider right one, the way Microsoft's PowerToys dashboard uses
+   a wide window. Container queries measure the page itself, so the switch
+   follows the space the page really has, not the screen size. */
+
+.page-gestures {
+  max-width: 1600px;
+  container: gestures-page / inline-size;
+}
+
+.gestures-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recent {
+  display: none;
+}
+
+@container gestures-page (min-width: 1000px) {
+  .gestures-layout {
+    display: grid;
+    grid-template-columns: minmax(400px, 5fr) minmax(0, 8fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .gestures-main > .group-title-row {
+    margin-top: 0;
+  }
+
+  .recent {
+    display: block;
+  }
+}
+
 /* Navigation ------------------------------------------------------------- */
 
 .nav {
@@ -398,6 +746,12 @@ input,
 
 .nav-status[data-state="error"] .status-dot {
   background: var(--critical);
+}
+
+/* Paused: a small pause symbol, so it differs from "off" by shape, not only colour. */
+.nav-status[data-state="paused"] .status-dot {
+  border-radius: 1px;
+  background: linear-gradient(to right, var(--caution) 0 3px, transparent 3px 5px, var(--caution) 5px);
 }
 
 @media (max-width: 1100px) {
@@ -752,7 +1106,21 @@ input,
 
 .gesture {
   position: relative;
+  container: row / inline-size;
   transition: border-color 150ms ease;
+}
+
+/* A narrow row has no room for the action chips beside the name: drop them
+   and let the name and "Last ran" use the space. */
+@container row (max-width: 640px) {
+  .gesture-summary {
+    visibility: hidden;
+    flex: 0 0 0;
+  }
+
+  .gesture-titles {
+    flex: 1 1 auto;
+  }
 }
 
 /* ::after marks the gesture the camera sees right now; ::before is a one-off
@@ -774,6 +1142,26 @@ input,
 }
 
 .gesture.is-seen::after {
+  opacity: 1;
+}
+
+/* A thin bar along the bottom of the row whose gesture is being held. */
+.gesture-hold {
+  position: absolute;
+  right: 12px;
+  bottom: 3px;
+  left: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  opacity: 0;
+  transform: scaleX(var(--hold, 0));
+  transform-origin: left;
+  transition: transform 90ms linear, opacity 150ms ease;
+  pointer-events: none;
+}
+
+.gesture.is-seen .gesture-hold {
   opacity: 1;
 }
 
@@ -816,7 +1204,7 @@ button.gesture-head:focus-visible {
   width: 28px;
   height: 28px;
   color: var(--text-1);
-  transition: color 150ms ease;
+  transition: color 150ms ease, opacity 150ms ease;
 }
 
 .gesture-glyph .glyph {
@@ -844,11 +1232,16 @@ button.gesture-head:focus-visible {
   white-space: nowrap;
 }
 
+/* Chips that don't fit wrap onto a hidden second line, so a narrow row
+   shows fewer whole chips rather than one cut through the middle. */
 .gesture-summary {
   display: flex;
   flex: 1;
+  flex-wrap: wrap;
+  align-content: flex-start;
   justify-content: flex-end;
   gap: 2px;
+  height: 24px;
   min-width: 0;
   padding-right: 6px;
   overflow: hidden;
@@ -891,6 +1284,82 @@ button.gesture-head:focus-visible {
 
 .is-open > .gesture-head .chevron {
   transform: rotate(180deg);
+}
+
+/* Each set-up row has an on/off switch. It is a sibling of the head button
+   (a control can't live inside a button), laid over the space the head
+   keeps free for it, just left of the chevron. */
+.gesture-switch-slot {
+  display: none;
+  flex: none;
+  width: 40px;
+}
+
+.gesture-switch {
+  position: absolute;
+  top: 24px; /* centred in the 68px head */
+  right: 60px; /* clear of the 32px chevron, its 12px padding and the gap */
+  z-index: 1;
+  display: none;
+}
+
+.gesture.has-switch .gesture-switch-slot,
+.gesture.has-switch .gesture-switch {
+  display: block;
+}
+
+/* Run sits just left of the switch, over a slot the head keeps free for it. */
+.gesture-run-slot {
+  display: none;
+  flex: none;
+  width: 32px;
+  margin-right: -8px; /* the head's 16px gap is more than the run button needs */
+}
+
+.gesture-run {
+  position: absolute;
+  top: 18px; /* centred in the 68px head */
+  right: 108px; /* the switch's 60px offset, its 40px width and an 8px gap */
+  z-index: 1;
+  display: none;
+}
+
+.gesture.has-switch .gesture-run-slot,
+.gesture.has-switch .gesture-run {
+  display: grid;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gesture:has(> .gesture-run:hover) > .gesture-head {
+    --row-bg: var(--card-hover);
+  }
+}
+
+/* The last run failed: the subtitle says so, and the flag turns red. */
+.gesture.has-failed .gesture-flag {
+  display: inline-grid;
+  color: var(--critical);
+}
+
+/* Switched off: everything stays editable, but reads as resting. */
+.gesture-label {
+  transition: opacity 150ms ease;
+}
+
+.gesture.is-off .gesture-glyph,
+.gesture.is-off .gesture-label,
+.gesture.is-off .gesture-summary {
+  opacity: 0.45;
+}
+
+.gesture.is-off.is-open .gesture-summary {
+  opacity: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gesture:has(> .gesture-switch:hover) > .gesture-head {
+    --row-bg: var(--card-hover);
+  }
 }
 
 /* The summary is a small script: each action is a little piece, locked
@@ -947,6 +1416,12 @@ button.gesture-head:focus-visible {
   text-overflow: ellipsis;
 }
 
+/* A chip alone on a line that's still too wide shortens its text instead. */
+.gesture-summary .chip {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
 .chip.is-empty {
   --type: var(--caution-bg);
   box-shadow: none;
@@ -969,6 +1444,30 @@ button.gesture-head:focus-visible {
 
 [data-type="hotkey"] {
   --type: var(--piece-keys);
+}
+
+[data-type="type_text"] {
+  --type: var(--piece-text);
+}
+
+[data-type="wait"] {
+  --type: var(--piece-wait);
+}
+
+[data-type="volume"] {
+  --type: var(--piece-volume);
+}
+
+[data-type="open_path"] {
+  --type: var(--piece-path);
+}
+
+[data-type="settings"] {
+  --type: var(--piece-settings);
+}
+
+[data-type="system"] {
+  --type: var(--piece-system);
 }
 
 /* While a piece is dragged, closed gestures accept it too. */
@@ -1100,6 +1599,17 @@ button.gesture-head:focus-visible {
   color: var(--text-2);
   font-size: 12px;
   line-height: 16px;
+}
+
+/* A small heading over each group of pieces in the palette. */
+.palette-group {
+  margin: 4px 0 -10px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 14px;
+  text-transform: uppercase;
 }
 
 .palette-piece {
@@ -1312,7 +1822,8 @@ button.gesture-head:focus-visible {
     align-items: center;
   }
 
-  .palette-title {
+  .palette-title,
+  .palette-group {
     width: 100%;
     margin: 0;
   }
@@ -1361,12 +1872,32 @@ button.gesture-head:focus-visible {
   margin: 0 16px 16px 52px;
 }
 
+.tracking {
+  container: tracking / inline-size;
+}
+
 .live {
   display: grid;
   grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
   gap: 24px;
   padding: 16px 16px 16px 52px;
   border-top: 1px solid var(--divider);
+}
+
+/* In a narrow column (the left of the wide layout): the preview takes the
+   full width, and the status sits under it. */
+@container tracking (max-width: 620px) {
+  .live {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding-left: 16px;
+  }
+
+  .facts-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: 32px;
+  }
 }
 
 .camera-frame {
@@ -1451,14 +1982,211 @@ button.gesture-head:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-.fact-glyph {
+.facts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+}
+
+/* The hold in progress: a ring that fills while a gesture is held, and what
+   is happening in words. Fixed sizes, so the card never jumps as it changes. */
+.hold {
+  --hold: 0;
+  --ring: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+}
+
+.hold-ring {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+}
+
+.hold-ring > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  fill: none;
+  stroke-width: 3;
+}
+
+.hold-track {
+  stroke: var(--control-stroke);
+}
+
+.hold-fill {
+  stroke: var(--ring);
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc(100 - var(--hold) * 100);
+  transition: stroke-dashoffset 90ms linear, stroke 150ms ease;
+}
+
+.hold[data-phase="fired"] {
+  --ring: var(--success);
+}
+
+.hold[data-phase="cooldown"],
+.hold[data-phase="rearm"] {
+  --ring: var(--text-3);
+}
+
+.hold-glyph {
   --glyph-bg: var(--card);
   color: var(--accent);
 }
 
-.fact-glyph .glyph {
+.hold[data-phase="idle"] .hold-glyph,
+.hold[data-phase="unbound"] .hold-glyph,
+.hold[data-phase="off"] .hold-glyph {
+  opacity: 0.45;
+}
+
+.hold-glyph .glyph {
+  width: 28px;
+  height: 28px;
+}
+
+.hold-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hold-title {
+  font-weight: 600;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.hold-sub {
+  min-height: 16px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pause menu ---------------------------------------------------------------- */
+
+.pause-wrap {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  min-width: 170px;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--flyout-stroke);
+  border-radius: var(--radius-overlay);
+  background: var(--flyout);
+  box-shadow: var(--shadow-flyout);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-1);
+  text-align: left;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--subtle-hover);
+}
+
+.menu-item:active {
+  background: var(--subtle-pressed);
+}
+
+/* Recently ran (left column of the wide layout) ------------------------------ */
+
+.recent {
+  padding: 8px 16px 12px;
+}
+
+.recent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+}
+
+.recent-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.recent-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  border-top: 1px solid var(--divider);
+}
+
+.recent-glyph {
+  --glyph-bg: var(--card);
+  flex: none;
+  color: var(--text-1);
+}
+
+.recent-glyph .glyph {
   width: 24px;
   height: 24px;
+}
+
+.recent-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-time {
+  flex: none;
+  color: var(--text-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.recent-result {
+  flex: none;
+}
+
+.recent-empty {
+  padding: 4px 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .run-ok {
@@ -1708,6 +2436,76 @@ button.gesture-head:focus-visible {
 
 .modal-actions .spacer {
   flex: 1;
+}
+
+/* Custom CSS editor ------------------------------------------------------------ */
+
+.btn-chevron .icon {
+  transition: transform 200ms var(--ease-out);
+}
+
+[aria-expanded="true"] > .btn-chevron .icon {
+  transform: rotate(180deg);
+}
+
+.css-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px 16px 52px;
+}
+
+.css-input {
+  width: 100%;
+  min-height: 220px;
+  padding: 10px 12px;
+  border: 1px solid var(--control-stroke);
+  border-bottom-color: var(--field-underline);
+  border-radius: var(--radius);
+  background: var(--control);
+  color: var(--text-1);
+  font: 13px/20px var(--font-mono);
+  tab-size: 2;
+  resize: vertical;
+}
+
+.css-input::placeholder {
+  color: var(--text-3);
+}
+
+.css-input:focus {
+  border-bottom-color: var(--accent);
+  background: var(--card);
+  box-shadow: inset 0 -1px 0 var(--accent);
+  outline: none;
+}
+
+.css-editor-bar {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.css-hint {
+  flex: 1;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.css-hint a {
+  color: var(--accent-text);
+}
+
+.css-state {
+  flex: none;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.css-state[data-state="error"] {
+  color: var(--critical);
 }
 
 /* Close question -------------------------------------------------------------- */
@@ -2088,6 +2886,15 @@ button.gesture-head:focus-visible {
     transition: background-color 83ms ease;
   }
 
+  .btn-chevron .icon {
+    transition: none;
+  }
+
+  .hold-fill,
+  .gesture-hold {
+    transition: none;
+  }
+
   .toast,
   .toast.is-in {
     transform: none;
@@ -2113,4 +2920,734 @@ button.gesture-head:focus-visible {
   .palette-piece:active {
     transform: none;
   }
+}
+
+/* Two-hand setups ------------------------------------------------------------
+
+   A two-hand gesture is drawn as both hands side by side, the second mirrored
+   and tucked slightly behind the first. Each place that draws a glyph keeps
+   its own size for one hand; a pair is simply a little under twice as wide. */
+
+.glyph-pair {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+.glyph-pair > .glyph + .glyph {
+  margin-left: -18%;
+  transform: scaleX(-1);
+}
+
+/* In a row the pair stays centred on the usual 28px column, spilling a few
+   pixels into the padding and gap, so every row's name still lines up. */
+.gesture-glyph > .glyph-pair {
+  width: 40px;
+  height: 100%;
+  margin-left: -6px;
+}
+
+.gesture-glyph > .glyph-pair > .glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.hold-glyph .glyph-pair .glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.group-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.pair-dialog {
+  width: min(460px, 100%);
+}
+
+.pair-preview {
+  --glyph-bg: var(--flyout);
+  display: flex;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.pair-preview .glyph {
+  width: 56px;
+  height: 56px;
+}
+
+.pair-fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.pair-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.pair-field .select-wrap,
+.pair-field .select {
+  width: 100%;
+  min-width: 0;
+}
+
+.pair-plus {
+  flex: none;
+  padding-bottom: 6px;
+  color: var(--text-2);
+  font-size: 16px;
+}
+
+.pair-error {
+  color: var(--critical);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.pair-error[hidden] {
+  display: none;
+}
+
+/* Setup guide --------------------------------------------------------------------
+
+   A full-window "experiment". Lab touches stay small and functional: a rack
+   of test tubes in the header fills one per step, and each hand pose or
+   gesture under test is a "specimen" with its own tube that fills while it
+   is measured or held. */
+
+.guide-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  background: var(--mica);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.guide-overlay.is-in {
+  opacity: 1;
+}
+
+.guide {
+  display: flex;
+  width: min(880px, 100%);
+  flex-direction: column;
+  gap: 20px;
+  min-height: 0;
+  transform: translateY(8px);
+  transition: transform 250ms var(--ease-out);
+}
+
+.guide-overlay.is-in .guide {
+  transform: none;
+}
+
+.guide-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.guide-head .spacer,
+.guide-actions .spacer {
+  flex: 1;
+}
+
+.guide-rack {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 26px;
+  padding: 0 4px 3px;
+  border-bottom: 2px solid var(--control-stroke-strong);
+}
+
+.tube {
+  position: relative;
+  overflow: hidden;
+  width: 9px;
+  height: 22px;
+  border: 1.5px solid var(--control-stroke-strong);
+  border-top: 0;
+  border-radius: 0 0 5px 5px;
+}
+
+.tube::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 400ms var(--ease-out);
+}
+
+.tube[data-state="current"]::after {
+  transform: scaleY(0.4);
+}
+
+.tube[data-state="done"]::after {
+  transform: scaleY(0.85);
+}
+
+.guide-kicker {
+  color: var(--text-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.guide-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.guide-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guide-title {
+  font: 600 28px/36px var(--font-display);
+  outline: none;
+}
+
+.guide-lead {
+  max-width: 62ch;
+  color: var(--text-1);
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.guide-note {
+  color: var(--text-2);
+}
+
+.lab-notes,
+.guide-tips,
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lab-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.lab-note-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-text);
+}
+
+.guide-tips {
+  gap: 4px;
+  padding-left: 18px;
+  color: var(--text-2);
+  list-style: disc;
+}
+
+.guide-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .guide-split {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-frame {
+    max-width: 420px;
+  }
+}
+
+.guide-camera-slot:empty {
+  display: none;
+}
+
+.guide-frame {
+  width: 100%;
+}
+
+.guide-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.guide-reading {
+  min-height: 20px;
+  font-weight: 600;
+}
+
+.guide-reading:empty {
+  display: none;
+}
+
+.guide-reading[data-tone="success"] {
+  color: var(--success);
+}
+
+.guide-reading[data-tone="warn"] {
+  color: var(--caution);
+}
+
+.guide-reading[data-tone="error"] {
+  color: var(--critical);
+}
+
+.guide-reading.is-quiet {
+  font-weight: 400;
+}
+
+.guide-inline-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.guide-help summary {
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+.guide-help[open] summary {
+  margin-bottom: 8px;
+}
+
+/* Specimens: one hand pose or gesture each, with a tube that fills. */
+
+.specimens {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.specimen {
+  --fill: 0;
+  --glyph-bg: var(--card);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--card);
+  transition: border-color 150ms ease;
+}
+
+.specimen-glyph {
+  flex: none;
+  color: var(--text-2);
+  transition: color 150ms ease;
+}
+
+.specimen-glyph .glyph {
+  width: 28px;
+  height: 28px;
+}
+
+.specimen-glyph .glyph-pair .glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.specimen-label {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.specimen-hint {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.specimen-tube {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  width: 12px;
+  height: 30px;
+  border: 1.5px solid var(--control-stroke-strong);
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+}
+
+.specimen-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform: scaleY(var(--fill));
+  transform-origin: bottom;
+  transition: transform 90ms linear, background-color 150ms ease;
+}
+
+.specimen[data-state="measuring"] {
+  border-color: var(--accent);
+}
+
+.specimen[data-state="measuring"] .specimen-glyph,
+.specimen[data-state="done"] .specimen-glyph {
+  color: var(--accent);
+}
+
+.specimen[data-state="done"] {
+  border-color: color-mix(in srgb, var(--success) 50%, var(--stroke));
+}
+
+.specimen[data-state="done"] .specimen-fill {
+  background: var(--success);
+}
+
+/* Choosing the first shortcut. */
+
+.guide-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.guide-field legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice {
+  --glyph-bg: var(--control);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 14px 6px 10px;
+  border: 1px solid var(--control-stroke);
+  border-radius: var(--radius);
+  background: var(--control);
+  color: var(--text-1);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .choice:hover {
+    --glyph-bg: var(--control-hover);
+    background: var(--control-hover);
+  }
+}
+
+.choice[aria-checked="true"] {
+  --glyph-bg: color-mix(in srgb, var(--accent) 10%, var(--control));
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--control));
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.choice-glyph .glyph {
+  width: 26px;
+  height: 26px;
+}
+
+.choice-label {
+  display: flex;
+  flex-direction: column;
+}
+
+.choice-hint {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+
+/* Step 5 draws the Gestures page's own editor, as a card of its own. */
+.guide-editor {
+  overflow: hidden;
+}
+
+.guide-editor .editor {
+  border-top: 0;
+  border-radius: var(--radius);
+}
+
+.choice:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* The trial run reuses the hold ring, larger. */
+
+.guide-run-ring {
+  --ring: var(--accent);
+  --hold: 0;
+  display: flex;
+}
+
+.guide-run-ring .hold-ring {
+  width: 96px;
+  height: 96px;
+}
+
+.guide-run-ring .hold-glyph .glyph {
+  width: 44px;
+  height: 44px;
+}
+
+.guide-run-ring .hold-glyph .glyph-pair .glyph {
+  width: 34px;
+  height: 34px;
+}
+
+.guide-run-ring[data-phase="idle"] .hold-glyph {
+  opacity: 0.45;
+}
+
+.guide-run-ring[data-phase="fired"] {
+  --ring: var(--success);
+}
+
+/* The lab report. */
+
+.report-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.report-icon {
+  display: grid;
+  color: var(--text-3);
+}
+
+.report-item[data-ok="true"] .report-icon {
+  color: var(--success);
+}
+
+.report-detail {
+  color: var(--text-2);
+}
+
+.guide-startup {
+  padding: 12px 16px;
+}
+
+.guide-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide,
+  .tube::after,
+  .specimen-fill {
+    transition: none;
+  }
+}
+
+/* Starter templates ------------------------------------------------------------ */
+
+.template-dialog {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+}
+
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  margin: 0 -4px;
+  padding: 0 4px 4px;
+  overflow: auto;
+}
+
+.template-category {
+  margin: 8px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.template-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--control-stroke);
+  border-radius: var(--radius);
+  background: var(--control);
+  color: var(--text-1);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .template-card:hover {
+    border-color: var(--accent);
+    background: var(--control-hover);
+  }
+}
+
+.template-name {
+  font-weight: 600;
+}
+
+.template-text {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.template-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.template-steps .chip {
+  max-width: 100%;
+}
+
+/* Colour palette swatches ------------------------------------------------------
+
+   Each swatch carries data-palette, so inside it --mica, --card and --accent
+   are that palette's own colours, in the current light or dark mode. */
+
+.palette-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  padding: 0 16px 16px 52px;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px;
+  border: 0;
+  border-radius: calc(var(--radius) + 4px);
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.swatch-preview {
+  display: grid;
+  place-items: end start;
+  height: 56px;
+  padding: 0 0 8px 10px;
+  border: 1px solid var(--control-stroke-strong);
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--mica);
+  box-shadow: inset 0 0 0 0 var(--accent);
+  transition: box-shadow 150ms ease;
+}
+
+.swatch-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 62px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.swatch-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.swatch-line {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent-text);
+  opacity: 0.55;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .swatch:hover .swatch-preview {
+    border-color: var(--text-3);
+  }
+}
+
+.swatch[aria-checked="true"] .swatch-preview {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.swatch[aria-checked="true"] .swatch-name {
+  font-weight: 600;
 }

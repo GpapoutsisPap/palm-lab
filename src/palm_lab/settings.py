@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from palm_lab.config import config_dir
+from palm_lab.palettes import DEFAULT_PALETTE, PALETTES
 from palm_lab.state import DEFAULT_COOLDOWN_SECONDS, DEFAULT_DWELL_SECONDS
 
 SETTINGS_FILENAME = "settings.toml"
@@ -18,6 +19,9 @@ COOLDOWN_RANGE = (0.0, 60.0)
 CLOSE_ACTIONS = ("ask", "background", "quit")
 # "system" follows Windows' own light or dark mode.
 THEMES = ("system", "light", "dark")
+# The pop-up by the clock when a gesture runs: for every run, only for
+# failures, or never (see palm_lab.run_popup).
+POPUP_MODES = ("all", "failures", "off")
 KNOWN_SETTINGS = {
     "camera_index",
     "dwell_seconds",
@@ -25,6 +29,10 @@ KNOWN_SETTINGS = {
     "sounds",
     "close_action",
     "theme",
+    "custom_css",
+    "guide_done",
+    "run_popup",
+    "palette",
 }
 
 
@@ -42,6 +50,10 @@ class Settings:
     sounds: bool = True
     close_action: str = "ask"
     theme: str = "system"
+    custom_css: bool = True  # apply custom.css; the file itself is kept either way
+    guide_done: bool = False  # the setup guide was finished or skipped; it opens until then
+    run_popup: str = "all"
+    palette: str = DEFAULT_PALETTE  # a colour palette from palm_lab.palettes
 
     def as_dict(self) -> dict[str, float | int | bool | str]:
         return asdict(self)
@@ -92,6 +104,22 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
     if not isinstance(theme, str) or theme not in THEMES:
         raise SettingsError(f"'theme' must be one of: {', '.join(THEMES)}")
 
+    custom_css = data.get("custom_css", True)
+    if not isinstance(custom_css, bool):
+        raise SettingsError("'custom_css' must be true or false")
+
+    guide_done = data.get("guide_done", False)
+    if not isinstance(guide_done, bool):
+        raise SettingsError("'guide_done' must be true or false")
+
+    run_popup = data.get("run_popup", "all")
+    if not isinstance(run_popup, str) or run_popup not in POPUP_MODES:
+        raise SettingsError(f"'run_popup' must be one of: {', '.join(POPUP_MODES)}")
+
+    palette = data.get("palette", DEFAULT_PALETTE)
+    if not isinstance(palette, str) or palette not in PALETTES:
+        raise SettingsError(f"'palette' must be one of: {', '.join(PALETTES)}")
+
     return Settings(
         camera_index=camera,
         dwell_seconds=dwell,
@@ -99,6 +127,10 @@ def settings_from_data(data: Mapping[str, object]) -> Settings:
         sounds=sounds,
         close_action=close_action,
         theme=theme,
+        custom_css=custom_css,
+        guide_done=guide_done,
+        run_popup=run_popup,
+        palette=palette,
     )
 
 
@@ -125,6 +157,10 @@ def save_settings(settings: Settings, path: Path | None = None) -> Path:
         f"sounds = {'true' if settings.sounds else 'false'}\n"
         f'close_action = "{settings.close_action}"\n'
         f'theme = "{settings.theme}"\n'
+        f"custom_css = {'true' if settings.custom_css else 'false'}\n"
+        f"guide_done = {'true' if settings.guide_done else 'false'}\n"
+        f'run_popup = "{settings.run_popup}"\n'
+        f'palette = "{settings.palette}"\n'
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")

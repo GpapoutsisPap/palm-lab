@@ -38,5 +38,18 @@ class LaunchFailedError(ActionError):
         self.reason = reason
 
 
+class ActionFailedError(ActionError):
+    """One of the newer pieces (typing, volume, a folder, lock...) couldn't do its job."""
+
+    def __init__(self, what: str, reason: str) -> None:
+        super().__init__(f"{what}: {reason}")
+        self.what = what
+        self.reason = reason
+
+    def user_message(self) -> str:
+        reason = self.reason[:1].upper() + self.reason[1:]
+        return f"{self.what} didn\u2019t work. {reason.rstrip('.')}."
+
+
 class InvalidBindingError(ActionError):
     """The configuration file could not be understood."""

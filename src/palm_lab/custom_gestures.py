@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from palm_lab.combos import COMBO_MARK
 from palm_lab.config import config_dir
 from palm_lab.gestures import BUILTIN_GESTURES, FingerTuple, GestureConflictError
 
@@ -118,6 +119,9 @@ def save_custom_gesture(
     name = name.strip()
     if not name:
         raise CustomGestureError("A gesture needs a name.")
+    if COMBO_MARK in name:
+        # "+" joins the two shapes of a two-hand setup, so a name can't use it.
+        raise CustomGestureError(f"A gesture's name can't contain {COMBO_MARK!r}.")
     path = path or gestures_path()
     existing = load_custom_gestures(path)
 

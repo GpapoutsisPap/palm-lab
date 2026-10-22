@@ -13,6 +13,8 @@ from typing import Any
 
 TOOLTIP = "palm-lab"
 TOOLTIP_TRACKING = "palm-lab: watching for gestures"
+TOOLTIP_PAUSED = "palm-lab: paused"
+PAUSE_CHOICES = ((15, "Pause for 15 minutes"), (60, "Pause for 1 hour"))
 REFRESH_SECONDS = 1.0
 # A notification sent before the icon has appeared is lost; wait this long for it.
 SHOW_WAIT_SECONDS = 3.0
@@ -41,6 +43,9 @@ class Tray:
         on_toggle_tracking: Callable[[], None],
         on_quit: Callable[[], None],
         is_tracking: Callable[[], bool],
+        on_pause: Callable[[int], None] = lambda minutes: None,
+        on_resume: Callable[[], None] = lambda: None,
+        is_paused: Callable[[], bool] = lambda: False,
         backend: Callable[[], Any] = load_pystray,
         image: Callable[[Path], Any] = load_image,
         sleep: Callable[[float], None] = time.sleep,
@@ -50,12 +55,15 @@ class Tray:
         self._on_toggle_tracking = on_toggle_tracking
         self._on_quit = on_quit
         self._is_tracking = is_tracking
+        self._on_pause = on_pause
+        self._on_resume = on_resume
+        self._is_paused = is_paused
         self._backend = backend
         self._image = image
         self._sleep = sleep
         self._icon: Any = None
         self._stopped = threading.Event()
-        self._tracking_shown: bool | None = None
+        self._shown_state: tuple[bool, bool] | None = None
 
     def start(self) -> None:
         """Show the icon. Never raises: palm-lab still works without it."""
@@ -67,6 +75,19 @@ class Tray:
                     "Tracking",
                     lambda: self._on_toggle_tracking(),
                     checked=lambda _item: self._is_tracking(),
+                ),
+                *(
+                    pystray.MenuItem(
+                        text,
+                        self._pause_action(minutes),
+                        visible=lambda _item: self._is_tracking(),
+                    )
+                    for minutes, text in PAUSE_CHOICES
+                ),
+                pystray.MenuItem(
+                    "Resume now",
+                    lambda: self._on_resume(),
+                    visible=lambda _item: self._is_paused(),
                 ),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Quit palm-lab", lambda: self._on_quit()),
@@ -80,6 +101,9 @@ class Tray:
         threading.Thread(
             target=self._keep_current, name="palm-lab-tray-refresh", daemon=True
         ).start()
+
+    def _pause_action(self, minutes: int) -> Callable[[], None]:
+        return lambda: self._on_pause(minutes)
 
     @property
     def available(self) -> bool:
@@ -101,12 +125,13 @@ class Tray:
         icon = self._icon
         if icon is None:
             return
-        tracking = self._is_tracking()
-        if tracking == self._tracking_shown:
+        state = (self._is_tracking(), self._is_paused())
+        if state == self._shown_state:
             return
-        self._tracking_shown = tracking
+        self._shown_state = state
+        tracking, paused = state
         try:
-            icon.title = TOOLTIP_TRACKING if tracking else TOOLTIP
+            icon.title = TOOLTIP_TRACKING if tracking else TOOLTIP_PAUSED if paused else TOOLTIP
             icon.update_menu()
         except Exception as exc:
             print(f"Could not update the notification-area icon: {exc}")

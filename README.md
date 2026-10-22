@@ -14,13 +14,32 @@ and runs the actions you snap together for each one, all on your own computer.
 
 ## Features
 
+- **A guided start:** a two-minute setup guide, run as a small lab
+  experiment, checks your camera, measures your hand, tests every gesture and
+  helps you make and run your first shortcut.
+- **Tuned to your hand:** palm-lab measures how far your fingers really open
+  and curl, and reads them by your own measurements.
 - **Four gestures built in:** peace sign, fist, open palm and thumbs up.
+- **Two-hand setups:** a shortcut that only runs when both hands show their
+  shapes together, so a hand resting on your chin can't set it off.
+- **Switch any gesture off** without losing what it does.
 - **Add your own:** hold a new hand shape up twice, name it, and it gets its
   own icon. palm-lab tells you straight away if you already use that shape.
-- **Actions that snap together:** open an app from your Start menu, open a
-  website, or press keys (media keys, volume, any combination). Drag action
-  pieces into a gesture, reorder them, and test them without the camera.
-- **Live view:** see what the camera sees, the hand it found, and what ran.
+- **Actions that snap together:** open an app, a website, a folder or a
+  Windows setting; press keys; type text in any language; set the volume or
+  mute your microphone; wait; lock the PC or take a screenshot. Drag pieces
+  into a gesture, reorder them, run them without the camera, or start from a
+  template.
+- **Know what ran:** a small pop-up by the clock confirms each gesture (or
+  says what failed) while the window is closed, and every gesture shows when
+  it last ran.
+- **Live view:** see what the camera sees, the hand it found, how far through
+  a hold you are, and what ran, or why nothing did.
+- **Pause:** stop gestures for 15 minutes to a few hours, with the camera off,
+  from the window or the icon by the clock.
+- **Make it yours:** light or dark theme, colour palettes (Sunset, Neon,
+  Ocean, Grape, Rose, Graphite), and your own CSS to restyle anything, typed
+  right in Settings.
 - **Always ready:** close the window and palm-lab can keep running by the
   clock, and it can start with Windows so your gestures work from sign-in.
 - **Feels at home on Windows 11:** light and dark themes, your accent colour,
@@ -61,12 +80,54 @@ uv run python scripts/build.py --installer
 
 The programs land in `dist\palm-lab\` and the installer in `dist\`.
 
+## Custom CSS
+
+Settings > Appearance > Custom CSS restyles the window with your own CSS.
+Changes show as you type and are saved to `custom.css` in palm-lab's settings
+folder (`palm-lab config` prints where), which you can also edit in any
+editor. Sharing a theme is sharing that file.
+
+Most looks come from changing a few variables. They win over the colour
+palette chosen in Settings too:
+
+```css
+:root {
+  --accent: #E3008C;        /* buttons, switches, highlights */
+  --radius: 10px;           /* corner rounding */
+  --font: "Comic Sans MS";  /* body text */
+}
+
+/* Only in the dark theme */
+:root[data-theme="dark"] {
+  --mica: #101030;          /* window background */
+  --card: #1A1A40;
+}
+```
+
+| Variables | What they colour |
+| --- | --- |
+| `--mica`, `--layer`, `--card`, `--card-hover`, `--flyout` | Backgrounds, from the window to cards and pop-ups |
+| `--text-1`, `--text-2`, `--text-3` | Text, from main to faint |
+| `--accent`, `--accent-text`, `--on-accent` | The accent, text in it, and text on it |
+| `--stroke`, `--divider`, `--control`, `--control-stroke` | Borders, dividers and input boxes |
+| `--success`, `--caution`, `--critical` | Status colours |
+| `--piece-launch`, `--piece-web`, `--piece-keys`, `--piece-hat` | The action pieces |
+| `--radius`, `--radius-overlay`, `--radius-piece` | Corner rounding |
+| `--font`, `--font-display`, `--font-mono` | Fonts |
+
+Anything else can be targeted by class, such as `.gesture`, `.card`, `.nav`
+or `.piece`; with `palm-lab ui --debug`, right-click > Inspect shows them.
+
+If your CSS hides the window's controls, press **Ctrl+Shift+X** to turn it
+off, or start palm-lab with `palm-lab ui --no-custom-css`.
+
 ## Command line
 
 | Command | What it does |
 | --- | --- |
 | `palm-lab` | Open the window (the default) |
 | `palm-lab ui --background` | Start hidden by the clock with tracking on |
+| `palm-lab ui --no-custom-css` | Open without your custom CSS, to fix it |
 | `palm-lab doctor` | Check the model, libraries and hand detection |
 | `palm-lab config` | Show where configuration lives and what is bound |
 | `palm-lab shortcut [--start-menu] [--startup] [--remove]` | Add or remove the desktop, Start menu and Start with Windows shortcuts |

@@ -20,9 +20,8 @@ from mediapipe.tasks.python.vision import (
 from palm_lab.actions.models import Binding, load_bindings
 from palm_lab.actions.runner import run_binding
 from palm_lab.config import MODEL_PATH, fixture_dir
-from palm_lab.features import extract
-from palm_lab.gestures import classify
-from palm_lab.landmarks import Point, normalise
+from palm_lab.engine import classify_hands
+from palm_lab.landmarks import Point
 from palm_lab.state import GestureTrigger
 
 TEXT_COLOUR = (255, 255, 255)
@@ -48,12 +47,12 @@ def save_fixture(hand: list[dict[str, float]], gesture_name: str) -> Path:
 
 
 def classify_frame(result: object) -> str | None:
-    """Run the first detected hand through the recognition pipeline."""
+    """Run the detected hands through the recognition pipeline.
+
+    Two hands give a two-hand gesture, exactly as in the window.
+    """
     hands = result.hand_landmarks  # type: ignore[attr-defined]
-    if not hands:
-        return None
-    points = [Point(lm.x, lm.y, lm.z) for lm in hands[0]]
-    return classify(extract(normalise(points)))
+    return classify_hands([[Point(lm.x, lm.y, lm.z) for lm in hand] for hand in hands])
 
 
 def _landmarker_options(num_hands: int) -> HandLandmarkerOptions:
@@ -212,6 +211,8 @@ def run_preview(
                     binding = bindings.get(fired)
                     if binding is None:
                         print(f"TRIGGERED: {fired} (no binding)")
+                    elif not binding.enabled:
+                        print(f"TRIGGERED: {fired} -> {binding.name} (switched off)")
                     else:
                         label = f"{fired} -> {binding.name}"
                         print(f"TRIGGERED: {fired} -> {binding.name}")

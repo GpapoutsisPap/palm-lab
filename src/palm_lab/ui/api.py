@@ -8,6 +8,8 @@ rather than raising, so the page can always show the user a message.
 
 import base64
 import shutil
+import threading
+import time
 import webbrowser
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -23,7 +25,10 @@ from palm_lab.actions.models import (
     save_bindings,
 )
 from palm_lab.actions.runner import ActionResult, run_binding
+from palm_lab.actions.targets import OPTIONS
+from palm_lab.combos import combo_parts
 from palm_lab.config import PROJECT_URL
+from palm_lab.custom_css import CustomCssError, load_custom_css, save_custom_css
 from palm_lab.custom_gestures import (
     CustomGesture,
     CustomGestureError,
@@ -32,7 +37,16 @@ from palm_lab.custom_gestures import (
     save_custom_gesture,
 )
 from palm_lab.engine import EngineStatus, FiredEvent, Hands, TrackingEngine
+from palm_lab.features import HandMeasurement
 from palm_lab.gestures import BUILTIN_GESTURES, GestureConflictError
+from palm_lab.hand_profile import (
+    HandProfileError,
+    load_hand_profile,
+    reset_hand_profile,
+    save_hand_profile,
+    tune,
+)
+from palm_lab.palettes import PALETTES
 from palm_lab.settings import (
     COOLDOWN_RANGE,
     DWELL_RANGE,
@@ -44,6 +58,9 @@ from palm_lab.settings import (
     settings_from_data,
 )
 from palm_lab.shortcuts import ShortcutError, Shortcuts
+from palm_lab.state import TriggerState
+from palm_lab.templates import CATEGORIES as TEMPLATE_CATEGORIES
+from palm_lab.templates import TEMPLATES
 from palm_lab.version import __version__
 from palm_lab.windows import accent_palette, open_folder
 
@@ -67,6 +84,9 @@ def _binding_to_json(binding: Binding) -> JsonDict:
         "gesture": binding.gesture,
         "name": binding.name,
         "step_delay_seconds": binding.step_delay_seconds,
+        "enabled": binding.enabled,
+        # The two shapes of a two-hand setup, so the page needn't parse the key.
+        "hands": list(parts) if (parts := combo_parts(binding.gesture)) else None,
         "action": [{"type": a.type.value, "target": a.target} for a in binding.actions],
     }
 
@@ -84,10 +104,12 @@ def _fired_to_json(event: FiredEvent | None) -> JsonDict | None:
     if event is None:
         return None
     return {
+        "id": event.id,
         "gesture": event.gesture,
         "name": event.binding_name,
         "at": event.at,
         "finished": event.finished,
+        "manual": event.manual,
         "results": [_result_to_json(r) for r in event.results],
     }
 
@@ -101,6 +123,30 @@ def _custom_gesture_to_json(gesture: CustomGesture) -> JsonDict:
     return {"name": gesture.name, "fingers": list(gesture.fingers)}
 
 
+# Pausing is for a while, not for good: longer than this is what the switch is for.
+MAX_PAUSE_MINUTES = 24 * 60
+
+# Starts `job` after `delay` seconds; returns a function that cancels it.
+Scheduler = Callable[[float, Callable[[], None]], Callable[[], None]]
+
+
+def run_after(delay: float, job: Callable[[], None]) -> Callable[[], None]:
+    timer = threading.Timer(delay, job)
+    timer.daemon = True
+    timer.start()
+    return timer.cancel
+
+
+def _hold_to_json(trigger: TriggerState) -> JsonDict:
+    """The hold in progress, for the ring and status line on the Gestures page."""
+    return {
+        "phase": trigger.phase,
+        "gesture": trigger.gesture,
+        "progress": round(trigger.progress, 3),
+        "cooldown": round(trigger.cooldown_remaining, 1),
+    }
+
+
 def _status_to_json(status: EngineStatus) -> JsonDict:
     return {
         "running": status.running,
@@ -109,6 +155,9 @@ def _status_to_json(status: EngineStatus) -> JsonDict:
         "fps": round(status.fps, 1),
         "error": status.error,
         "last_fired": _fired_to_json(status.last_fired),
+        "hold": _hold_to_json(status.trigger),
+        # When this changes, the page fetches activity() to catch up.
+        "history_version": status.history_version,
     }
 
 
@@ -131,6 +180,11 @@ class Api:
         open_url: Callable[[str], object] = webbrowser.open,
         on_theme_change: Callable[[], None] = lambda: None,
         on_close_choice: Callable[[str], None] = lambda choice: None,
+        custom_css_file: Path | None = None,
+        custom_css_allowed: bool = True,
+        hand_profile_file: Path | None = None,
+        schedule: Scheduler = run_after,
+        wall_clock: Callable[[], float] = time.time,
     ) -> None:
         self._engine = engine
         self._bindings_file = bindings_file
@@ -145,6 +199,20 @@ class Api:
         self._open_url = open_url
         self._on_theme_change = on_theme_change
         self._on_close_choice = on_close_choice
+        self._custom_css_file = custom_css_file
+        # False for `palm-lab ui --no-custom-css`: the way back from CSS that
+        # hid the window's own controls.
+        self._custom_css_allowed = custom_css_allowed
+        self._schedule = schedule
+        self._wall_clock = wall_clock
+        self._hand_profile_file = hand_profile_file
+        self._hand_tuned = False
+        # The setup guide measures an open hand, then a fist, then tunes.
+        self._hand_samples: dict[str, list[HandMeasurement]] = {}
+        self._pause_lock = threading.Lock()
+        self._paused_until: float | None = None  # wall-clock time tracking comes back
+        self._cancel_resume: Callable[[], None] | None = None
+        self._resume_error: str | None = None
         self._problems: list[str] = []
         self._bindings_unreadable = False
 
@@ -170,6 +238,15 @@ class Api:
                 f"Your custom gestures file could not be read ({exc}); ignoring it."
             )
 
+        if hand_profile_file is not None:
+            try:
+                profile = load_hand_profile(hand_profile_file)
+            except HandProfileError as exc:
+                profile = None
+                self._problems.append(f"{exc} Using the standard settings for your hand.")
+            self._hand_tuned = profile is not None
+            engine.update_hand_profile(profile)
+
         engine.update_bindings(self._bindings)
         engine.update_settings(self._settings)
         engine.update_custom_gestures(self._custom_gestures)
@@ -184,6 +261,11 @@ class Api:
             "action_types": [t.value for t in ActionType],
             "known_apps": self._app_suggestions(),
             "hotkey_presets": list(HOTKEY_PRESETS),
+            # Suggestions for the newer pieces: [value, label] pairs per type.
+            "action_options": {kind: [list(o) for o in opts] for kind, opts in OPTIONS.items()},
+            "templates": TEMPLATES,
+            "palettes": [[key, palette.label] for key, palette in PALETTES.items()],
+            "template_categories": list(TEMPLATE_CATEGORIES),
             "bindings": [_binding_to_json(b) for b in self._bindings],
             "settings": self._settings.as_dict(),
             "limits": {
@@ -197,6 +279,25 @@ class Api:
             "version": __version__,
             "accent": list(self._accent()),
             "project_url": PROJECT_URL,
+            "custom_css": self._custom_css_state(),
+            "hand": self._hand_state(),
+        }
+
+    def _hand_state(self) -> JsonDict:
+        return {"available": self._hand_profile_file is not None, "tuned": self._hand_tuned}
+
+    def _custom_css_state(self) -> JsonDict:
+        if self._custom_css_file is None:
+            return {"text": "", "file": None, "allowed": False, "error": None}
+        try:
+            text, error = load_custom_css(self._custom_css_file), None
+        except (CustomCssError, OSError) as exc:
+            text, error = "", str(exc)
+        return {
+            "text": text,
+            "file": str(self._custom_css_file),
+            "allowed": self._custom_css_allowed,
+            "error": error,
         }
 
     def _app_suggestions(self) -> list[str]:
@@ -241,7 +342,13 @@ class Api:
         if binding is None:
             return {"ok": False, "error": f"Nothing is bound to {gesture!r} yet."}
         results = self._run(binding)
+        self._engine.record_manual_run(binding, results)
         return {"ok": all(r.ok for r in results), "results": [_result_to_json(r) for r in results]}
+
+    def activity(self) -> JsonDict:
+        """The recent runs, oldest first, for the Activity page and "Last ran"."""
+        version, events = self._engine.history()
+        return {"version": version, "events": [_fired_to_json(e) for e in events]}
 
     # Settings ----------------------------------------------------------------
 
@@ -272,6 +379,8 @@ class Api:
     # Tracking ----------------------------------------------------------------
 
     def start(self) -> JsonDict:
+        """Start tracking. Also ends a pause early."""
+        self._clear_pause()
         try:
             self._engine.start()
         except (RuntimeError, OSError) as exc:
@@ -279,11 +388,63 @@ class Api:
         return {"ok": True, "status": self.status()}
 
     def stop(self) -> JsonDict:
+        """Stop tracking for good (until switched back on), cancelling any pause."""
+        self._clear_pause()
         self._engine.stop()
         return {"ok": True, "status": self.status()}
 
     def status(self) -> JsonDict:
-        return _status_to_json(self._engine.status())
+        status = _status_to_json(self._engine.status())
+        with self._pause_lock:
+            status["paused_until"] = self._paused_until
+            if not status["running"] and not status["error"] and self._resume_error:
+                status["error"] = self._resume_error
+        return status
+
+    # Pausing -------------------------------------------------------------------
+
+    def pause(self, minutes: float) -> JsonDict:
+        """Stop tracking for a while, releasing the camera, then start again by itself."""
+        if (
+            isinstance(minutes, bool)
+            or not isinstance(minutes, int | float)
+            or not 0 < minutes <= MAX_PAUSE_MINUTES
+        ):
+            return {
+                "ok": False,
+                "error": f"Pause for between 1 and {MAX_PAUSE_MINUTES} minutes.",
+                "status": self.status(),
+            }
+        self._clear_pause()
+        self._engine.stop()
+        with self._pause_lock:
+            self._paused_until = self._wall_clock() + minutes * 60
+            self._cancel_resume = self._schedule(minutes * 60, self._resume_when_due)
+        return {"ok": True, "status": self.status()}
+
+    def resume(self) -> JsonDict:
+        """End a pause now."""
+        return self.start()
+
+    def _resume_when_due(self) -> None:
+        with self._pause_lock:
+            if self._paused_until is None:
+                return  # resumed or switched off in the meantime
+            self._paused_until = None
+            self._cancel_resume = None
+        try:
+            self._engine.start()
+        except (RuntimeError, OSError) as exc:
+            with self._pause_lock:
+                self._resume_error = f"Tracking could not start again after the pause: {exc}"
+
+    def _clear_pause(self) -> None:
+        with self._pause_lock:
+            cancel, self._cancel_resume = self._cancel_resume, None
+            self._paused_until = None
+            self._resume_error = None
+        if cancel is not None:
+            cancel()
 
     def preview(self) -> JsonDict | None:
         """The latest camera frame and its hands, or None when not tracking."""
@@ -293,12 +454,15 @@ class Api:
         return {
             "image": "data:image/jpeg;base64," + base64.b64encode(frame.image).decode("ascii"),
             "hands": _hands_to_json(frame.hands),
+            # Sent with every frame, so the hold ring moves as smoothly as the video.
+            "hold": _hold_to_json(self._engine.status().trigger),
         }
 
     # Custom gestures -----------------------------------------------------------
 
     def start_gesture_capture(self) -> JsonDict:
         """Begin recording a new gesture, starting the camera if it isn't running."""
+        self._clear_pause()  # the camera is coming on, so a pause is over
         if not self._engine.running:
             try:
                 self._engine.start()
@@ -346,6 +510,91 @@ class Api:
         self._custom_gestures = updated
         self._engine.update_custom_gestures(updated)
         return {"ok": True, "custom_gestures": [_custom_gesture_to_json(g) for g in updated]}
+
+    # The setup guide: tuning to a hand, and checking gestures -----------------------
+
+    def start_hand_measure(self) -> JsonDict:
+        """Start measuring one held pose, starting the camera if it's off."""
+        self._clear_pause()
+        if not self._engine.running:
+            try:
+                self._engine.start()
+            except (RuntimeError, OSError) as exc:
+                return {"ok": False, "error": str(exc)}
+        self._engine.start_measuring()
+        return {"ok": True, "status": self.status()}
+
+    def hand_measure_status(self) -> JsonDict | None:
+        """Polled while the guide measures: progress, and hands in view."""
+        status = self._engine.measure_status()
+        if status is None:
+            return None
+        return {"progress": round(status.progress, 3), "hands": status.hands, "done": status.done}
+
+    def keep_hand_measure(self, pose: str) -> JsonDict:
+        """Keep a finished measurement as the "open" hand or the "fist"."""
+        if pose not in ("open", "fist"):
+            return {"ok": False, "error": f"Unknown pose {pose!r}."}
+        status = self._engine.measure_status()
+        if status is None or not status.done:
+            return {"ok": False, "error": "That pose hasn't finished measuring yet."}
+        self._hand_samples[pose] = self._engine.take_measurements()
+        return {"ok": True}
+
+    def cancel_hand_measure(self) -> JsonDict:
+        self._engine.take_measurements()
+        self._hand_samples.clear()
+        return {"ok": True}
+
+    def tune_hand(self) -> JsonDict:
+        """Tune to the kept open hand and fist, save it and use it straight away."""
+        if self._hand_profile_file is None:
+            return {"ok": False, "error": "Tuning isn't available here."}
+        try:
+            result = tune(self._hand_samples.get("open", []), self._hand_samples.get("fist", []))
+        except HandProfileError as exc:
+            return {"ok": False, "error": str(exc)}
+        finally:
+            self._hand_samples.clear()
+        try:
+            save_hand_profile(result.profile, self._hand_profile_file)
+        except OSError as exc:
+            return {"ok": False, "error": f"Could not save the tuning: {exc}"}
+        self._engine.update_hand_profile(result.profile)
+        self._hand_tuned = True
+        return {"ok": True, "kept_standard": list(result.kept_standard), "hand": self._hand_state()}
+
+    def reset_hand_tuning(self) -> JsonDict:
+        """Go back to the standard settings for reading fingers."""
+        if self._hand_profile_file is not None:
+            try:
+                reset_hand_profile(self._hand_profile_file)
+            except OSError as exc:
+                return {"ok": False, "error": f"Could not remove the tuning: {exc}"}
+        self._engine.update_hand_profile(None)
+        self._hand_tuned = False
+        return {"ok": True, "hand": self._hand_state()}
+
+    def set_guide_quiet(self, quiet: bool) -> JsonDict:
+        """While the guide checks gestures, read them without running anything."""
+        self._engine.set_quiet(bool(quiet))
+        return {"ok": True}
+
+    # Custom CSS ---------------------------------------------------------------------
+
+    def save_custom_css(self, text: str) -> JsonDict:
+        """Save the CSS typed in Settings (the page has already applied it)."""
+        if self._custom_css_file is None:
+            return {"ok": False, "error": "Custom CSS is not available here."}
+        if not isinstance(text, str):
+            return {"ok": False, "error": "Custom CSS must be text."}
+        try:
+            save_custom_css(text, self._custom_css_file)
+        except CustomCssError as exc:
+            return {"ok": False, "error": str(exc)}
+        except OSError as exc:
+            return {"ok": False, "error": f"Could not save {self._custom_css_file}: {exc}"}
+        return {"ok": True}
 
     # Window ------------------------------------------------------------------------
 
