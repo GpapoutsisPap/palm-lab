@@ -10,6 +10,8 @@ for the people installing the app.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-06
+
 ### Added
 
 - A pop-up by the clock when a gesture runs with palm-lab's window hidden:
@@ -146,7 +148,8 @@ The first working version, run from a terminal.
 - The `palm-lab` command line: `run`, `capture`, `config` and `doctor`.
 - A Windows executable built with PyInstaller.
 
-[Unreleased]: https://github.com/GpapoutsisPap/palm-lab/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/GpapoutsisPap/palm-lab/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/GpapoutsisPap/palm-lab/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/GpapoutsisPap/palm-lab/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/GpapoutsisPap/palm-lab/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/GpapoutsisPap/palm-lab/releases/tag/v0.1.0
